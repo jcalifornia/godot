@@ -179,6 +179,7 @@ doc/Doxyfile
 include/Makefile
 include/skeleton/Makefile
 src/Makefile
+src/Version_script
 tools/Makefile
 ])
 
