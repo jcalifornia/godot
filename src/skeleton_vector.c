@@ -103,7 +103,12 @@ void oggskel_vect_destroy (TrackVect *vect)
       _ogg_free (vect->tracks[i].bone);
     
     if (vect->tracks[i].index != NULL)
+    {
+      if (vect->tracks[i].index->keypoints != NULL)
+        _ogg_free (vect->tracks[i].index->keypoints);
+        
       _ogg_free (vect->tracks[i].index);
+    }
   }
   
   if (vect->tracks)

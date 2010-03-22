@@ -71,7 +71,7 @@ typedef struct _Index {
   ogg_int32_t     serial_no;
   ogg_int64_t     num_keys;
   ogg_int64_t     ptime_denum;
-  KeyFrameInfo    keypoints[];
+  KeyFrameInfo  * keypoints;
 } Index;
 
 typedef struct _TrackVect TrackVect;

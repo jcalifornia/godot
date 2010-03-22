@@ -381,7 +381,7 @@ static int decode_fisbone (OggSkeleton *skeleton,
   return ret;
 }
 
-int decode_index (OggSkeleton* skeleton, const ogg_packet *op)
+static int decode_index (OggSkeleton* skeleton, const ogg_packet *op)
 {
   ogg_int64_t i = 0, offset = 0, time = 0, time_mult = 1000;
   Index * current_index       = NULL;
@@ -400,7 +400,7 @@ int decode_index (OggSkeleton* skeleton, const ogg_packet *op)
     return SKELETON_ERR_BAD_PACKET;
   }
   
-  current_index = _ogg_calloc (1, op->bytes);
+  current_index = _ogg_calloc (1, sizeof (Index));
   if (current_index == NULL)
   {
     return SKELETON_ERR_OUT_OF_MEMORY;
@@ -433,7 +433,15 @@ int decode_index (OggSkeleton* skeleton, const ogg_packet *op)
     return SKELETON_ERR_;
   }
 */
+  current_index->keypoints = 
+    _ogg_calloc (current_index->num_keys, sizeof (KeyFrameInfo));
 
+  if (current_index->keypoints == NULL)
+  {
+    ret = SKELETON_ERR_OUT_OF_MEMORY;
+    goto fin;
+  }
+  
   p = op->packet + INDEX_KEYPOINT_OFFSET;
   /* read in keypoints */
   for (i = 0; i < current_index->num_keys; ++i)
