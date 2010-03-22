@@ -39,27 +39,34 @@
 #include <ogg/ogg.h>
 #include <skeleton/skeleton_constants.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * 
  */
 typedef struct _OggSkeleton OggSkeleton;
 
+#include <skeleton/skeleton_query.h>
+
 /** 
  * 
  * @return 
  */
-OggSkeleton* oggskeleton_new ();
+OggSkeleton* oggskel_new ();
 
 /** 
  * 
  * @param skeleton 
  * @return
  */
-OggSkeletonError oggskeleton_destroy (OggSkeleton* skeleton);
+OggSkeletonError oggskel_destroy (OggSkeleton* skeleton);
 
 /** encoding */
+int oggskel_encode_header (OggSkeleton* skeleton, ogg_packet *op);
 
-//()
+//void oggskel_encode_ (OggSkeleton* skeleton);
 
 /** decoding */
 /**
@@ -68,7 +75,10 @@ OggSkeletonError oggskeleton_destroy (OggSkeleton* skeleton);
  * @parma op Ogg packet
  * @return
  */
-int oggskeleton_decode_header (OggSkeleton* skeleton, const ogg_packet* op);
+int oggskel_decode_header (OggSkeleton* skeleton, const ogg_packet* op);
 
-
+#ifdef __cplusplus
+}
 #endif
+
+#endif /* __OGG_SKELETON_H__ */

@@ -28,31 +28,32 @@
    (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
- 
-#ifndef __OGG_SKELETON_CONSTANTS_H__
-#define __OGG_SKELETON_CONSTANTS_H__
 
-/** @file
- * General constants used by libskeleton
- */
- 
-/**
- * Definition of error return values
- */
-typedef enum _OggSkeletonError {
-  SKELETON_ERR_OK                 = 0,
-  SKELETON_ERR_GENERIC            = -1,
-  SKELETON_ERR_BAD_SKELETON       = -2,
-  SKELETON_ERR_VERSION            = -3,
-  SKELETON_ERR_OUT_OF_MEMORY      = -4,
-  SKELETON_ERR_EOS_AWAITING       = -5,
-  SKELETON_WARN_EOS_NOT_EMTPY     = -6,
-  SKELETON_ERR_BAD_FISBONE        = -7,
-  SKELETON_ERR_BAD_SERIAL_NO      = -8,
-  SKELETON_ERR_DENUM_ZERO         = -9,
-  SKELETON_ERR_MALICIOUS_INDEX    = -10,
-  SKELETON_ERR_UNSUPPORTED_VERSION= -11,
-  SKELETON_WARN_FISHEAD_NOT_BOS   = -12,
-} OggSkeletonError;
+#ifndef __OGG_SKELETON_VECTOR_H__
+#define __OGG_SKELETON_VECTOR_H__
 
-#endif /* __OGG_SKELETON_CONSTANTS_H__ */
+#include <ogg/os_types.h>
+#include "skeleton_private.h"
+
+typedef struct _TrackInfo {
+  ogg_uint32_t    serial_no;
+  FisBone       * bone;
+  Index         * index;
+} TrackInfo;
+
+struct _TrackVect {
+  size_t        size;
+  TrackInfo   * tracks;
+};
+
+TrackVect* oggskel_vect_new ();
+
+void oggskel_vect_destroy (TrackVect *vect);
+
+int oggskel_vect_add_bone (TrackVect *vect, FisBone *bone, ogg_uint32_t serial_no);
+FisBone* oggskel_vect_get_bone (const TrackVect *vect, ogg_uint32_t serial_no);
+
+int oggskel_vect_add_index (TrackVect *vect, Index *bone, ogg_uint32_t serial_no);
+Index* oggskel_vect_get_index (const TrackVect *vect, ogg_uint32_t serial_no);
+
+#endif /* __OGG_SKELETON_VECTOR_H__ */

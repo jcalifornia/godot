@@ -32,13 +32,30 @@
 #ifndef __OGG_SKELETON_MACROS_H__
 #define __OGG_SKELETON_MACROS_H__
 
+#define SKELETON_VERSION_MAJOR 3
+#define SKELETON_VERSION_MINOR 3
+
 #define SKELETON_VERSION(major, minor) (((major)<<16)|(minor))
 
-#define FISHEAD_MAGIC "fishead"
+#define FISHEAD_MAGIC "fishead\0"
 #define FISHEAD_MAGIC_LEN 8
-#define FISBONE_MAGIC "fisbone"
+#define FISHEAD_3_0_SIZE 64
+#define FISHEAD_3_2_SIZE 112
+
+#define FISBONE_MAGIC "fisbone\0"
 #define FISBONE_MAGIC_LEN 8
-#define INDEX_MAGIC "index"
+#define FISBONE_SIZE 52
+
+#define INDEX_MAGIC "index\0"
 #define INDEX_MAGIC_LEN 6
+#define INDEX_KEYPOINT_OFFSET 26
+
+// Maximum possible size of one uncompressed keypoint entry in the index. This
+// takes into account the maximum possible values for all fields, and the number
+// of bytes required to encode their maximum values with variable byte encoding.
+#define MAX_KEY_POINT_SIZE 24
+ 
+// Minimum possible size of a compressed keypoint.
+#define MIN_KEY_POINT_SIZE 2
 
 #endif /* __OGG_SKELETON_MACROS_H__ */

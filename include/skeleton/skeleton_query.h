@@ -32,35 +32,51 @@
 #ifndef __OGG_SKELETON_QUERY_H__
 #define __OGG_SKELETON_QUERY_H__
 
-OggSkeletonError oggskeleton_get_ptime_num (const OggSkeleton *skeleton, ogg_int64_t *pres_num);
-OggSkeletonError oggskeleton_set_ptime_num (OggSkeleton *skeleton, ogg_int64_t pres_num);
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-OggSkeletonError oggskeleton_get_ptime_denum (const OggSkeleton *skeleton, ogg_int64_t *pres_denum);
-OggSkeletonError oggskeleton_set_ptime_denum (OggSkeleton *skeleton, ogg_int64_t pres_denum);
+OggSkeletonError oggskel_get_ver_maj (const OggSkeleton *skeleton, ogg_uint16_t *ver_maj);
+OggSkeletonError oggskel_get_ver_min (const OggSkeleton *skeleton, ogg_uint16_t *ver_min);
 
-OggSkeletonError oggskeleton_get_btime_num (const OggSkeleton *skeleton, ogg_int64_t *btime_num);
-OggSkeletonError oggskeleton_set_btime_num (OggSkeleton *skeleton, ogg_int64_t btime_num);
+OggSkeletonError oggskel_get_ptime_num (const OggSkeleton *skeleton, ogg_int64_t *pres_num);
+OggSkeletonError oggskel_set_ptime_num (OggSkeleton *skeleton, ogg_int64_t pres_num);
 
-OggSkeletonError oggskeleton_get_btime_denum (const OggSkeleton *skeleton, ogg_int64_t *btime_denum);
-OggSkeletonError oggskeleton_set_btime_denum (OggSkeleton *skeleton, ogg_int64_t btime_denum);
+OggSkeletonError oggskel_get_ptime_denum (const OggSkeleton *skeleton, ogg_int64_t *pres_denum);
+OggSkeletonError oggskel_set_ptime_denum (OggSkeleton *skeleton, ogg_int64_t pres_denum);
 
-OggSkeletonError oggskeleton_get_utc (const OggSkeleton *skeleton, char *UTC);
-OggSkeletonError oggskeleton_set_utc (OggSkeleton *skeleton, const char *UTC);
+OggSkeletonError oggskel_get_btime_num (const OggSkeleton *skeleton, ogg_int64_t *btime_num);
+OggSkeletonError oggskel_set_btime_num (OggSkeleton *skeleton, ogg_int64_t btime_num);
 
-OggSkeletonError oggskeleton_get_num_headers (OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_uint32_t *num_headers);
-OggSkeletonError oggskeleton_set_num_headers (OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_uint32_t num_headers);
+OggSkeletonError oggskel_get_btime_denum (const OggSkeleton *skeleton, ogg_int64_t *btime_denum);
+OggSkeletonError oggskel_set_btime_denum (OggSkeleton *skeleton, ogg_int64_t btime_denum);
 
-OggSkeletonError oggskeleton_get_granule_num (OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_int64_t *granule_num);
-OggSkeletonError oggskeleton_set_granule_num (OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_int64_t granule_num);
+OggSkeletonError oggskel_get_utc (const OggSkeleton *skeleton, char **UTC);
+OggSkeletonError oggskel_set_utc (OggSkeleton *skeleton, const char *UTC);
 
-OggSkeletonError oggskeleton_get_granule_denum (OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_int64_t *granule_denum);
-OggSkeletonError oggskeleton_set_granule_denum (OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_int64_t granule_denum);
+OggSkeletonError oggskel_get_num_headers (const OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_uint32_t *num_headers);
+OggSkeletonError oggskel_set_num_headers (OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_uint32_t num_headers);
 
-OggSkeletonError oggskeleton_get_start_granule (OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_int64_t *start_granule);
-OggSkeletonError oggskeleton_set_start_granule (OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_int64_t start_granule);
+OggSkeletonError oggskel_get_granule_num (const OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_int64_t *granule_num);
+OggSkeletonError oggskel_set_granule_num (OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_int64_t granule_num);
 
-OggSkeletonError oggskeleton_get_preroll (OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_uint32_t *preroll);
-OggSkeletonError oggskeleton_set_preroll (OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_uint32_t preroll);
+OggSkeletonError oggskel_get_granule_denum (const OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_int64_t *granule_denum);
+OggSkeletonError oggskel_set_granule_denum (OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_int64_t granule_denum);
 
+OggSkeletonError oggskel_get_start_granule (const OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_int64_t *start_granule);
+OggSkeletonError oggskel_set_start_granule (OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_int64_t start_granule);
+
+OggSkeletonError oggskel_get_preroll (const OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_uint32_t *preroll);
+OggSkeletonError oggskel_set_preroll (OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_uint32_t preroll);
+
+OggSkeletonError oggskel_get_granule_shift (const OggSkeleton *skeleton, ogg_uint32_t serial_no, unsigned char *granule_shift);
+OggSkeletonError oggskel_set_granule_shift (OggSkeleton *skeleton, ogg_uint32_t serial_no, unsigned char granule_shift);
+
+OggSkeletonError oggskel_get_msg_header (const OggSkeleton *skeleton, ogg_uint32_t serial_no, char **msg_header);
+OggSkeletonError oggskel_set_msg_header (OggSkeleton *skeleton, ogg_uint32_t serial_no, char *msg_header);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __OGG_SKELETON_QUERY_H__  */

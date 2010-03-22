@@ -29,30 +29,92 @@
    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
  
-#ifndef __OGG_SKELETON_CONSTANTS_H__
-#define __OGG_SKELETON_CONSTANTS_H__
+#include <stdio.h>
+#include <unistd.h>
 
-/** @file
- * General constants used by libskeleton
- */
- 
-/**
- * Definition of error return values
- */
-typedef enum _OggSkeletonError {
-  SKELETON_ERR_OK                 = 0,
-  SKELETON_ERR_GENERIC            = -1,
-  SKELETON_ERR_BAD_SKELETON       = -2,
-  SKELETON_ERR_VERSION            = -3,
-  SKELETON_ERR_OUT_OF_MEMORY      = -4,
-  SKELETON_ERR_EOS_AWAITING       = -5,
-  SKELETON_WARN_EOS_NOT_EMTPY     = -6,
-  SKELETON_ERR_BAD_FISBONE        = -7,
-  SKELETON_ERR_BAD_SERIAL_NO      = -8,
-  SKELETON_ERR_DENUM_ZERO         = -9,
-  SKELETON_ERR_MALICIOUS_INDEX    = -10,
-  SKELETON_ERR_UNSUPPORTED_VERSION= -11,
-  SKELETON_WARN_FISHEAD_NOT_BOS   = -12,
-} OggSkeletonError;
+#include <ogg/ogg.h>
+#include <skeleton/skeleton.h>
 
-#endif /* __OGG_SKELETON_CONSTANTS_H__ */
+static void 
+usage ()
+{
+  printf ("\n\n");
+}
+
+/* grab some data from the container */
+int buffer_data(FILE *in, ogg_sync_state *oy){
+  char *buffer  = ogg_sync_buffer (oy, 4096);
+  int bytes     = fread (buffer, 1, 4096, in);
+  ogg_sync_wrote (oy,bytes);
+  return (bytes);
+}
+
+int
+main (int argc, char **argv)
+{
+  int indexing, ch;
+  FILE *in, *out;
+  ogg_sync_state    oy;
+  ogg_page          og;
+  ogg_stream_state  os;
+  
+  indexing = 0;
+  
+  while ((ch = getopt(argc, argv, "io:")) != -1) 
+  {
+    switch (ch) 
+    {
+      case 'i':
+        indexing = 1;
+        break;
+
+      case 'o':
+        break;
+
+      case '?':
+      default:
+        usage();
+    }
+  }
+
+  argc -= optind;
+  argv += optind;
+  
+  if (argc == 0)
+  {
+    usage ();
+    return 1;
+  }
+  
+  in = fopen (argv[0], "rb");
+  if (in == NULL)
+  {
+    perror ("error opening input");
+    return -1;
+  }
+
+  /* initialise ogg_sync_state */
+  ogg_sync_init (&oy);
+  
+  /* process all the headers of the Ogg container */
+  while (1)
+  {
+    int ret = buffer_data (in, &oy);
+    if (ret == 0) break;
+    while (ogg_sync_pageout (&oy, &og) > 0)
+    {
+      ogg_packet        op;
+      int               got_packet;
+
+      ogg_stream_init (&os, ogg_page_serialno (&og));
+      ogg_stream_pagein (&os, &og);
+      if (got_packet = ogg_stream_packetout (&os, &op))
+      {
+      }
+    }
+  }
+
+  fclose (in);
+  
+  return 0;
+}

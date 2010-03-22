@@ -11,11 +11,13 @@ lib_LTLIBRARIES = libskeleton.la
 
 noinst_HEADERS =			\
 	skeleton_macros.h		\
-	skeleton_private.h
+	skeleton_private.h		\
+	skeleton_vector.h
 	
 libskeleton_la_SOURCES =     		\
 	skeleton.c			\
-	skeleton_query.c		
+	skeleton_query.c		\
+	skeleton_vector.c		
 	
 libskeleton_la_CFLAGS = $(AM_CFLAGS) $(OGG_CFLAGS)
 libskeleton_la_LDFLAGS = -version-info @SHARED_VERSION_INFO@ @SHLIB_VERSION_ARG@ 

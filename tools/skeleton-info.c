@@ -30,7 +30,10 @@
  */
  
 #include <stdio.h>
+#include <stdlib.h>
+
 #include <ogg/ogg.h>
+
 #include <skeleton/skeleton.h>
 
 /* grab some data from the container */
@@ -44,19 +47,56 @@ int buffer_data(FILE *in,ogg_sync_state *oy){
 void print_fishead (const OggSkeleton *skeleton)
 {
   ogg_int64_t t;
+  ogg_uint16_t maj, min;
   char *UTC;
 
-  printf ("Skeleton fishead header content:\n");  
-  oggskeleton_get_ptime_num (skeleton, &t);
+  printf ("Skeleton fishead header content:\n");
+  oggskel_get_ver_maj (skeleton, &maj);
+  oggskel_get_ver_min (skeleton, &min);
+  printf ("\tSkeleton version: %d.%d\n", maj, min);
+  oggskel_get_ptime_num (skeleton, &t);
   printf ("\tPresentation time numerator: %lld\n", t);
-  oggskeleton_get_ptime_denum (skeleton, &t);  
+  oggskel_get_ptime_denum (skeleton, &t);  
   printf ("\tPresentation time denumerator: %lld\n", t);
-  oggskeleton_get_btime_num (skeleton, &t);  
+  oggskel_get_btime_num (skeleton, &t);  
   printf ("\tBase time numerator: %lld\n", t);
-  oggskeleton_get_btime_denum (skeleton, &t);  
+  oggskel_get_btime_denum (skeleton, &t);  
   printf ("\tBase time denumerator: %lld\n", t);
-  oggskeleton_get_utc (skeleton, UTC);
+  oggskel_get_utc (skeleton, &UTC);
   printf ("\tUTC: %s\n", UTC);
+  _ogg_free (UTC);
+}
+
+void print_fisbone (const OggSkeleton *skeleton, ogg_uint32_t serial_no)
+{
+  ogg_int64_t t;
+  ogg_uint32_t i;
+  unsigned char c;
+  char *msg_fields;
+  int ret;
+  
+  ret = oggskel_get_num_headers (skeleton, serial_no, &i);
+  if (ret == SKELETON_ERR_BAD_SERIAL_NO)
+  {
+    printf ("\nThere is no fisbone for %d !!!\n", serial_no);
+    return;
+  }
+  
+  printf ("\nSkeleton fisbone header for %d\n", serial_no);
+  printf ("\tNumber of headers: %d\n", i);
+  oggskel_get_granule_num (skeleton, serial_no, &t);
+  printf ("\tGranule position numerator: %lld\n", t);
+  oggskel_get_granule_denum (skeleton, serial_no, &t);
+  printf ("\tGranule position denumerator: %lld\n", t);
+  oggskel_get_start_granule (skeleton, serial_no, &t);
+  printf ("\tStart granule position: %lld\n", t);
+  oggskel_get_preroll (skeleton, serial_no, &i);
+  printf ("\tPreroll: %d\n", i);
+  oggskel_get_granule_shift (skeleton, serial_no, &c);
+  printf ("\tGranule shift: %d\n", c);
+  oggskel_get_msg_header (skeleton, serial_no, &msg_fields);
+  printf ("\tMessage header fields:\n\t\t%s\n", msg_fields);
+  _ogg_free (msg_fields);
 }
 
 int
@@ -86,12 +126,17 @@ main (int argc, char **argv)
   ogg_sync_init (&oy);
   
   /* create skeleton handle */
-  skeleton = oggskeleton_new ();
+  skeleton = oggskel_new ();
   if (skeleton == NULL)
   {
     printf ("error while creating skeleton handle\n");
     return -1;
   }
+  ogg_packet        op;
+  
+  oggskel_encode_header (skeleton, &op);
+
+  oggskel_decode_header (skeleton, &op);
   
   /* process all the headers of the Ogg container */
   while (sk_headers != 0)
@@ -109,7 +154,7 @@ main (int argc, char **argv)
       ogg_stream_pagein (&os, &og);
       if (got_packet = ogg_stream_packetout (&os, &op))
       {
-        sk_headers = oggskeleton_decode_header (skeleton, &op);
+        sk_headers = oggskel_decode_header (skeleton, &op);
       
         if (sk_headers == -1)
         {
@@ -132,27 +177,8 @@ main (int argc, char **argv)
   {
     printf ("Couldn't find any skeleton headers in the ogg file\n");
   }
-  
-  while (1)
-  {
-    int ret = buffer_data (fd, &oy);
-    if (ret == 0) break;
-    while (ogg_sync_pageout (&oy, &og) > 0)
-    {
-      ogg_packet        op;
-      int               got_packet;
 
-      ogg_stream_pagein (&os, &og);
-      if (got_packet = ogg_stream_packetout (&os, &op))
-      {
-        printf ("decoding index\n");
-        oggskeleton_decode_index (skeleton, &op);
-      }
-    }
-  }
-  
-  
-  oggskeleton_destroy (skeleton);
+  oggskel_destroy (skeleton);
   
   fclose (fd);
   

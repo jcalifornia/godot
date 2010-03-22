@@ -48,31 +48,39 @@ typedef struct _FisHead {
   ogg_int64_t   last_sample_denum;
   ogg_int64_t   segment_len;
   ogg_int64_t   nh_offset;
-  ogg_int64_t   nh_byte_offset;  
 } FisHead;
 
 typedef struct _FisBone {
-  ogg_uint32_t  msg_header_offset;  
-  ogg_uint32_t  serial_no;
-  ogg_uint32_t  num_headers;
-  ogg_int64_t   granule_num;
-  ogg_int64_t   granule_denum;
-  ogg_int64_t   start_granule;
-  ogg_uint32_t  preroll;
+  ogg_uint32_t    msg_header_offset;  
+  ogg_uint32_t    serial_no;
+  ogg_uint32_t    num_headers;
+  ogg_int64_t     granule_num;
+  ogg_int64_t     granule_denum;
+  ogg_int64_t     start_granule;
+  ogg_uint32_t    preroll;
+  unsigned char   granule_shift;
+  unsigned char   msg_fields[];
 } FisBone;
 
+typedef struct _KeyFrameInfo {
+  ogg_int64_t   offset;
+  ogg_int64_t   time_ms;
+} KeyFrameInfo;
+
 typedef struct _Index {
-  ogg_int32_t   serial_no;
-  ogg_int64_t   num_keys;
-  ogg_int64_t   ptime_denum;
+  ogg_int32_t     serial_no;
+  ogg_int64_t     num_keys;
+  ogg_int64_t     ptime_denum;
+  KeyFrameInfo    keypoints[];
 } Index;
 
-struct _OggSkeleton {
-  FisHead      fishead;
-  FisBone   ** fisbones;
-  Index        indices;
-  int          num_bones;
-};
+typedef struct _TrackVect TrackVect;
 
+struct _OggSkeleton {
+  FisHead       fishead;
+  TrackVect   * track_vect;
+  short         indexing;
+  short         finished;
+};
 
 #endif /* __OGG_SKELETON_PRIVATE__ */
