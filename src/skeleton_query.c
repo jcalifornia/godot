@@ -29,6 +29,7 @@
    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
  
+#include <stdlib.h>
 #include <string.h>
 
 #include "skeleton_private.h"
@@ -209,10 +210,13 @@ oggskel_get_utc (const OggSkeleton *skeleton, char **UTC)
     return SKELETON_ERR_EOS_AWAITING;
   }
 
-  if ((*UTC = strdup (skeleton->fishead.UTC)) == NULL)
+  *UTC = _ogg_calloc (20, sizeof (char));
+  if (*UTC == NULL)
   {
     return SKELETON_ERR_OUT_OF_MEMORY;
   }
+  
+  memcpy (*UTC, skeleton->fishead.UTC, 20);
 
   return SKELETON_ERR_OK;
 }
@@ -418,7 +422,8 @@ oggskel_set_preroll (OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_uint32_t
 OggSkeletonError 
 oggskel_get_msg_header (const OggSkeleton *skeleton, ogg_uint32_t serial_no, char **msg_header)
 {
-  FisBone *bone = NULL;
+  FisBone *bone        = NULL;
+  size_t   fields_size = 0;
   
   if (skeleton == NULL)
   {
@@ -430,8 +435,12 @@ oggskel_get_msg_header (const OggSkeleton *skeleton, ogg_uint32_t serial_no, cha
     return SKELETON_ERR_BAD_SERIAL_NO;
   }
   
-  if ((*msg_header = strdup (bone->msg_fields)) == NULL)
+  fields_size = strlen (bone->msg_fields);
+  *msg_header = _ogg_calloc (fields_size, sizeof (char));
+  if (*msg_header == NULL)
     return SKELETON_ERR_OUT_OF_MEMORY;
+  
+  memcpy (*msg_header, bone->msg_fields, fields_size);
   
   return SKELETON_ERR_OK; 
 }

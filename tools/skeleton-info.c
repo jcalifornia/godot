@@ -49,7 +49,7 @@ void print_fishead (const OggSkeleton *skeleton)
 {
   ogg_int64_t t;
   ogg_uint16_t maj, min;
-  char *UTC;
+  char *UTC = NULL;
 
   printf ("Skeleton fishead header content:\n");
   oggskel_get_ver_maj (skeleton, &maj);
@@ -73,7 +73,7 @@ void print_fisbone (const OggSkeleton *skeleton, ogg_uint32_t serial_no)
   ogg_int64_t t;
   ogg_uint32_t i;
   unsigned char c;
-  char *msg_fields;
+  char *msg_fields = NULL;
   int ret;
   
   ret = oggskel_get_num_headers (skeleton, serial_no, &i);
@@ -157,14 +157,14 @@ main (int argc, char **argv)
       }
       else
       {
-        if (sk_p) ogg_stream_pagein(&skel_stream, &og);
+        if (sk_p) ogg_stream_pagein (&skel_stream, &og);
         flag = 0;
       }
       ogg_stream_init (&os, ogg_page_serialno (&og));
       ogg_stream_pagein (&os, &og);
       got_packet = ogg_stream_packetpeek (&os, &op);
       
-      if ((got_packet == 1) && !sk_p &&(sk_headers = oggskel_decode_header (skeleton, &op)) >= 0)
+      if ((got_packet == 1) && !sk_p &&(sk_headers = oggskel_decode_header (skeleton, &op)) > 0)
       {
         /* found a skeleton stream, save it */
         memcpy (&skel_stream, &os, sizeof (os));
@@ -183,7 +183,7 @@ main (int argc, char **argv)
   /* process the rest of the skeleton headers */
   while (sk_headers && sk_p)
   {
-    int ret = 0;
+    int ret = -1;
     
     while (sk_headers && (ret = ogg_stream_packetpeek (&skel_stream, &op)))
     {
@@ -206,12 +206,12 @@ main (int argc, char **argv)
     
     if(ogg_sync_pageout(&oy,&og) > 0)
     {
-      if (sk_p) ogg_stream_pagein(&skel_stream, &og);
+      if (sk_p) ogg_stream_pagein (&skel_stream, &og);
     }
     else
     {
-      int bytes = buffer_data(fd, &oy); /* someone needs more data */
-      if(bytes == 0)
+      int bytes = buffer_data (fd, &oy); /* someone needs more data */
+      if (bytes == 0)
       {
         printf("End of file while searching for codec headers.\n");
         return -1;

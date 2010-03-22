@@ -381,7 +381,7 @@ static int decode_fisbone (OggSkeleton *skeleton,
   return ret;
 }
 
-static int decode_index (OggSkeleton* skeleton, const ogg_packet *op)
+int decode_index (OggSkeleton* skeleton, const ogg_packet *op)
 {
   ogg_int64_t i = 0, offset = 0, time = 0, time_mult = 1000;
   Index * current_index       = NULL;

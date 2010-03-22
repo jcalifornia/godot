@@ -59,7 +59,7 @@ typedef struct _FisBone {
   ogg_int64_t     start_granule;
   ogg_uint32_t    preroll;
   unsigned char   granule_shift;
-  unsigned char   msg_fields[];
+  char            msg_fields[];
 } FisBone;
 
 typedef struct _KeyFrameInfo {
