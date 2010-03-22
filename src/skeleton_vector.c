@@ -52,18 +52,21 @@ get_track_nfo (TrackVect *vect, ogg_uint32_t serial_no)
   
   if ((t_nfo = find_track_info (vect, serial_no)) == NULL)
   {
-    vect->tracks = 
+    t_nfo = 
       _ogg_realloc (vect->tracks, sizeof (TrackInfo)*(vect->size+1));
       
-    if (vect == NULL)
+    if (t_nfo == NULL)
     {
       return NULL;
     }
     
+    vect->tracks = t_nfo;    
     vect->size++;
     
     t_nfo = &(vect->tracks[vect->size - 1]);
-    t_nfo->serial_no = serial_no;
+    t_nfo->serial_no  = serial_no;
+    t_nfo->bone       = NULL;
+    t_nfo->index      = NULL;
   }
   
   return t_nfo;
