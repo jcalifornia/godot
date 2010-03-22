@@ -109,8 +109,11 @@ OggSkeleton* oggskel_new ()
   
   skeleton->track_vect = oggskel_vect_new ();
   if (skeleton->track_vect == NULL)
+  {
+    _ogg_free (skeleton);
     return NULL;
-
+  }
+  
   skeleton->indexing  = 0;
   skeleton->finished  = 0;
   
@@ -132,7 +135,7 @@ OggSkeletonError oggskel_destroy (OggSkeleton* skeleton)
 
 static int encode_fishead (const OggSkeleton *skeleton, ogg_packet *op)
 {  
-  size_t      fishead_size;
+  size_t      fishead_size = 0;
 
   if (skeleton == NULL) 
   {
@@ -175,7 +178,7 @@ static int encode_fishead (const OggSkeleton *skeleton, ogg_packet *op)
   write64le (op->packet+36, skeleton->fishead.btime_denum);
   memcpy (op->packet+44, skeleton->fishead.UTC, sizeof (skeleton->fishead.UTC));
 
-//  if (version >= SKELETON_VERSION(3,2)) 
+  if (skeleton->indexing)
   {
     write64le (op->packet+64, skeleton->fishead.first_sample_num);
     write64le (op->packet+72, skeleton->fishead.first_sample_denum);
@@ -208,7 +211,7 @@ static int encode_fisbone (const FisBone *fisbone, ogg_packet *op)
     return SKELETON_ERR_GENERIC;
   }
   
-  bone_size += sizeof (fisbone);
+  bone_size += sizeof (*fisbone);
   if (bone_size < FISBONE_SIZE)
   {
     return -1;
@@ -233,6 +236,22 @@ static int encode_fisbone (const FisBone *fisbone, ogg_packet *op)
   op->granulepos  = 0;
   op->packetno    = 0;
 
+  return 1;
+}
+
+static int encode_skeleton_eos (ogg_packet *op)
+{
+  if (op == NULL)
+  {
+    return SKELETON_ERR_GENERIC;
+  }
+
+  op->b_o_s       = 0;
+  op->e_o_s       = 1;
+  op->bytes       = 0;
+  op->granulepos  = 0;
+  op->packetno    = 0;
+  
   return 1;
 }
 
@@ -278,6 +297,11 @@ static int decode_fishead (OggSkeleton *skeleton,
     return SKELETON_ERR_BAD_SKELETON;
   }
   
+  if (op == NULL)
+  {
+    return SKELETON_ERR_BAD_PACKET;
+  }
+  
   skeleton->fishead.ver_maj     = extract_int16 (op->packet + 8);
   skeleton->fishead.ver_min     = extract_int16 (op->packet + 10); 
 
@@ -319,6 +343,11 @@ static int decode_fisbone (OggSkeleton *skeleton,
   if (skeleton == NULL)
   {
     return SKELETON_ERR_BAD_SKELETON;
+  }
+  
+  if (op == NULL)
+  {
+    return SKELETON_ERR_BAD_PACKET;
   }
   
   if (op->bytes < FISBONE_SIZE)
@@ -364,6 +393,11 @@ static int decode_index (OggSkeleton* skeleton, const ogg_packet *op)
   if (skeleton == NULL)
   {
     return SKELETON_ERR_BAD_SKELETON;
+  }
+
+  if (op == NULL)
+  {
+    return SKELETON_ERR_BAD_PACKET;
   }
   
   current_index = _ogg_calloc (1, op->bytes);
@@ -432,13 +466,18 @@ fin:
 
 int oggskel_decode_header (OggSkeleton* skeleton, const ogg_packet* op)
 {
-  int ret = 1;
+  int ret = -1;
   
   if (skeleton == NULL)
   {
     return SKELETON_ERR_BAD_SKELETON;
   }
 
+  if (op == NULL)
+  {
+    return SKELETON_ERR_BAD_PACKET;
+  }
+  
   /* we've got the skeleton EOS packet - presumably */
   if (op->e_o_s)
   {
@@ -453,7 +492,7 @@ int oggskel_decode_header (OggSkeleton* skeleton, const ogg_packet* op)
       return SKELETON_WARN_EOS_NOT_EMTPY;
     }
     
-    return 0;
+    return SKELETON_ERR_OK;
   }
   
   /* identify the type of skeleton packet */

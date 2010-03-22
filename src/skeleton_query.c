@@ -225,7 +225,7 @@ oggskel_set_utc (OggSkeleton *skeleton, const char *UTC)
     return SKELETON_ERR_BAD_SKELETON;
   }
   
-  if (strlen (UTC) < 20) 
+  if (strlen (UTC) != 20) 
   {
     return -1;
   }

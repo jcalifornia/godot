@@ -31,6 +31,7 @@
  
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <ogg/ogg.h>
 
@@ -104,10 +105,15 @@ main (int argc, char **argv)
 {
   ogg_sync_state    oy;
   ogg_page          og;
-  ogg_stream_state  os;
+  ogg_packet        op;
+  ogg_stream_state  os, skel_stream;
   OggSkeleton     * skeleton;
   FILE            * fd;
-  int               sk_headers = -1;
+  int               sk_headers = -1, sk_p = 0;
+  int               flag = 1;
+  int               serials[255];
+  int               num_streams = 0;
+  int               skel_serial = 0;
   
   if (argc < 2)
   {
@@ -122,6 +128,8 @@ main (int argc, char **argv)
     return -1;
   }
   
+  memset (serials, 0, 255);
+  
   /* initialise ogg_sync_state */
   ogg_sync_init (&oy);
   
@@ -132,46 +140,96 @@ main (int argc, char **argv)
     printf ("error while creating skeleton handle\n");
     return -1;
   }
-  ogg_packet        op;
   
-  oggskel_encode_header (skeleton, &op);
-
-  oggskel_decode_header (skeleton, &op);
-  
-  /* process all the headers of the Ogg container */
-  while (sk_headers != 0)
+  /* process all the bos pages....*/
+  while (flag)
   {
     int ret = buffer_data (fd, &oy);
     if (ret == 0) break;
     while (ogg_sync_pageout (&oy, &og) > 0)
     {
-      ogg_packet        op;
-      int               got_packet;
+      int got_packet;
 
-      if (sk_headers != 1)
-        ogg_stream_init (&os, ogg_page_serialno (&og));
-    
-      ogg_stream_pagein (&os, &og);
-      if (got_packet = ogg_stream_packetout (&os, &op))
+      if (ogg_page_bos (&og))
       {
-        sk_headers = oggskel_decode_header (skeleton, &op);
+        /* record the serial number of the streams in the container */
+        serials[num_streams++] = ogg_page_serialno (&og);
+      }
+      else
+      {
+        if (sk_p) ogg_stream_pagein(&skel_stream, &og);
+        flag = 0;
+      }
+      ogg_stream_init (&os, ogg_page_serialno (&og));
+      ogg_stream_pagein (&os, &og);
+      got_packet = ogg_stream_packetpeek (&os, &op);
       
-        if (sk_headers == -1)
-        {
-          /* packet was not a skeleton header */
-          ogg_stream_clear (&os);
-        }
-        else
-        {
-          /* found a skeleton header */
-        }
+      if ((got_packet == 1) && !sk_p &&(sk_headers = oggskel_decode_header (skeleton, &op)) >= 0)
+      {
+        /* found a skeleton stream, save it */
+        memcpy (&skel_stream, &os, sizeof (os));
+        sk_p = 1;
+        skel_serial = ogg_page_serialno (&og);
+        if (sk_headers) ogg_stream_packetout (&skel_stream, NULL);
+      }
+      else
+      {
+        /* packet was not a skeleton header */
+        ogg_stream_clear (&os);
       }
     }
   }
   
-  if (sk_headers == 0)
+  /* process the rest of the skeleton headers */
+  while (sk_headers && sk_p)
   {
+    int ret = 0;
+    
+    while (sk_headers && (ret = ogg_stream_packetpeek (&skel_stream, &op)))
+    {
+      if (ret < 0) continue;
+      sk_headers = oggskel_decode_header (skeleton, &op);
+      if (sk_headers < 0)
+      {
+        printf ("Error parsing Skeleton stream headers\n");
+        return -1;
+      }
+      else if (sk_headers)
+      {
+        ogg_stream_packetout (&skel_stream, NULL);
+      }
+
+      sk_p++;
+    }
+    
+    if (!(sk_headers && sk_p)) break;
+    
+    if(ogg_sync_pageout(&oy,&og) > 0)
+    {
+      if (sk_p) ogg_stream_pagein(&skel_stream, &og);
+    }
+    else
+    {
+      int bytes = buffer_data(fd, &oy); /* someone needs more data */
+      if(bytes == 0)
+      {
+        printf("End of file while searching for codec headers.\n");
+        return -1;
+      }
+    }
+  }
+
+  
+  if (sk_p)
+  {
+    int i = 0;
     print_fishead (skeleton);
+    
+    for (i = 0; i < num_streams; ++i)
+    {
+      if (serials[i] != skel_serial)
+        print_fisbone (skeleton, serials[i]);
+    }
   }
   else
   {

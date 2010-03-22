@@ -53,6 +53,7 @@ typedef enum _OggSkeletonError {
   SKELETON_ERR_MALICIOUS_INDEX    = -10,
   SKELETON_ERR_UNSUPPORTED_VERSION= -11,
   SKELETON_WARN_FISHEAD_NOT_BOS   = -12,
+  SKELETON_ERR_BAD_PACKET         = -13
 } OggSkeletonError;
 
 #endif /* __OGG_SKELETON_CONSTANTS_H__ */

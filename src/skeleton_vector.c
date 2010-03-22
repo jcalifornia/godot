@@ -103,17 +103,24 @@ void oggskel_vect_destroy (TrackVect *vect)
       _ogg_free (vect->tracks[i].index);
   }
   
+  if (vect->tracks)
+    _ogg_free (vect->tracks);
+  
   _ogg_free (vect);
 }
 
 FisBone* oggskel_vect_get_bone (const TrackVect *vect, ogg_uint32_t serial_no)
 {
+  TrackInfo *t_nfo = NULL;
+  
   if (vect == NULL)
   {
     return NULL;
   }
   
-  return find_track_info (vect, serial_no)->bone;
+  t_nfo = find_track_info (vect, serial_no);
+  
+  return (t_nfo == NULL) ? NULL : t_nfo->bone;
 }
 
 int oggskel_vect_add_bone (TrackVect *vect, FisBone *bone, ogg_uint32_t serial_no)
@@ -180,10 +187,14 @@ int oggskel_vect_add_index (TrackVect *vect, Index *index, ogg_uint32_t serial_n
 
 Index* oggskel_vect_get_index (const TrackVect *vect, ogg_uint32_t serial_no)
 {
+  TrackInfo *t_nfo = NULL;
+  
   if (vect == NULL)
   {
     return NULL;
   }
+
+  t_nfo = find_track_info (vect, serial_no);
   
-  return find_track_info (vect, serial_no)->index;
+  return (t_nfo == NULL) ? NULL : t_nfo->index;
 }
