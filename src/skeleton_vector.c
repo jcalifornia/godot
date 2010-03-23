@@ -64,6 +64,7 @@ get_track_nfo (TrackVect *vect, ogg_int32_t serial_no)
     vect->size++;
     
     t_nfo = &(vect->tracks[vect->size - 1]);
+    /* initialise the new trackInfo */
     t_nfo->serial_no  = serial_no;
     t_nfo->bone       = NULL;
     t_nfo->index      = NULL;

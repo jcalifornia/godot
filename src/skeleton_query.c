@@ -35,8 +35,8 @@
 #include "skeleton_private.h"
 #include "skeleton_vector.h"
 
-OggSkeletonError 
-oggskel_get_ver_maj (const OggSkeleton *skeleton, ogg_uint16_t *ver_maj)
+static inline OggSkeletonError
+getter_error_check (const OggSkeleton *skeleton, void *input)
 {
   if (skeleton == NULL)
   {
@@ -48,6 +48,22 @@ oggskel_get_ver_maj (const OggSkeleton *skeleton, ogg_uint16_t *ver_maj)
     return SKELETON_ERR_EOS_AWAITING;
   }
   
+  if (input == NULL)
+  {
+    return -1;
+  }
+  
+  return SKELETON_ERR_OK;
+}
+
+OggSkeletonError 
+oggskel_get_ver_maj (const OggSkeleton *skeleton, ogg_uint16_t *ver_maj)
+{
+  OggSkeletonError ret = -1;
+  
+  if ((ret = getter_error_check (skeleton, ver_maj)) < 0)
+    return ret;
+
   *ver_maj = skeleton->fishead.ver_maj;
   
   return SKELETON_ERR_OK;
@@ -56,35 +72,23 @@ oggskel_get_ver_maj (const OggSkeleton *skeleton, ogg_uint16_t *ver_maj)
 OggSkeletonError 
 oggskel_get_ver_min (const OggSkeleton *skeleton, ogg_uint16_t *ver_min)
 {
-  if (skeleton == NULL)
-  {
-    return SKELETON_ERR_BAD_SKELETON;
-  }
+  OggSkeletonError ret = -1;
   
-  if (skeleton->finished == 0)
-  {
-    return SKELETON_ERR_EOS_AWAITING;
-  }
+  if ((ret = getter_error_check (skeleton, ver_min)) < 0)
+    return ret;
   
   *ver_min = skeleton->fishead.ver_min;
   
   return SKELETON_ERR_OK;  
 }
 
-
-
 OggSkeletonError 
 oggskel_get_ptime_num (const OggSkeleton *skeleton, ogg_int64_t *pres_num)
 {
-  if (skeleton == NULL)
-  {
-    return SKELETON_ERR_BAD_SKELETON;
-  }
+  OggSkeletonError ret = -1;
   
-  if (skeleton->finished == 0)
-  {
-    return SKELETON_ERR_EOS_AWAITING;
-  }
+  if ((ret = getter_error_check (skeleton, pres_num)) < 0)
+    return ret;
   
   *pres_num = skeleton->fishead.ptime_num;
   
@@ -107,15 +111,10 @@ oggskel_set_ptime_num (OggSkeleton *skeleton, ogg_int64_t pres_num)
 OggSkeletonError 
 oggskel_get_ptime_denum (const OggSkeleton *skeleton, ogg_int64_t *pres_denum)
 {
-  if (skeleton == NULL)
-  {
-    return SKELETON_ERR_BAD_SKELETON;
-  }
+  OggSkeletonError ret = -1;
   
-  if (skeleton->finished == 0)
-  {
-    return SKELETON_ERR_EOS_AWAITING;
-  }
+  if ((ret = getter_error_check (skeleton, pres_denum)) < 0)
+    return ret;
 
   *pres_denum = skeleton->fishead.ptime_denum;
   
@@ -138,16 +137,11 @@ oggskel_set_ptime_denum (OggSkeleton *skeleton, ogg_int64_t pres_denum)
 OggSkeletonError 
 oggskel_get_btime_num (const OggSkeleton *skeleton, ogg_int64_t *btime_num)
 {
-  if (skeleton == NULL)
-  {
-    return SKELETON_ERR_BAD_SKELETON;
-  }
-
-  if (skeleton->finished == 0)
-  {
-    return SKELETON_ERR_EOS_AWAITING;
-  }
-
+  OggSkeletonError ret = -1;
+  
+  if ((ret = getter_error_check (skeleton, btime_num)) < 0)
+    return ret;
+    
   *btime_num = skeleton->fishead.btime_num;
 
   return SKELETON_ERR_OK;
@@ -169,16 +163,11 @@ oggskel_set_btime_num (OggSkeleton *skeleton, ogg_int64_t btime_num)
 OggSkeletonError 
 oggskel_get_btime_denum (const OggSkeleton *skeleton, ogg_int64_t *btime_denum)
 {
-  if (skeleton == NULL)
-  {
-    return SKELETON_ERR_BAD_SKELETON;
-  }
+  OggSkeletonError ret = -1;
   
-  if (skeleton->finished == 0)
-  {
-    return SKELETON_ERR_EOS_AWAITING;
-  }
-  
+  if ((ret = getter_error_check (skeleton, btime_denum)) < 0)
+    return ret;
+    
   *btime_denum = skeleton->fishead.btime_denum;
   
   return SKELETON_ERR_OK;
@@ -243,12 +232,11 @@ OggSkeletonError
 oggskel_get_granule_shift (const OggSkeleton *skeleton, ogg_int32_t serial_no, unsigned char *granule_shift)
 {
   FisBone *bone = NULL;
+  OggSkeletonError ret = -1;
   
-  if (skeleton == NULL)
-  {
-    return SKELETON_ERR_BAD_SKELETON;
-  }
-  
+  if ((ret = getter_error_check (skeleton, granule_shift)) < 0)
+    return ret;
+
   if ((bone = oggskel_vect_get_bone (skeleton->track_vect, serial_no)) == NULL)
   {
     return SKELETON_ERR_BAD_SERIAL_NO;
@@ -268,12 +256,11 @@ OggSkeletonError
 oggskel_get_num_headers (const OggSkeleton *skeleton, ogg_int32_t serial_no, ogg_uint32_t *num_headers)
 {
   FisBone *bone = NULL;
+  OggSkeletonError ret = -1;
   
-  if (skeleton == NULL)
-  {
-    return SKELETON_ERR_BAD_SKELETON;
-  }
-  
+  if ((ret = getter_error_check (skeleton, num_headers)) < 0)
+    return ret;
+
   if ((bone = oggskel_vect_get_bone (skeleton->track_vect, serial_no)) == NULL)
   {
     return SKELETON_ERR_BAD_SERIAL_NO;
@@ -299,12 +286,11 @@ OggSkeletonError
 oggskel_get_granule_num (const OggSkeleton *skeleton, ogg_int32_t serial_no, ogg_int64_t *granule_num)
 {
   FisBone *bone = NULL;
+  OggSkeletonError ret = -1;
   
-  if (skeleton == NULL)
-  {
-    return SKELETON_ERR_BAD_SKELETON;
-  }
-  
+  if ((ret = getter_error_check (skeleton, granule_num)) < 0)
+    return ret;
+
   if ((bone = oggskel_vect_get_bone (skeleton->track_vect, serial_no)) == NULL)
   {
     return SKELETON_ERR_BAD_SERIAL_NO;
@@ -330,12 +316,11 @@ OggSkeletonError
 oggskel_get_granule_denum (const OggSkeleton *skeleton, ogg_int32_t serial_no, ogg_int64_t *granule_denum)
 {
   FisBone *bone;
+  OggSkeletonError ret = -1;
   
-  if (skeleton == NULL)
-  {
-    return SKELETON_ERR_BAD_SKELETON;
-  }
-  
+  if ((ret = getter_error_check (skeleton, granule_denum)) < 0)
+    return ret;
+
   if ((bone = oggskel_vect_get_bone (skeleton->track_vect, serial_no)) == NULL)
   {
     return SKELETON_ERR_BAD_SERIAL_NO;
@@ -361,12 +346,11 @@ OggSkeletonError
 oggskel_get_start_granule (const OggSkeleton *skeleton, ogg_int32_t serial_no, ogg_int64_t *start_granule)
 {
   FisBone *bone = NULL;
+  OggSkeletonError ret = -1;
   
-  if (skeleton == NULL)
-  {
-    return SKELETON_ERR_BAD_SKELETON;
-  }
-  
+  if ((ret = getter_error_check (skeleton, start_granule)) < 0)
+    return ret;
+ 
   if ((bone = oggskel_vect_get_bone (skeleton->track_vect, serial_no)) == NULL)
   {
     return SKELETON_ERR_BAD_SERIAL_NO;
@@ -392,12 +376,11 @@ OggSkeletonError
 oggskel_get_preroll (const OggSkeleton *skeleton, ogg_int32_t serial_no, ogg_uint32_t *preroll)
 {
   FisBone *bone = NULL;
+  OggSkeletonError ret = -1;
   
-  if (skeleton == NULL)
-  {
-    return SKELETON_ERR_BAD_SKELETON;
-  }
-  
+  if ((ret = getter_error_check (skeleton, preroll)) < 0)
+    return ret;
+
   if ((bone = oggskel_vect_get_bone (skeleton->track_vect, serial_no)) == NULL)
   {
     return SKELETON_ERR_BAD_SERIAL_NO;
@@ -455,4 +438,3 @@ oggskel_set_msg_header (OggSkeleton *skeleton, ogg_int32_t serial_no, char *msg_
   
   return SKELETON_ERR_OK;
 }
-

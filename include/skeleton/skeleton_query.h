@@ -75,7 +75,10 @@ OggSkeletonError oggskel_set_granule_shift (OggSkeleton *skeleton, ogg_int32_t s
 OggSkeletonError oggskel_get_msg_header (const OggSkeleton *skeleton, ogg_int32_t serial_no, char **msg_header);
 OggSkeletonError oggskel_set_msg_header (OggSkeleton *skeleton, ogg_int32_t serial_no, char *msg_header);
 
-//OggSkeletonError oggskel_get_offset (const OggSkeleton *skeleton, ogg_int32_t serial_no, ogg_int64_t time_ms, ogg_int64_t *offset);
+OggSkeletonError oggskel_get_keypoint_offset (const OggSkeleton *skeleton, 
+                                              ogg_int32_t* serial_no, 
+                                              ogg_int64_t time_ms, 
+                                              ogg_int64_t *offset);
 
 #ifdef __cplusplus
 }

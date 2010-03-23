@@ -519,6 +519,7 @@ int oggskel_decode_header (OggSkeleton* skeleton, const ogg_packet* op)
   }
   else if (memcmp (op->packet, INDEX_MAGIC, INDEX_MAGIC_LEN) == 0)
   {
+    skeleton->indexing = 1;
     ret = decode_index (skeleton, op);
   }
   else
