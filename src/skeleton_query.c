@@ -240,7 +240,7 @@ oggskel_set_utc (OggSkeleton *skeleton, const char *UTC)
 }
 
 OggSkeletonError 
-oggskel_get_granule_shift (const OggSkeleton *skeleton, ogg_uint32_t serial_no, unsigned char *granule_shift)
+oggskel_get_granule_shift (const OggSkeleton *skeleton, ogg_int32_t serial_no, unsigned char *granule_shift)
 {
   FisBone *bone = NULL;
   
@@ -259,13 +259,13 @@ oggskel_get_granule_shift (const OggSkeleton *skeleton, ogg_uint32_t serial_no, 
 }
 
 OggSkeletonError 
-oggskel_set_granule_shift (OggSkeleton *skeleton, ogg_uint32_t serial_no, unsigned char granule_shift)
+oggskel_set_granule_shift (OggSkeleton *skeleton, ogg_int32_t serial_no, unsigned char granule_shift)
 {
   return SKELETON_ERR_OK;
 }
 
 OggSkeletonError 
-oggskel_get_num_headers (const OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_uint32_t *num_headers)
+oggskel_get_num_headers (const OggSkeleton *skeleton, ogg_int32_t serial_no, ogg_uint32_t *num_headers)
 {
   FisBone *bone = NULL;
   
@@ -285,7 +285,7 @@ oggskel_get_num_headers (const OggSkeleton *skeleton, ogg_uint32_t serial_no, og
 }
 
 OggSkeletonError 
-oggskel_set_num_headers (OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_uint32_t num_headers)
+oggskel_set_num_headers (OggSkeleton *skeleton, ogg_int32_t serial_no, ogg_uint32_t num_headers)
 {
   if (skeleton == NULL)
   {
@@ -296,7 +296,7 @@ oggskel_set_num_headers (OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_uint
 }
 
 OggSkeletonError 
-oggskel_get_granule_num (const OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_int64_t *granule_num)
+oggskel_get_granule_num (const OggSkeleton *skeleton, ogg_int32_t serial_no, ogg_int64_t *granule_num)
 {
   FisBone *bone = NULL;
   
@@ -316,7 +316,7 @@ oggskel_get_granule_num (const OggSkeleton *skeleton, ogg_uint32_t serial_no, og
 }
 
 OggSkeletonError 
-oggskel_set_granule_num (OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_int64_t granule_num)
+oggskel_set_granule_num (OggSkeleton *skeleton, ogg_int32_t serial_no, ogg_int64_t granule_num)
 {
   if (skeleton == NULL)
   {
@@ -327,7 +327,7 @@ oggskel_set_granule_num (OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_int6
 }
 
 OggSkeletonError 
-oggskel_get_granule_denum (const OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_int64_t *granule_denum)
+oggskel_get_granule_denum (const OggSkeleton *skeleton, ogg_int32_t serial_no, ogg_int64_t *granule_denum)
 {
   FisBone *bone;
   
@@ -347,7 +347,7 @@ oggskel_get_granule_denum (const OggSkeleton *skeleton, ogg_uint32_t serial_no, 
 }
 
 OggSkeletonError 
-oggskel_set_granule_denum (OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_int64_t granule_denum)
+oggskel_set_granule_denum (OggSkeleton *skeleton, ogg_int32_t serial_no, ogg_int64_t granule_denum)
 {
   if (skeleton == NULL)
   {
@@ -358,7 +358,7 @@ oggskel_set_granule_denum (OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_in
 }
 
 OggSkeletonError 
-oggskel_get_start_granule (const OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_int64_t *start_granule)
+oggskel_get_start_granule (const OggSkeleton *skeleton, ogg_int32_t serial_no, ogg_int64_t *start_granule)
 {
   FisBone *bone = NULL;
   
@@ -378,7 +378,7 @@ oggskel_get_start_granule (const OggSkeleton *skeleton, ogg_uint32_t serial_no, 
 }
 
 OggSkeletonError 
-oggskel_set_start_granule (OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_int64_t start_granule)
+oggskel_set_start_granule (OggSkeleton *skeleton, ogg_int32_t serial_no, ogg_int64_t start_granule)
 {
   if (skeleton == NULL)
   {
@@ -389,7 +389,7 @@ oggskel_set_start_granule (OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_in
 }
 
 OggSkeletonError 
-oggskel_get_preroll (const OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_uint32_t *preroll)
+oggskel_get_preroll (const OggSkeleton *skeleton, ogg_int32_t serial_no, ogg_uint32_t *preroll)
 {
   FisBone *bone = NULL;
   
@@ -409,7 +409,7 @@ oggskel_get_preroll (const OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_ui
 }
 
 OggSkeletonError 
-oggskel_set_preroll (OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_uint32_t preroll)
+oggskel_set_preroll (OggSkeleton *skeleton, ogg_int32_t serial_no, ogg_uint32_t preroll)
 {
   if (skeleton == NULL)
   {
@@ -420,7 +420,7 @@ oggskel_set_preroll (OggSkeleton *skeleton, ogg_uint32_t serial_no, ogg_uint32_t
 }
 
 OggSkeletonError 
-oggskel_get_msg_header (const OggSkeleton *skeleton, ogg_uint32_t serial_no, char **msg_header)
+oggskel_get_msg_header (const OggSkeleton *skeleton, ogg_int32_t serial_no, char **msg_header)
 {
   FisBone *bone        = NULL;
   size_t   fields_size = 0;
@@ -446,7 +446,7 @@ oggskel_get_msg_header (const OggSkeleton *skeleton, ogg_uint32_t serial_no, cha
 }
 
 OggSkeletonError 
-oggskel_set_msg_header (OggSkeleton *skeleton, ogg_uint32_t serial_no, char *msg_header)
+oggskel_set_msg_header (OggSkeleton *skeleton, ogg_int32_t serial_no, char *msg_header)
 {
   if (skeleton == NULL)
   {

@@ -36,7 +36,7 @@
 #include "skeleton_private.h"
 
 typedef struct _TrackInfo {
-  ogg_uint32_t    serial_no;
+  ogg_int32_t     serial_no;
   FisBone       * bone;
   Index         * index;
 } TrackInfo;
@@ -50,10 +50,10 @@ TrackVect* oggskel_vect_new ();
 
 void oggskel_vect_destroy (TrackVect *vect);
 
-int oggskel_vect_add_bone (TrackVect *vect, FisBone *bone, ogg_uint32_t serial_no);
-FisBone* oggskel_vect_get_bone (const TrackVect *vect, ogg_uint32_t serial_no);
+int oggskel_vect_add_bone (TrackVect *vect, FisBone *bone, ogg_int32_t serial_no);
+FisBone* oggskel_vect_get_bone (const TrackVect *vect, ogg_int32_t serial_no);
 
-int oggskel_vect_add_index (TrackVect *vect, Index *bone, ogg_uint32_t serial_no);
-Index* oggskel_vect_get_index (const TrackVect *vect, ogg_uint32_t serial_no);
+int oggskel_vect_add_index (TrackVect *vect, Index *bone, ogg_int32_t serial_no);
+Index* oggskel_vect_get_index (const TrackVect *vect, ogg_int32_t serial_no);
 
 #endif /* __OGG_SKELETON_VECTOR_H__ */

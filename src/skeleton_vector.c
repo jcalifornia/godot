@@ -33,7 +33,7 @@
 #include "skeleton_vector.h"
 
 static TrackInfo* 
-find_track_info (const TrackVect *vect, ogg_uint32_t serial_no)
+find_track_info (const TrackVect *vect, ogg_int32_t serial_no)
 {
   int i = 0;
   for (i = 0; i < vect->size; ++i)
@@ -46,7 +46,7 @@ find_track_info (const TrackVect *vect, ogg_uint32_t serial_no)
 }
 
 static TrackInfo*
-get_track_nfo (TrackVect *vect, ogg_uint32_t serial_no)
+get_track_nfo (TrackVect *vect, ogg_int32_t serial_no)
 {
   TrackInfo *t_nfo = NULL;
   
@@ -117,7 +117,7 @@ void oggskel_vect_destroy (TrackVect *vect)
   _ogg_free (vect);
 }
 
-FisBone* oggskel_vect_get_bone (const TrackVect *vect, ogg_uint32_t serial_no)
+FisBone* oggskel_vect_get_bone (const TrackVect *vect, ogg_int32_t serial_no)
 {
   TrackInfo *t_nfo = NULL;
   
@@ -131,7 +131,7 @@ FisBone* oggskel_vect_get_bone (const TrackVect *vect, ogg_uint32_t serial_no)
   return (t_nfo == NULL) ? NULL : t_nfo->bone;
 }
 
-int oggskel_vect_add_bone (TrackVect *vect, FisBone *bone, ogg_uint32_t serial_no)
+int oggskel_vect_add_bone (TrackVect *vect, FisBone *bone, ogg_int32_t serial_no)
 {
   TrackInfo * t_nfo = NULL;
   
@@ -162,7 +162,7 @@ int oggskel_vect_add_bone (TrackVect *vect, FisBone *bone, ogg_uint32_t serial_n
   return 1;
 }
 
-int oggskel_vect_add_index (TrackVect *vect, Index *index, ogg_uint32_t serial_no)
+int oggskel_vect_add_index (TrackVect *vect, Index *index, ogg_int32_t serial_no)
 {
   TrackInfo * t_nfo = NULL;
   
@@ -193,7 +193,7 @@ int oggskel_vect_add_index (TrackVect *vect, Index *index, ogg_uint32_t serial_n
   return 1;
 }
 
-Index* oggskel_vect_get_index (const TrackVect *vect, ogg_uint32_t serial_no)
+Index* oggskel_vect_get_index (const TrackVect *vect, ogg_int32_t serial_no)
 {
   TrackInfo *t_nfo = NULL;
   

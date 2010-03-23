@@ -52,7 +52,7 @@ typedef struct _FisHead {
 
 typedef struct _FisBone {
   ogg_uint32_t    msg_header_offset;  
-  ogg_uint32_t    serial_no;
+  ogg_int32_t     serial_no;
   ogg_uint32_t    num_headers;
   ogg_int64_t     granule_num;
   ogg_int64_t     granule_denum;
