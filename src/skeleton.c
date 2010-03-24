@@ -217,7 +217,7 @@ static int encode_fisbone (const FisBone *fisbone, ogg_packet *op)
     return -1;
   }
   
-  op->packet = _ogg_calloc (bone_size, 1);
+  op->packet = _ogg_calloc (1, bone_size);
   
   memcpy (op->packet, FISBONE_MAGIC, FISBONE_MAGIC_LEN);
   write32le (op->packet + FISBONE_MAGIC_LEN, fisbone->msg_header_offset);
@@ -313,7 +313,16 @@ static int decode_fishead (OggSkeleton *skeleton,
   {
     return SKELETON_ERR_UNSUPPORTED_VERSION;
   }
-  /* TODO: ensure that the ogg packet's size is either 64 or 112 bytes! */
+
+  /* ensure that the ogg packet's size is either 64 or 112 bytes! */
+  if ((version >= SKELETON_VERSION(3,2)) && (op->bytes != FISHEAD_3_2_SIZE))
+  {
+    return -1;
+  }
+  else if ((version == SKELETON_VERSION(3,0)) && (op->bytes != FISHEAD_3_0_SIZE))
+  {
+    return -1;
+  }
     
   skeleton->fishead.ptime_num   = extract_int64 (op->packet + 12);
   skeleton->fishead.ptime_denum = extract_int64 (op->packet + 20); 

@@ -58,4 +58,15 @@
 // Minimum possible size of a compressed keypoint.
 #define MIN_KEY_POINT_SIZE 2
 
+/**
+ * macros for obtaining a type's max and min values
+ * http://www.fefe.de/intof.html 
+ */
+#define SKELETON_TYPE_HALF_MAX_SIGNED(type) ((type)1 << (sizeof(type)*8-2))
+#define SKELETON_TYPE_MAX_SIGNED(type) (SKELETON_TYPE_HALF_MAX_SIGNED(type) - 1 + SKELETON_TYPE_HALF_MAX_SIGNED(type))
+#define SKELETON_TYPE_MIN_SIGNED(type) (-1 - SKELETON_TYPE_MAX_SIGNED(type))
+#define SKELETON_TYPE_MIN(type) ((type)-1 < 1?SKELETON_TYPE_MIN_SIGNED(type):(type)0)
+#define SKELETON_TYPE_MAX(type) ((type)~SKELETON_TYPE_MIN(type))
+
+
 #endif /* __OGG_SKELETON_MACROS_H__ */

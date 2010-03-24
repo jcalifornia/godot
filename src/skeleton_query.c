@@ -32,6 +32,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "skeleton_macros.h"
 #include "skeleton_private.h"
 #include "skeleton_vector.h"
 
@@ -435,6 +436,102 @@ oggskel_set_msg_header (OggSkeleton *skeleton, ogg_int32_t serial_no, char *msg_
   {
     return SKELETON_ERR_BAD_SKELETON;
   }
+  
+  return SKELETON_ERR_OK;
+}
+
+static KeyFrameInfo*
+get_seek_keypoint (Index *index, ogg_int64_t target)
+{
+  ogg_int64_t start = 0;
+  ogg_int64_t end   = 0;
+  
+  if (index == NULL)
+    return NULL;
+  
+  /* binary search for the last keypoint with less time than target */
+  end = index->num_keys - 1;
+  while (end > start)
+  {
+    ogg_int64_t mid = (start + end + 1) >> 1;
+    if (index->keypoints[mid].time_ms == target)
+    {
+      start = mid;
+      break;
+    }
+    else if (index->keypoints[mid].time_ms < target)
+    {
+      start = mid;
+    }
+    else
+    {
+      end = mid - 1;
+    }
+  }
+  
+  return &(index->keypoints[start]);
+}
+
+OggSkeletonError 
+oggskel_get_keypoint_offset (const OggSkeleton *skeleton, 
+                             ogg_int32_t *serial_no,
+                             size_t       len, 
+                             ogg_int64_t  time_ms, 
+                             ogg_int64_t *offset)
+{
+  Index             * index       = NULL;
+  OggSkeletonError    ret         = -1;
+  size_t              i           = 0;
+  ogg_int64_t         min_offset  = SKELETON_TYPE_MAX(ogg_int64_t);
+  
+  if ((ret = getter_error_check (skeleton, offset)) < 0)
+    return ret;
+  
+  if (!skeleton->indexing)
+  {
+    return -1;
+  }
+
+  if (serial_no == NULL || len == 0)
+  {
+    return -1;
+  }
+    
+  /* check whether the requested time is indexed at all! */
+  if 
+  (
+    (skeleton->fishead.last_sample_num < time_ms) 
+    || 
+    (time_ms < skeleton->fishead.first_sample_num)
+  )
+  {
+    return -1;
+  }
+  
+  /* find the nearest keypoint that is before or at the given time_ms */
+  for (i = 0; i < len; ++i)
+  {
+    KeyFrameInfo *kf = NULL;
+    
+    /* TODO: what if one track is not indexed? is it possible at all that we have partially indexed ogg? :) */
+    if ((index = oggskel_vect_get_index (skeleton->track_vect, serial_no[i])) == NULL)
+    {
+      return SKELETON_ERR_BAD_SERIAL_NO;
+    }
+    
+    kf = get_seek_keypoint (index, time_ms);
+    
+    if (!kf || kf->offset > min_offset)
+      continue;
+      
+    min_offset = kf->offset;
+  }
+  
+  /* something went really wrong! */
+  if (min_offset == SKELETON_TYPE_MAX(ogg_int64_t))
+    return -1;
+    
+  *offset = min_offset;
   
   return SKELETON_ERR_OK;
 }
