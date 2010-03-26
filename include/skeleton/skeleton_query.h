@@ -54,6 +54,9 @@ OggSkeletonError oggskel_set_btime_denum (OggSkeleton *skeleton, ogg_int64_t bti
 OggSkeletonError oggskel_get_utc (const OggSkeleton *skeleton, char **UTC);
 OggSkeletonError oggskel_set_utc (OggSkeleton *skeleton, const char *UTC);
 
+OggSkeletonError oggskel_get_segment_len (const OggSkeleton *skeleton, ogg_int64_t *len);
+OggSkeletonError oggskel_get_non_header_offset (const OggSkeleton *skeleton, ogg_int64_t *offset);
+
 OggSkeletonError oggskel_get_num_headers (const OggSkeleton *skeleton, ogg_int32_t serial_no, ogg_uint32_t *num_headers);
 OggSkeletonError oggskel_set_num_headers (OggSkeleton *skeleton, ogg_int32_t serial_no, ogg_uint32_t num_headers);
 

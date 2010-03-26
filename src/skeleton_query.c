@@ -231,6 +231,47 @@ oggskel_set_utc (OggSkeleton *skeleton, const char *UTC)
 }
 
 OggSkeletonError 
+oggskel_get_segment_len (const OggSkeleton *skeleton, ogg_int64_t *len)
+{
+  OggSkeletonError ret  = -1;
+  ogg_uint32_t version  = 0;
+  
+  if ((ret = getter_error_check (skeleton, len)) < 0)
+    return ret;
+  
+  version = SKELETON_VERSION (skeleton->fishead.ver_maj, skeleton->fishead.ver_min);
+  if (version < SKELETON_VERSION(3,2))
+  {
+    return -1;
+  }
+    
+  *len = skeleton->fishead.segment_len;
+  
+  return SKELETON_ERR_OK;
+}
+
+OggSkeletonError 
+oggskel_get_non_header_offset (const OggSkeleton *skeleton, ogg_int64_t *offset)
+{
+  OggSkeletonError ret  = -1;
+  ogg_uint32_t version  = 0;
+  
+  if ((ret = getter_error_check (skeleton, offset)) < 0)
+    return ret;
+  
+  version = SKELETON_VERSION (skeleton->fishead.ver_maj, skeleton->fishead.ver_min);
+  if (version < SKELETON_VERSION(3,2))
+  {
+    return -1;
+  }
+  
+  *offset = skeleton->fishead.nh_offset;
+  
+  return SKELETON_ERR_OK;
+}
+
+
+OggSkeletonError 
 oggskel_get_granule_shift (const OggSkeleton *skeleton, ogg_int32_t serial_no, unsigned char *granule_shift)
 {
   FisBone *bone = NULL;

@@ -32,6 +32,9 @@
 		oggskel_get_utc;
 		oggskel_set_utc;
 
+		oggskel_get_segment_len;
+		oggskel_get_non_header_offset;
+
 		oggskel_get_num_headers;
 		oggskel_set_num_headers;
 
