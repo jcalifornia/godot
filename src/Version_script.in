@@ -10,7 +10,10 @@
 	global:
 		oggskel_new;
 		oggskel_destroy;
+		oggskel_encode_header;
+		oggskel_encode_add_stream;
 		oggskel_decode_header;
+		
 		oggskel_get_ver_maj;
 		oggskel_get_ver_min;
 
@@ -49,6 +52,8 @@
 
 		oggskel_get_msg_header;
 		oggskel_set_msg_header;
+		
+		oggskel_get_keypoint_offset;
 		
 	local:
 		*;
