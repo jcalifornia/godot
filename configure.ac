@@ -1,5 +1,5 @@
 # Process this file with autoconf to produce a configure script.
-AC_INIT([libskeleton], [0.1])
+AC_INIT([libskeleton], [0.1], [https://bugs.launchpad.net/skeleton])
 AC_CONFIG_SRCDIR([src/skeleton.c])
 
 AC_PREREQ(2.53)
@@ -62,9 +62,7 @@ if test "x${ac_enable_valgrind}" = xyes ; then
 else  TESTS_INFO="Type 'make check' to run test suite (Valgrind testing not enabled)"
 fi
 
-dnl Overall configuration success flag
-oggplay_config_ok=yes
-
+skeleton_config_ok=yes
 skeleton_tools="skeleton-info"
 
 dnl
@@ -83,9 +81,18 @@ fi
 dnl
 dnl  Detect ogg
 dnl
-PKG_CHECK_MODULES(OGG, ogg)
-AC_SUBST(OGG_CFLAGS)
-AC_SUBST(OGG_LIBS)
+PKG_CHECK_MODULES(OGG, ogg, HAVE_OGG="yes", HAVE_OGG="no")
+
+if test "x$HAVE_OGG" = "xyes" ; then
+  AC_DEFINE(HAVE_OGG, [], [Define if have libogg])
+  AC_SUBST(OGG_CFLAGS)
+  AC_SUBST(OGG_LIBS)
+else
+  AC_MSG_ERROR([
+*** libogg does not seem to exist on your system.
+*** Please install it and run this ./configure again.
+])
+fi
 
 dnl
 dnl Configure for target platform
@@ -121,7 +128,7 @@ dnl
 dnl  Configuration tests complete -- provide summary of results.
 dnl
 
-if test $oggplay_config_ok = no ; then
+if test $skeleton_config_ok = no ; then
 
 AC_MSG_RESULT([
 **************************************************************
@@ -134,14 +141,9 @@ AC_MSG_RESULT([
 *** misconfigured on your system:
 ])
 
-if test "x$HAVE_OGGZ" != xyes ; then
+if test "x$HAVE_OGG" != xyes ; then
     AC_MSG_RESULT(
-[*** liboggz, available from http://www.annodex.net/])
-fi
-
-if test "x$HAVE_FISHSOUND" != xyes ; then
-    AC_MSG_RESULT(
-[*** libfishsound, available from http://www.annodex.net/])
+[*** libogg, available from http://www.xiph.org/ogg/])
 fi
 
 AC_MSG_RESULT(

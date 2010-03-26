@@ -44,36 +44,43 @@ extern "C" {
 #endif
 
 /**
- * 
+ * OggSkeleton handle
  */
 typedef struct _OggSkeleton OggSkeleton;
 
 #include <skeleton/skeleton_query.h>
 
 /** 
+ * Creates an OggSkeleton handle.
+ * The OggSkeleton handle is to be used for both encoding and decoding
+ * skeleton stream.
  * 
- * @return 
+ * @return a new OggSkeleton handle
+ * @retval NULL in case of memory allocation error
  */
 OggSkeleton* oggskel_new ();
 
 /** 
- * 
- * @param skeleton 
- * @return
+ * Destroys an OggSkeleton handle.
+ * The functions frees all the memory areas that has been allocated
+ * for the OggSkeleton handle while en/de-coding a skeleton stream.
+ *  
+ * @param skeleton the OggSkeleton handle to be destroyed
+ * @return 
  */
 OggSkeletonError oggskel_destroy (OggSkeleton* skeleton);
 
 /** encoding */
 int oggskel_encode_header (OggSkeleton* skeleton, ogg_packet *op);
-
-//void oggskel_encode_ (OggSkeleton* skeleton);
+int oggskel_encode_add_stream (OggSkeleton* skeleton, ogg_int32_t serial_no);
 
 /** decoding */
 /**
+ * Decodes a skeleton packet.
  * 
- * @param skeleton skeleton handle
- * @parma op Ogg packet
- * @return
+ * @param skeleton OggSkeleton handle
+ * @param op a skeleton packet
+ * @return 
  */
 int oggskel_decode_header (OggSkeleton* skeleton, const ogg_packet* op);
 

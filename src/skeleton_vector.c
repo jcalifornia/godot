@@ -73,6 +73,31 @@ get_track_nfo (TrackVect *vect, ogg_int32_t serial_no)
   return t_nfo;
 }
 
+static int
+del_track_nfo (TrackVect *vect, ogg_int32_t serial_no)
+{
+  TrackInfo *t_nfo = NULL;
+  if ((t_nfo = find_track_info (vect, serial_no)) == NULL)
+    return -1;
+  
+  if (t_nfo->bone != NULL)
+  {
+    if (t_nfo->bone->msg_fields != NULL)
+      _ogg_free (t_nfo->bone->msg_fields);
+
+    _ogg_free (t_nfo->bone);
+  }
+  if (t_nfo->index != NULL)
+  {
+    if (t_nfo->index->keypoints != NULL)
+      _ogg_free (t_nfo->index->keypoints);
+      
+    _ogg_free (t_nfo->index);
+  }  
+  
+  return ;
+}
+
 TrackVect* oggskel_vect_new ()
 {
   TrackVect *vect;
@@ -101,8 +126,11 @@ void oggskel_vect_destroy (TrackVect *vect)
   for (i = 0; i < vect->size; ++i)
   {
     if (vect->tracks[i].bone != NULL)
+    {
+      if (vect->tracks[i].bone->msg_fields != NULL)
+        _ogg_free (vect->tracks[i].bone->msg_fields);
       _ogg_free (vect->tracks[i].bone);
-    
+    }
     if (vect->tracks[i].index != NULL)
     {
       if (vect->tracks[i].index->keypoints != NULL)

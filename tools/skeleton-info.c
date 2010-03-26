@@ -140,7 +140,7 @@ main (int argc, char **argv)
     printf ("error while creating skeleton handle\n");
     return -1;
   }
-  
+
   /* process all the bos pages....*/
   while (flag)
   {

@@ -59,7 +59,7 @@ typedef struct _FisBone {
   ogg_int64_t     start_granule;
   ogg_uint32_t    preroll;
   unsigned char   granule_shift;
-  char            msg_fields[];
+  char          * msg_fields;
 } FisBone;
 
 typedef struct _KeyFrameInfo {
@@ -76,11 +76,19 @@ typedef struct _Index {
 
 typedef struct _TrackVect TrackVect;
 
+typedef enum {
+  SKELETON_INITIALISED = 0,
+  SKELETON_HEAD,
+  SKELETON_EOS
+} SkelState;
+
 struct _OggSkeleton {
   FisHead       fishead;
   TrackVect   * track_vect;
   short         indexing;
   short         finished;
+  SkelState     state;
+  ogg_int64_t   packetno;
 };
 
 #endif /* __OGG_SKELETON_PRIVATE__ */

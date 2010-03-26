@@ -29,6 +29,7 @@
    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
  
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -250,6 +251,19 @@ oggskel_get_granule_shift (const OggSkeleton *skeleton, ogg_int32_t serial_no, u
 OggSkeletonError 
 oggskel_set_granule_shift (OggSkeleton *skeleton, ogg_int32_t serial_no, unsigned char granule_shift)
 {
+  FisBone *bone = NULL;
+  if (skeleton == NULL)
+  {
+    return SKELETON_ERR_BAD_SKELETON;
+  }
+  
+  if ((bone = oggskel_vect_get_bone (skeleton->track_vect, serial_no)) == NULL)
+  {
+    return SKELETON_ERR_BAD_SERIAL_NO;
+  }
+  
+  bone->granule_shift = granule_shift;
+  
   return SKELETON_ERR_OK;
 }
 
@@ -275,10 +289,19 @@ oggskel_get_num_headers (const OggSkeleton *skeleton, ogg_int32_t serial_no, ogg
 OggSkeletonError 
 oggskel_set_num_headers (OggSkeleton *skeleton, ogg_int32_t serial_no, ogg_uint32_t num_headers)
 {
+  FisBone *bone = NULL;
+
   if (skeleton == NULL)
   {
     return SKELETON_ERR_BAD_SKELETON;
   }
+  
+  if ((bone = oggskel_vect_get_bone (skeleton->track_vect, serial_no)) == NULL)
+  {
+    return SKELETON_ERR_BAD_SERIAL_NO;
+  }
+  
+  bone->num_headers = num_headers;
   
   return SKELETON_ERR_OK;
 }
@@ -305,10 +328,18 @@ oggskel_get_granule_num (const OggSkeleton *skeleton, ogg_int32_t serial_no, ogg
 OggSkeletonError 
 oggskel_set_granule_num (OggSkeleton *skeleton, ogg_int32_t serial_no, ogg_int64_t granule_num)
 {
+  FisBone *bone = NULL;
   if (skeleton == NULL)
   {
     return SKELETON_ERR_BAD_SKELETON;
   }
+  
+  if ((bone = oggskel_vect_get_bone (skeleton->track_vect, serial_no)) == NULL)
+  {
+    return SKELETON_ERR_BAD_SERIAL_NO;
+  }
+
+  bone->granule_num = granule_num;
   
   return SKELETON_ERR_OK;
 }
@@ -335,10 +366,18 @@ oggskel_get_granule_denum (const OggSkeleton *skeleton, ogg_int32_t serial_no, o
 OggSkeletonError 
 oggskel_set_granule_denum (OggSkeleton *skeleton, ogg_int32_t serial_no, ogg_int64_t granule_denum)
 {
+  FisBone *bone = NULL;
   if (skeleton == NULL)
   {
     return SKELETON_ERR_BAD_SKELETON;
   }
+
+  if ((bone = oggskel_vect_get_bone (skeleton->track_vect, serial_no)) == NULL)
+  {
+    return SKELETON_ERR_BAD_SERIAL_NO;
+  }
+
+  bone->granule_denum = granule_denum;
   
   return SKELETON_ERR_OK;
 }
@@ -365,10 +404,19 @@ oggskel_get_start_granule (const OggSkeleton *skeleton, ogg_int32_t serial_no, o
 OggSkeletonError 
 oggskel_set_start_granule (OggSkeleton *skeleton, ogg_int32_t serial_no, ogg_int64_t start_granule)
 {
+  FisBone *bone = NULL;
+  
   if (skeleton == NULL)
   {
     return SKELETON_ERR_BAD_SKELETON;
   }
+  
+  if ((bone = oggskel_vect_get_bone (skeleton->track_vect, serial_no)) == NULL)
+  {
+    return SKELETON_ERR_BAD_SERIAL_NO;
+  }
+
+  bone->start_granule = start_granule;
   
   return SKELETON_ERR_OK;
 }
@@ -395,10 +443,18 @@ oggskel_get_preroll (const OggSkeleton *skeleton, ogg_int32_t serial_no, ogg_uin
 OggSkeletonError 
 oggskel_set_preroll (OggSkeleton *skeleton, ogg_int32_t serial_no, ogg_uint32_t preroll)
 {
+  FisBone *bone = NULL;
   if (skeleton == NULL)
   {
     return SKELETON_ERR_BAD_SKELETON;
   }
+  
+  if ((bone = oggskel_vect_get_bone (skeleton->track_vect, serial_no)) == NULL)
+  {
+    return SKELETON_ERR_BAD_SERIAL_NO;
+  }
+  
+  bone->preroll = preroll;
   
   return SKELETON_ERR_OK;
 }
@@ -430,13 +486,40 @@ oggskel_get_msg_header (const OggSkeleton *skeleton, ogg_int32_t serial_no, char
 }
 
 OggSkeletonError 
-oggskel_set_msg_header (OggSkeleton *skeleton, ogg_int32_t serial_no, char *msg_header)
+oggskel_set_msg_header (OggSkeleton *skeleton, ogg_int32_t serial_no, const char *msg_header)
 {
+  FisBone *bone = NULL;
+  size_t len = 0;
+  
   if (skeleton == NULL)
   {
     return SKELETON_ERR_BAD_SKELETON;
   }
   
+  if (msg_header == NULL) 
+  {
+    return -1;
+  }
+  
+  if ((bone = oggskel_vect_get_bone (skeleton->track_vect, serial_no)) == NULL)
+  {
+    return SKELETON_ERR_BAD_SERIAL_NO;
+  }
+  
+  len = strlen (msg_header)+1;
+  if (bone->msg_fields != NULL && strlen(bone->msg_fields) != len)
+  {
+    _ogg_free (bone->msg_fields);
+    bone->msg_fields = NULL;
+  }
+  bone->msg_fields = _ogg_calloc (len, sizeof (char));
+  if (bone->msg_fields == NULL)
+  {
+    return SKELETON_ERR_OUT_OF_MEMORY;
+  }
+  
+
+  memcpy (bone->msg_fields, msg_header, len);
   return SKELETON_ERR_OK;
 }
 
@@ -513,7 +596,8 @@ oggskel_get_keypoint_offset (const OggSkeleton *skeleton,
   {
     KeyFrameInfo *kf = NULL;
     
-    /* TODO: what if one track is not indexed? is it possible at all that we have partially indexed ogg? :) */
+    /* TODO: what if one track is not indexed? 
+      is it possible at all that we have partially indexed ogg? :) */
     if ((index = oggskel_vect_get_index (skeleton->track_vect, serial_no[i])) == NULL)
     {
       return SKELETON_ERR_BAD_SERIAL_NO;
