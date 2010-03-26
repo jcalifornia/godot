@@ -81,17 +81,35 @@ fi
 dnl
 dnl  Detect ogg
 dnl
-PKG_CHECK_MODULES(OGG, ogg, HAVE_OGG="yes", HAVE_OGG="no")
-
+HAVE_OGG="no"
+if test "x$HAVE_PKG_CONFIG" = "xyes"
+then
+  PKG_CHECK_MODULES(OGG, ogg >= 1.0, HAVE_OGG="yes", HAVE_OGG="no")
+fi
 if test "x$HAVE_OGG" = "xyes" ; then
   AC_DEFINE(HAVE_OGG, [], [Define if have libogg])
   AC_SUBST(OGG_CFLAGS)
   AC_SUBST(OGG_LIBS)
 else
-  AC_MSG_ERROR([
-*** libogg does not seem to exist on your system.
-*** Please install it and run this ./configure again.
-])
+  AC_CHECK_LIB(
+    ogg,
+    ogg_sync_init,
+    [
+      AC_CHECK_HEADER(
+        [ogg/ogg.h],
+        [HAVE_OGG=yes],
+        [HAVE_OGG=no],
+      )
+    ],
+    [HAVE_OGG=no]
+  )
+  if test "x$HAVE_OGG" = "xno" ; then
+    AC_MSG_ERROR([
+  *** libogg does not seem to exist on your system.
+  *** Please install it and run this ./configure again.
+    ])
+  fi
+    
 fi
 
 dnl
