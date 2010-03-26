@@ -1,12 +1,12 @@
 # Process this file with autoconf to produce a configure script.
-AC_INIT([libskeleton], [0.1], [https://bugs.launchpad.net/skeleton])
+AC_INIT([libskeleton], [0.1.0], [https://bugs.launchpad.net/skeleton])
 AC_CONFIG_SRCDIR([src/skeleton.c])
 
 AC_PREREQ(2.53)
 
 AC_CANONICAL_TARGET
 
-AM_INIT_AUTOMAKE(libskeleton, 0.1)
+AM_INIT_AUTOMAKE(libskeleton, 0.1.0)
 AM_CONFIG_HEADER(config.h)
 
 SHARED_VERSION_INFO="1:0:1"
