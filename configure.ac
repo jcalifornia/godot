@@ -63,7 +63,7 @@ else  TESTS_INFO="Type 'make check' to run test suite (Valgrind testing not enab
 fi
 
 skeleton_config_ok=yes
-skeleton_tools="skeleton-info"
+skeleton_examples="skeleton-info"
 
 dnl
 dnl  Configuration option to add -Werror to all Makefiles
@@ -200,7 +200,7 @@ include/Makefile
 include/skeleton/Makefile
 src/Makefile
 src/Version_script
-tools/Makefile
+examples/Makefile
 skeleton.pc
 skeleton-uninstalled.pc
 ])
@@ -214,9 +214,9 @@ AC_MSG_RESULT([
 ------------------------------------------------------------------------
   $PACKAGE $VERSION:  Automatic configuration OK.
 
-  Tools (./tools):
+  Examples (./examples):
 
-    $skeleton_tools
+    $skeleton_examples
 
   Installation paths:
 

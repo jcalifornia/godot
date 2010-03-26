@@ -34,7 +34,7 @@ AUTOMAKE_OPTIONS = foreign
 
 DISTCHECK_CONFIGURE_FLAGS = --enable-gcc-werror
 
-SUBDIRS = doc include src tools
+SUBDIRS = doc include src examples
 
 # pkg-config
 pkgconfigdir = $(libdir)/pkgconfig

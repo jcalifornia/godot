@@ -10,7 +10,7 @@ SKELETON_LIBS = $(SKELETONDIR)/libskeleton.la @OGG_LIBS@
 
 # Tools
 
-bin_PROGRAMS = skeleton-apply skeleton-info
+noinst_PROGRAMS = skeleton-apply skeleton-info
 
 skeleton_apply_SOURCE = skeleton-apply.c
 skeleton_apply_LDADD = $(SKELETON_LIBS)
