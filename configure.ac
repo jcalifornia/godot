@@ -183,6 +183,8 @@ include/skeleton/Makefile
 src/Makefile
 src/Version_script
 tools/Makefile
+skeleton.pc
+skeleton-uninstalled.pc
 ])
 
 AS_AC_EXPAND(LIBDIR, ${libdir})

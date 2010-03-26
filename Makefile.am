@@ -36,5 +36,9 @@ DISTCHECK_CONFIGURE_FLAGS = --enable-gcc-werror
 
 SUBDIRS = doc include src tools
 
+# pkg-config
 pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = skeleton.pc
+
+EXTRA_DIST = skeleton.pc.in skeleton-uninstalled.pc.in
 
