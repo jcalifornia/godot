@@ -52,7 +52,7 @@ getter_error_check (const OggSkeleton *skeleton, void *input)
   
   if (input == NULL)
   {
-    return -1;
+    return SKELETON_ERR_BAD_ARG;
   }
   
   return SKELETON_ERR_OK;
@@ -222,7 +222,7 @@ oggskel_set_utc (OggSkeleton *skeleton, const char *UTC)
   
   if (strlen (UTC) != 20) 
   {
-    return -1;
+    return SKELETON_ERR_BAD_ARG;
   }
   
   memcpy (skeleton->fishead.UTC, UTC, 20);
@@ -539,7 +539,7 @@ oggskel_set_msg_header (OggSkeleton *skeleton, ogg_int32_t serial_no, const char
   
   if (msg_header == NULL) 
   {
-    return -1;
+    return SKELETON_ERR_BAD_ARG;
   }
   
   if ((bone = oggskel_vect_get_bone (skeleton->track_vect, serial_no)) == NULL)
@@ -559,8 +559,8 @@ oggskel_set_msg_header (OggSkeleton *skeleton, ogg_int32_t serial_no, const char
     return SKELETON_ERR_OUT_OF_MEMORY;
   }
   
-
   memcpy (bone->msg_fields, msg_header, len);
+  
   return SKELETON_ERR_OK;
 }
 
@@ -613,7 +613,7 @@ oggskel_get_keypoint_offset (const OggSkeleton *skeleton,
   
   if (!skeleton->indexing)
   {
-    return -1;
+    return SKELETON_ERR_NO_INDEX;
   }
 
   if (serial_no == NULL || len == 0)
@@ -629,7 +629,7 @@ oggskel_get_keypoint_offset (const OggSkeleton *skeleton,
     (time_ms < skeleton->fishead.first_sample_num)
   )
   {
-    return -1;
+    return SKELETON_ERR_OUT_OF_RANGE;
   }
   
   /* find the nearest keypoint that is before or at the given time_ms */
@@ -641,6 +641,7 @@ oggskel_get_keypoint_offset (const OggSkeleton *skeleton,
       is it possible at all that we have partially indexed ogg? :) */
     if ((index = oggskel_vect_get_index (skeleton->track_vect, serial_no[i])) == NULL)
     {
+      /* SKELETON_ERR_NO_INDEX */
       return SKELETON_ERR_BAD_SERIAL_NO;
     }
     

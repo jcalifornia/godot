@@ -146,7 +146,7 @@ static int encode_fishead (OggSkeleton *skeleton, ogg_packet *op)
   
   if (op == NULL)
   {
-    return SKELETON_ERR_GENERIC;
+    return SKELETON_ERR_BAD_PACKET;
   }
 
   if (skeleton->indexing)
@@ -159,7 +159,7 @@ static int encode_fishead (OggSkeleton *skeleton, ogg_packet *op)
   else
   {
     /* indexing is not enabled thus creating version 3.0 skeleton bitstream */
-    skeleton->fishead.ver_maj = SKELETON_VERSION_MAJOR;
+    skeleton->fishead.ver_maj = 3;
     skeleton->fishead.ver_min = 0;
     fishead_size              = FISHEAD_3_0_SIZE;
   }
@@ -210,14 +210,16 @@ int encode_fisbone (const FisBone *fisbone, ogg_int64_t packetno, ogg_packet *op
   
   if (op == NULL)
   {
-    return SKELETON_ERR_GENERIC;
+    return SKELETON_ERR_BAD_PACKET;
+  }
+  
+  /* check whether the mandatory Content-type is set for the track */
+  if (!fisbone->msg_fields || !strstr (fisbone->msg_fields, "Content-type:"))
+  {
+    return SKELETON_ERR_NO_CONTENT_TYPE;
   }
   
   bone_size += strlen (fisbone->msg_fields);
-  if (bone_size < FISBONE_SIZE)
-  {
-    return -1;
-  }
   
   op->packet = _ogg_calloc (FISBONE_SIZE, sizeof (unsigned char));
   if (op->packet == NULL)
@@ -250,7 +252,7 @@ static int encode_skeleton_eos (ogg_int64_t packetno, ogg_packet *op)
 {
   if (op == NULL)
   {
-    return SKELETON_ERR_GENERIC;
+    return SKELETON_ERR_BAD_PACKET;
   }
 
   op->b_o_s       = 0;
@@ -274,7 +276,7 @@ int oggskel_encode_header (OggSkeleton* skeleton, ogg_packet *op)
   
   if (op == NULL)
   {
-    return SKELETON_ERR_GENERIC;
+    return SKELETON_ERR_BAD_PACKET;
   }
   
   switch (skeleton->state)
@@ -284,7 +286,7 @@ int oggskel_encode_header (OggSkeleton* skeleton, ogg_packet *op)
       skeleton->state = SKELETON_HEAD;
       break;
     case SKELETON_HEAD:
-      ret = -1;
+      ret = SKELETON_ERR_GENERIC;
       if (skeleton->track_vect->size > skeleton->packetno)
       {
         FisBone *bone = skeleton->track_vect->tracks[skeleton->packetno].bone;
@@ -298,7 +300,7 @@ int oggskel_encode_header (OggSkeleton* skeleton, ogg_packet *op)
       }
       break;
     default:
-      ret = -1;
+      ret = SKELETON_ERR_GENERIC;
   }
 
   return ret;
@@ -361,11 +363,11 @@ static int decode_fishead (OggSkeleton *skeleton,
   /* ensure that the ogg packet's size is either 64 or 112 bytes! */
   if ((version >= SKELETON_VERSION(3,2)) && (op->bytes != FISHEAD_3_2_SIZE))
   {
-    return -1;
+    return SKELETON_ERR_MALICIOUS_FISHEAD;
   }
   else if ((version == SKELETON_VERSION(3,0)) && (op->bytes != FISHEAD_3_0_SIZE))
   {
-    return -1;
+    return SKELETON_ERR_MALICIOUS_FISHEAD;
   }
     
   skeleton->fishead.ptime_num   = extract_int64 (op->packet + 12);
@@ -405,7 +407,7 @@ static int decode_fisbone (OggSkeleton *skeleton,
   
   if (op->bytes < FISBONE_SIZE)
   {
-    return SKELETON_ERR_BAD_FISBONE;
+    return SKELETON_ERR_MALICIOUS_FISBONE;
   }
   
   current_bone = _ogg_calloc (1, sizeof(FisBone));
@@ -597,7 +599,7 @@ int oggskel_decode_header (OggSkeleton* skeleton, const ogg_packet* op)
   else
   {
     /* unknown packet type */
-    ret = -1;
+    ret = SKELETON_ERR_GENERIC;
   }
 
   return ret;
