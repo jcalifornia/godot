@@ -1,7 +1,7 @@
 ## Process this file with automake to produce Makefile.in
 
 # Include files to install
-includedir = $(prefix)/include
+includedir = $(prefix)/include/skeleton
 
 include_HEADERS = 		\
 	skeleton.h		\
