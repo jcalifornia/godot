@@ -221,7 +221,7 @@ int encode_fisbone (const FisBone *fisbone, ogg_int64_t packetno, ogg_packet *op
   
   bone_size += strlen (fisbone->msg_fields);
   
-  op->packet = _ogg_calloc (FISBONE_SIZE, sizeof (unsigned char));
+  op->packet = _ogg_calloc (bone_size, sizeof (unsigned char));
   if (op->packet == NULL)
   {
     return SKELETON_ERR_OUT_OF_MEMORY;
