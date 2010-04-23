@@ -121,6 +121,63 @@ read_var_length (unsigned char* p, ogg_int64_t* num) {
   return p;
 }
 
+static inline unsigned char*
+write_var_length (unsigned char* p, const unsigned char* limit, const ogg_int64_t n)
+{
+  unsigned char* before_p = p;
+  ogg_int64_t k = n;
+  do {
+    unsigned char b = (unsigned char)(k & 0x7f);
+    k >>= 7;
+    if (k == 0) {
+      // Last byte, add terminating bit.
+      b |= 0x80;
+    }
+    *p = b;
+    p++;
+  } while (k && p < limit);
+
+#if DEBUG
+  ogg_int64_t t;
+  read_var_length (before_p, &t);
+  assert (t == n);
+#endif
+
+  return p;
+}
+
+static inline int bits_required (ogg_int64_t n) 
+{
+  int count = 0;
+  while (n) {
+    n = n >> 1;
+    count++;
+  }
+  return count;
+}
+
+static inline int bytes_required (ogg_int64_t n) 
+{
+  int bits = bits_required(n);
+  int bytes = bits / 7;
+  return bytes + (((bits % 7) != 0 || bits == 0) ? 1 : 0);
+}
+
+static ogg_int64_t compressed_length (const KeyFrameInfo* k, ogg_int64_t num_keys) 
+{
+  ogg_int64_t length  = 0;
+  unsigned int i      = 1;
+  
+  length = bytes_required(k[0].offset) + bytes_required(k[0].time_ms);
+  for (i=1; i < num_keys; ++i) 
+  {
+    ogg_int64_t off_diff = k[i].offset - k[i-1].offset;
+    ogg_int64_t time_diff = k[i].time_ms - k[i-1].time_ms;
+    length += bytes_required(off_diff) + bytes_required(time_diff);
+  }
+  return length;
+}
+
 
 OggSkeleton* oggskel_new () 
 {
@@ -291,6 +348,71 @@ static int encode_skeleton_eos (ogg_int64_t packetno, ogg_packet *op)
   return 0;
 }
 
+static int encode_index (const Index *index, ogg_int64_t packetno, ogg_packet *op)
+{
+  size_t          index_size  = INDEX_KEYPOINT_OFFSET, i = 0;
+  unsigned char * p           = NULL;
+  unsigned char * limit       = NULL;
+  ogg_int64_t     prev_offset = 0, prev_time = 0;  
+  
+  if (index == NULL) 
+  {
+    return SKELETON_ERR_BAD_SKELETON;
+  }
+  
+  if (op == NULL)
+  {
+    return SKELETON_ERR_BAD_PACKET;
+  }
+  
+  /* adjust the size of the packet with the number of keypoints */
+  index_size += compressed_length (index->keypoints, index->num_keys);
+
+  /* allocate packet */
+  op->packet = _ogg_calloc (index_size, sizeof(unsigned char));
+  if (op->packet == NULL)
+  {
+    return SKELETON_ERR_OUT_OF_MEMORY;
+  }
+  
+  /* write out the index packet's header */
+  memcpy (op->packet, INDEX_MAGIC, INDEX_MAGIC_LEN);
+  p = write32le (op->packet+INDEX_MAGIC_LEN, index->serial_no);
+  p = write64le (p, index->num_keys);
+  p = write64le (p, index->ptime_denum);
+  
+  limit = op->packet + index_size;
+  /* write out the keypoint pairs */
+  for (i = 0; i < index->num_keys; ++i)
+  {
+    ogg_int64_t     off_diff, time_diff;
+    unsigned char * expected  = NULL;
+    KeyFrameInfo    k         = index->keypoints[i];
+    
+    off_diff  = k.offset - prev_offset;
+    time_diff = k.time_ms - prev_time;
+    
+    expected = p + bytes_required (off_diff);
+    p = write_var_length (p, limit, off_diff);
+    assert (p == expected);
+
+    expected = p + bytes_required (time_diff);
+    p = write_var_length (p, limit, time_diff);
+    assert (p == expected);
+
+    prev_offset = k.offset;
+    prev_time   = k.time_ms;
+  }
+  
+  /* set various properties of the packet */
+  op->b_o_s       = 0;
+  op->e_o_s       = 0;
+  op->bytes       = index_size;
+  op->granulepos  = -1;
+  op->packetno    = packetno;
+  
+  return 1;
+}
 
 int oggskel_encode_header (OggSkeleton* skeleton, ogg_packet *op)
 {
