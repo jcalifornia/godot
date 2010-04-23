@@ -37,37 +37,60 @@
 #include "skeleton_macros.h"
 #include "skeleton_vector.h"
 
-static inline unsigned short extract_int16 (unsigned char *data)
+static inline unsigned char* extract_uint16 (unsigned char *data, ogg_uint16_t* i)
 {
-  return data[0] | data[1] <<8;
+  if (data == NULL || i == NULL) return NULL;
+  *i = data[0] | data[1] <<8;
+  return data + 2;
 }
 
-static inline unsigned long extract_int32(unsigned char *data) 
+static inline unsigned char* extract_uint32(unsigned char *data, ogg_uint32_t* i) 
 {
- return data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
+  if (data == NULL || i == NULL) return NULL;
+  *i = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
+  return data + 4;
 }
 
-static inline ogg_int64_t extract_int64(unsigned char *data) 
+static inline unsigned char* extract_int32(unsigned char *data, ogg_int32_t* i)
 {
- return ((ogg_int64_t)(extract_int32(data))) |
-        (((ogg_int64_t)(extract_int32(data + 4))) << 32);
+  if (data == NULL || i == NULL) return NULL;
+  *i = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
+  return data + 4;  
 }
 
-static inline void write16le (unsigned char *data_out, ogg_uint16_t i)
+static inline unsigned char* extract_int64(unsigned char *data, ogg_int64_t* i) 
+{
+  ogg_uint32_t lo = -1;
+  ogg_int32_t hi = -1;
+  
+  if (data == NULL || i == NULL) return NULL;
+
+  data = extract_uint32(data, &lo);
+  data = extract_int32(data, &hi);
+  *i = (ogg_int64_t) lo + ((ogg_int64_t)hi << 32);
+
+  return data;
+}
+
+static inline unsigned char* write16le (unsigned char *data_out, const ogg_uint16_t i)
 {
     data_out[0]=i&0xff;
     data_out[1]=(i>>8)&0xff;
+    
+    return data_out + 2;
 }
 
-static inline void write32le (unsigned char *data_out, ogg_uint32_t i)
+static inline unsigned char* write32le (unsigned char *data_out, const ogg_uint32_t i)
 {
     data_out[0]=i&0xff;
     data_out[1]=(i>>8)&0xff;
     data_out[2]=(i>>16)&0xff;
     data_out[3]=(i>>24)&0xff;
+    
+    return data_out + 4;
 }
 
-static inline void write64le (unsigned char *data_out, ogg_int64_t i)
+static inline unsigned char* write64le (unsigned char *data_out, const ogg_int64_t i)
 {
     ogg_uint32_t hi=i>>32;
     data_out[0]=i&0xff;
@@ -78,6 +101,8 @@ static inline void write64le (unsigned char *data_out, ogg_int64_t i)
     data_out[5]=(hi>>8)&0xff;
     data_out[6]=(hi>>16)&0xff;
     data_out[7]=(hi>>24)&0xff;
+    
+    return data_out + 8;
 }
 
 
@@ -137,8 +162,9 @@ OggSkeletonError oggskel_destroy (OggSkeleton* skeleton)
 
 static int encode_fishead (OggSkeleton *skeleton, ogg_packet *op)
 {  
-  size_t      fishead_size = 0;
-
+  size_t          fishead_size  = 0;
+  unsigned char * packet        = NULL;
+  
   if (skeleton == NULL) 
   {
     return SKELETON_ERR_BAD_SKELETON;
@@ -172,22 +198,23 @@ static int encode_fishead (OggSkeleton *skeleton, ogg_packet *op)
   }
   
   memcpy (op->packet, FISHEAD_MAGIC, FISHEAD_MAGIC_LEN);
-  write16le (op->packet+FISHEAD_MAGIC_LEN, skeleton->fishead.ver_maj);
-  write16le (op->packet+10, skeleton->fishead.ver_min);
-  write64le (op->packet+12, skeleton->fishead.ptime_num);
-  write64le (op->packet+20, skeleton->fishead.ptime_denum);
-  write64le (op->packet+28, skeleton->fishead.btime_num);
-  write64le (op->packet+36, skeleton->fishead.btime_denum);
-  memcpy (op->packet+44, skeleton->fishead.UTC, sizeof (skeleton->fishead.UTC));
+  packet = write16le (op->packet+FISHEAD_MAGIC_LEN, skeleton->fishead.ver_maj);
+  packet = write16le (packet, skeleton->fishead.ver_min);
+  packet = write64le (packet, skeleton->fishead.ptime_num);
+  packet = write64le (packet, skeleton->fishead.ptime_denum);
+  packet = write64le (packet, skeleton->fishead.btime_num);
+  packet = write64le (packet, skeleton->fishead.btime_denum);
+  memcpy (packet, skeleton->fishead.UTC, sizeof (skeleton->fishead.UTC));
 
   if (skeleton->indexing)
   {
-    write64le (op->packet+64, skeleton->fishead.first_sample_num);
-    write64le (op->packet+72, skeleton->fishead.first_sample_denum);
-    write64le (op->packet+80, skeleton->fishead.last_sample_num);
-    write64le (op->packet+88, skeleton->fishead.last_sample_denum);
-    write64le (op->packet+96, skeleton->fishead.segment_len);
-    write64le (op->packet+104, skeleton->fishead.nh_offset);
+    packet += sizeof (skeleton->fishead.UTC);
+    packet = write64le (packet, skeleton->fishead.first_sample_num);
+    packet = write64le (packet, skeleton->fishead.first_sample_denum);
+    packet = write64le (packet, skeleton->fishead.last_sample_num);
+    packet = write64le (packet, skeleton->fishead.last_sample_denum);
+    packet = write64le (packet, skeleton->fishead.segment_len);
+    write64le (packet, skeleton->fishead.nh_offset);
   }
 
   op->b_o_s       = 1;
@@ -199,9 +226,10 @@ static int encode_fishead (OggSkeleton *skeleton, ogg_packet *op)
   return 1;
 }
 
-int encode_fisbone (const FisBone *fisbone, ogg_int64_t packetno, ogg_packet *op)
+static int encode_fisbone (const FisBone *fisbone, ogg_int64_t packetno, ogg_packet *op)
 {
-  size_t bone_size = FISBONE_SIZE;
+  size_t          bone_size = FISBONE_SIZE;
+  unsigned char * packet    = NULL;
   
   if (fisbone == NULL) 
   {
@@ -226,18 +254,17 @@ int encode_fisbone (const FisBone *fisbone, ogg_int64_t packetno, ogg_packet *op
   {
     return SKELETON_ERR_OUT_OF_MEMORY;
   }
-  
-  memcpy (op->packet, FISBONE_MAGIC, FISBONE_MAGIC_LEN);
 
-  write32le (op->packet + FISBONE_MAGIC_LEN, fisbone->msg_header_offset);
-  write32le (op->packet + 12, fisbone->serial_no);
-  write32le (op->packet + 16, fisbone->num_headers);
-  write64le (op->packet + 20, fisbone->granule_num);
-  write64le (op->packet + 28, fisbone->granule_denum);
-  write64le (op->packet + 36, fisbone->start_granule);
-  write32le (op->packet + 44, fisbone->preroll);
-  *(op->packet + 48) = fisbone->granule_shift;
-  memcpy (op->packet+FISBONE_SIZE, fisbone->msg_fields, bone_size - FISBONE_SIZE);
+  memcpy (op->packet, FISBONE_MAGIC, FISBONE_MAGIC_LEN);
+  packet = write32le (op->packet+FISBONE_MAGIC_LEN, fisbone->msg_header_offset);
+  packet = write32le (packet, fisbone->serial_no);
+  packet = write32le (packet, fisbone->num_headers);
+  packet = write64le (packet, fisbone->granule_num);
+  packet = write64le (packet, fisbone->granule_denum);
+  packet = write64le (packet, fisbone->start_granule);
+  packet = write32le (packet, fisbone->preroll);
+  *(packet) = fisbone->granule_shift;
+  memcpy (packet+FISBONE_SIZE, fisbone->msg_fields, bone_size - FISBONE_SIZE);
 
   op->b_o_s       = 0;
   op->e_o_s       = 0;
@@ -337,19 +364,20 @@ static int decode_fishead (OggSkeleton *skeleton,
                            const ogg_packet *op) 
 {
   ogg_uint32_t version;
+  unsigned char* pk = NULL;
   
   if (skeleton == NULL)
   {
     return SKELETON_ERR_BAD_SKELETON;
   }
   
-  if (op == NULL)
+  if (op == NULL || op->packet == NULL)
   {
     return SKELETON_ERR_BAD_PACKET;
   }
   
-  skeleton->fishead.ver_maj     = extract_int16 (op->packet + 8);
-  skeleton->fishead.ver_min     = extract_int16 (op->packet + 10); 
+  pk = extract_uint16 (op->packet + FISHEAD_MAGIC_LEN, &skeleton->fishead.ver_maj);
+  pk = extract_uint16 (pk, &skeleton->fishead.ver_min); 
 
   version = SKELETON_VERSION (skeleton->fishead.ver_maj, 
                               skeleton->fishead.ver_min);
@@ -370,20 +398,20 @@ static int decode_fishead (OggSkeleton *skeleton,
     return SKELETON_ERR_MALICIOUS_FISHEAD;
   }
     
-  skeleton->fishead.ptime_num   = extract_int64 (op->packet + 12);
-  skeleton->fishead.ptime_denum = extract_int64 (op->packet + 20); 
-  skeleton->fishead.btime_num   = extract_int64 (op->packet + 28);
-  skeleton->fishead.btime_denum = extract_int64 (op->packet + 36);
-  memcpy (skeleton->fishead.UTC, op->packet+44, sizeof (skeleton->fishead.UTC));
+  pk = extract_int64 (pk, &skeleton->fishead.ptime_num);
+  pk = extract_int64 (pk, &skeleton->fishead.ptime_denum); 
+  pk = extract_int64 (pk, &skeleton->fishead.btime_num);
+  pk = extract_int64 (pk, &skeleton->fishead.btime_denum);
+  memcpy (skeleton->fishead.UTC, pk, sizeof (skeleton->fishead.UTC));
     
   if (version >= SKELETON_VERSION(3,2)) 
   {
-    skeleton->fishead.first_sample_num      = extract_int64 (op->packet + 64);
-    skeleton->fishead.first_sample_denum    = extract_int64 (op->packet + 72);
-    skeleton->fishead.last_sample_num       = extract_int64 (op->packet + 80);
-    skeleton->fishead.last_sample_denum     = extract_int64 (op->packet + 88);
-    skeleton->fishead.segment_len           = extract_int64 (op->packet + 96);
-    skeleton->fishead.nh_offset             = extract_int64 (op->packet + 104);
+    pk = extract_int64 (pk+sizeof (skeleton->fishead.UTC), &skeleton->fishead.first_sample_num);
+    pk = extract_int64 (pk, &skeleton->fishead.first_sample_denum);
+    pk = extract_int64 (pk, &skeleton->fishead.last_sample_num);
+    pk = extract_int64 (pk, &skeleton->fishead.last_sample_denum);
+    pk = extract_int64 (pk, &skeleton->fishead.segment_len);
+    extract_int64 (pk, &skeleton->fishead.nh_offset);
   }
 
   return 1;
@@ -392,15 +420,16 @@ static int decode_fishead (OggSkeleton *skeleton,
 static int decode_fisbone (OggSkeleton *skeleton, 
                            const ogg_packet *op) 
 {
-  FisBone * current_bone;
-  int       ret = -1;    
+  FisBone       * current_bone = NULL;
+  int             ret = -1;    
+  unsigned char * pk = NULL;
   
   if (skeleton == NULL)
   {
     return SKELETON_ERR_BAD_SKELETON;
   }
   
-  if (op == NULL)
+  if (op == NULL || op->packet == NULL)
   {
     return SKELETON_ERR_BAD_PACKET;
   }
@@ -416,20 +445,21 @@ static int decode_fisbone (OggSkeleton *skeleton,
     return SKELETON_ERR_OUT_OF_MEMORY;
   }
   
-  current_bone->msg_header_offset   = extract_int32 (op->packet + FISHEAD_MAGIC_LEN);
-  current_bone->serial_no           = extract_int32 (op->packet + 12);
-  current_bone->num_headers         = extract_int32 (op->packet + 16);
-  current_bone->granule_num         = extract_int64 (op->packet + 20);
-  current_bone->granule_denum       = extract_int64 (op->packet + 28);
-  current_bone->start_granule       = extract_int64 (op->packet + 36);
-  current_bone->preroll             = extract_int32 (op->packet + 44);
-  current_bone->granule_shift       = *(op->packet + 48);
-  current_bone->msg_fields          = _ogg_calloc (op->bytes-FISBONE_SIZE, sizeof(char));
+  pk = extract_uint32 (op->packet + FISHEAD_MAGIC_LEN, &current_bone->msg_header_offset);
+  pk = extract_int32 (pk, &current_bone->serial_no);
+  pk = extract_uint32 (pk, &current_bone->num_headers);
+  pk = extract_int64 (pk, &current_bone->granule_num);
+  pk = extract_int64 (pk, &current_bone->granule_denum);
+  pk = extract_int64 (pk, &current_bone->start_granule);
+  pk = extract_uint32 (pk, &current_bone->preroll);
+  current_bone->granule_shift = *(pk);
+  current_bone->msg_fields    = _ogg_calloc (op->bytes-FISBONE_SIZE, sizeof(char));
   if (current_bone->msg_fields == NULL)
   {
+    _ogg_free (current_bone);
     return SKELETON_ERR_OUT_OF_MEMORY;
   }
-  //(char*)(current_bone + (FISBONE_SIZE - FISBONE_MAGIC_LEN));
+
   memcpy (current_bone->msg_fields, op->packet + FISBONE_SIZE, (op->bytes - FISBONE_SIZE));
 
   ret = 
@@ -456,7 +486,7 @@ static int decode_index (OggSkeleton* skeleton, const ogg_packet *op)
     return SKELETON_ERR_BAD_SKELETON;
   }
 
-  if (op == NULL)
+  if (op == NULL || op->packet == NULL)
   {
     return SKELETON_ERR_BAD_PACKET;
   }
@@ -467,9 +497,9 @@ static int decode_index (OggSkeleton* skeleton, const ogg_packet *op)
     return SKELETON_ERR_OUT_OF_MEMORY;
   }
   
-  current_index->serial_no   = extract_int32 (op->packet + 6);
-  current_index->num_keys    = extract_int64 (op->packet + 10);
-  current_index->ptime_denum = extract_int64 (op->packet + 18);  
+  p = extract_int32 (op->packet + INDEX_MAGIC_LEN, &current_index->serial_no);
+  p = extract_int64 (p, &current_index->num_keys);
+  p = extract_int64 (p, &current_index->ptime_denum);  
   
   /* check whether presentation time denumerator is 0 */
   if (current_index->ptime_denum == 0)
