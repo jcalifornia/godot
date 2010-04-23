@@ -65,6 +65,14 @@ void print_fishead (const OggSkeleton *skeleton)
   printf ("\tBase time denumerator: %lld\n", t);
   oggskel_get_utc (skeleton, &UTC);
   printf ("\tUTC: %s\n", UTC);
+  
+  if (maj == 3 && min >= 2)
+  {
+    oggskel_get_segment_len (skeleton, &t);
+    printf ("\tSegment length: %lld\n", t);
+    oggskel_get_non_header_offset (skeleton, &t);
+    printf ("\tNon-header offset: %lld\n", t);
+  }
   _ogg_free (UTC);
 }
 
