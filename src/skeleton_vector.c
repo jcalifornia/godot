@@ -54,15 +54,15 @@ get_track_nfo (TrackVect *vect, ogg_int32_t serial_no)
   {
     t_nfo = 
       _ogg_realloc (vect->tracks, sizeof (TrackInfo)*(vect->size+1));
-      
+    
     if (t_nfo == NULL)
     {
       return NULL;
     }
     
-    vect->tracks = t_nfo;    
+    vect->tracks = t_nfo;
     vect->size++;
-    
+
     t_nfo = &(vect->tracks[vect->size - 1]);
     /* initialise the new trackInfo */
     t_nfo->serial_no  = serial_no;
@@ -106,11 +106,15 @@ TrackVect* oggskel_vect_new ()
   if (vect == NULL)
     return NULL;
   
-  /* initialise the vector with 2 empty tracks */
-  /*vect->tracks = _ogg_calloc (sizeof (TrackInfo), 2);
+  /* initialise the vector with 2 empty tracks 
+  vect->tracks = _ogg_calloc (sizeof (TrackInfo), 2);
   if (vect->tracks == NULL)
+  {
+    _ogg_free (vect);
     return NULL;
+  }
   */
+  
   return vect;
 }
 
@@ -123,25 +127,27 @@ void oggskel_vect_destroy (TrackVect *vect)
     return;
   }
   
-  for (i = 0; i < vect->size; ++i)
-  {
-    if (vect->tracks[i].bone != NULL)
-    {
-      if (vect->tracks[i].bone->msg_fields != NULL)
-        _ogg_free (vect->tracks[i].bone->msg_fields);
-      _ogg_free (vect->tracks[i].bone);
-    }
-    if (vect->tracks[i].index != NULL)
-    {
-      if (vect->tracks[i].index->keypoints != NULL)
-        _ogg_free (vect->tracks[i].index->keypoints);
-        
-      _ogg_free (vect->tracks[i].index);
-    }
-  }
-  
   if (vect->tracks)
+  {
+    for (i = 0; i < vect->size; ++i)
+    {
+      if (vect->tracks[i].bone != NULL)
+      {
+        if (vect->tracks[i].bone->msg_fields != NULL)
+          _ogg_free (vect->tracks[i].bone->msg_fields);
+        _ogg_free (vect->tracks[i].bone);
+      }
+      if (vect->tracks[i].index != NULL)
+      {
+        if (vect->tracks[i].index->keypoints != NULL)
+          _ogg_free (vect->tracks[i].index->keypoints);
+        
+        _ogg_free (vect->tracks[i].index);
+      }
+    }
+
     _ogg_free (vect->tracks);
+  }
   
   _ogg_free (vect);
 }
