@@ -32,8 +32,8 @@
 #ifndef __OGG_SKELETON_MACROS_H__
 #define __OGG_SKELETON_MACROS_H__
 
-#define SKELETON_VERSION_MAJOR 3
-#define SKELETON_VERSION_MINOR 3
+#define SKELETON_VERSION_MAJOR 4
+#define SKELETON_VERSION_MINOR 0
 
 #define SKELETON_VERSION(major, minor) (((major)<<16)|(minor))
 
@@ -41,6 +41,7 @@
 #define FISHEAD_MAGIC_LEN 8
 #define FISHEAD_3_0_SIZE 64
 #define FISHEAD_3_2_SIZE 112
+#define FISHEAD_4_0_SIZE 80
 
 #define FISBONE_MAGIC "fisbone\0"
 #define FISBONE_MAGIC_LEN 8

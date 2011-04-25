@@ -71,6 +71,8 @@ typedef struct _Index {
   ogg_int32_t     serial_no;
   ogg_int64_t     num_keys;
   ogg_int64_t     ptime_denum;
+  ogg_int64_t     first_sample_num;
+  ogg_int64_t     last_sample_num;
   KeyFrameInfo  * keypoints;
 } Index;
 
