@@ -250,6 +250,9 @@ main (int argc, char **argv)
       case SKELETON_ERR_UNSUPPORTED_VERSION:
         printf ("Unsupported skeleton version\n");
         break;
+      case SKELETON_ERR_MALICIOUS_FISHEAD:
+        printf ("Malicious fishead header\n");
+        break;
       case SKELETON_ERR_MALICIOUS_FISBONE:
         printf ("Malicious fisbone header\n");
         break;
