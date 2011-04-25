@@ -19,6 +19,6 @@ libskeleton_la_SOURCES =     		\
 	skeleton_query.c		\
 	skeleton_vector.c		
 	
-libskeleton_la_CFLAGS = $(AM_CFLAGS) $(OGG_CFLAGS)
+libskeleton_la_CFLAGS = $(AM_CFLAGS) $(OGG_CFLAGS) $(CFLAGS)
 libskeleton_la_LDFLAGS = -version-info @SHARED_VERSION_INFO@ @SHLIB_VERSION_ARG@ 
 libskeleton_la_LIBADD = @OGG_LIBS@

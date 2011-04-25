@@ -1,9 +1,8 @@
 ## Process this file with automake to produce Makefile.in
 
-AM_CFLAGS = -Wall \
-            @OGG_CFLAGS@
+AM_CFLAGS = -Wall
 
-INCLUDES = -I$(top_srcdir)/include
+INCLUDES = -I$(top_srcdir)/include @OGG_CFLAGS@
 
 SKELETONDIR = ../src
 SKELETON_LIBS = $(SKELETONDIR)/libskeleton.la @OGG_LIBS@

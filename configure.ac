@@ -91,25 +91,19 @@ if test "x$HAVE_OGG" = "xyes" ; then
   AC_SUBST(OGG_CFLAGS)
   AC_SUBST(OGG_LIBS)
 else
-  AC_CHECK_LIB(
-    ogg,
-    ogg_sync_init,
-    [
-      AC_CHECK_HEADER(
-        [ogg/ogg.h],
-        [HAVE_OGG=yes],
-        [HAVE_OGG=no],
-      )
-    ],
-    [HAVE_OGG=no]
-  )
-  if test "x$HAVE_OGG" = "xno" ; then
-    AC_MSG_ERROR([
-  *** libogg does not seem to exist on your system.
-  *** Please install it and run this ./configure again.
-    ])
-  fi
-    
+  XIPH_PATH_OGG(, AC_MSG_ERROR([
+*** libogg does not seem to exist on your system.
+*** Please install it and run this ./configure again.
+  ]))
+  cflags_save=$CFLAGS
+  libs_save=$LIBS
+  CFLAGS="$CFLAGS $OGG_CFLAGS"
+  LIBS="$LIBS $OGG_LIBS"
+  AC_CHECK_FUNC(oggpackB_read, , [
+    AC_MSG_ERROR([newer libogg version (1.1 or later) required])
+  ])
+  CFLAGS=$cflags_save
+  LIBS=$libs_save    
 fi
 
 dnl
