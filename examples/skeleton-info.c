@@ -185,6 +185,11 @@ main (int argc, char **argv)
         /* packet was not a skeleton header */
         ogg_stream_clear (&os);
       }
+      
+      if (sk_headers < -1) {
+        flag = 0;
+        break;
+      }
     }
   }
   
@@ -241,7 +246,28 @@ main (int argc, char **argv)
   }
   else
   {
-    printf ("Couldn't find any skeleton headers in the ogg file\n");
+    switch (sk_headers) {
+      case SKELETON_ERR_UNSUPPORTED_VERSION:
+        printf ("Unsupported skeleton version\n");
+        break;
+      case SKELETON_ERR_MALICIOUS_FISBONE:
+        printf ("Malicious fisbone header\n");
+        break;
+      case SKELETON_ERR_MALICIOUS_INDEX:
+        printf ("Malicious index header\n");
+        break;
+      case SKELETON_ERR_BAD_PACKET:
+        printf ("Bad packet\n");
+        break;
+      case SKELETON_ERR_OUT_OF_MEMORY:
+        printf ("Ran out of memory\n");
+        break;
+      case SKELETON_ERR_BAD_SKELETON:
+        printf ("Bad OggSkeleton handle");
+        break;
+      default:
+        printf ("Couldn't find any skeleton headers in the ogg file\n");
+    }
   }
 
   oggskel_destroy (skeleton);
