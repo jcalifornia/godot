@@ -95,7 +95,7 @@ del_track_nfo (TrackVect *vect, ogg_int32_t serial_no)
     _ogg_free (t_nfo->index);
   }  
   
-  return ;
+  return 0;
 }
 
 TrackVect* oggskel_vect_new ()
