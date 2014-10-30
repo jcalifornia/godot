@@ -608,7 +608,6 @@ static int decode_index (OggSkeleton* skeleton, const ogg_packet *op)
   ogg_int64_t i = 0, offset = 0, time = 0, time_mult = 1000;
   Index * current_index       = NULL;
   ogg_int64_t min_packet_size = -1;
-  ogg_int64_t max_packet_size = -1;
   unsigned char *p            = NULL;
   int ret = -1;
   
@@ -658,14 +657,6 @@ static int decode_index (OggSkeleton* skeleton, const ogg_packet *op)
     goto fin;
   }
 
-/*
-  max_packet_size = 
-    INDEX_KEYPOINT_OFFSET + current_index->num_keys * MAX_KEY_POINT_SIZE;
-  if (max_packet_size > )
-  {
-    return SKELETON_ERR_;
-  }
-*/
   current_index->keypoints = 
     _ogg_calloc (current_index->num_keys, sizeof (KeyFrameInfo));
 
