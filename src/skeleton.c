@@ -124,7 +124,9 @@ read_var_length (unsigned char* p, ogg_int64_t* num) {
 static inline unsigned char*
 write_var_length (unsigned char* p, const unsigned char* limit, const ogg_int64_t n)
 {
+#if DEBUG
   unsigned char* before_p = p;
+#endif
   ogg_int64_t k = n;
   do {
     unsigned char b = (unsigned char)(k & 0x7f);
