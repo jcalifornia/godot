@@ -53,7 +53,7 @@ int
 main (int argc, char **argv)
 {
   int indexing, ch;
-  FILE *in, *out;
+  FILE *in;
   ogg_sync_state    oy;
   ogg_page          og;
   ogg_stream_state  os;
@@ -108,7 +108,7 @@ main (int argc, char **argv)
 
       ogg_stream_init (&os, ogg_page_serialno (&og));
       ogg_stream_pagein (&os, &og);
-      if (got_packet = ogg_stream_packetout (&os, &op))
+      if ((got_packet = ogg_stream_packetout (&os, &op)))
       {
       }
     }
