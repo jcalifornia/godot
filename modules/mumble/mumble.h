@@ -3,11 +3,12 @@
 #define MUMBLE_H
 
 #include "reference.h"
+#include <mumlib.hpp>
 
-class Mumble : public Reference {
+class Mumble :  public Reference {
     GDCLASS(Mumble,Reference);
-
     int count;
+    mumlib::Mumlib *mum;
 
 protected:
     static void _bind_methods();
