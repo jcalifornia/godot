@@ -215,6 +215,7 @@ sources = [
     "register_types.cpp",
     "mumble.cpp"
     "callback.cpp"
+    "utils.cpp"
 ]
 thirdparty_dir = "#thirdparty/mumlib/"
 
