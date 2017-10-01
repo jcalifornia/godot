@@ -1,4 +1,10 @@
 # SCsub
+
+build_mumlib_proto = "pushd ../../thirdparty/mumlib; \
+mkdir build; \
+protoc --proto_path=. --cpp_out=build/ Mumble.proto \
+popd;"
+
 Import('env')
 
 
@@ -219,7 +225,8 @@ thirdparty_dir = "#thirdparty/mumlib/"
 
 third_party_includes = [
     "include",
-    "include/mumlib"
+    "include/mumlib",
+    "build"
 ]
 third_party_sources = [
     "src/Audio.cpp",
@@ -227,9 +234,11 @@ third_party_sources = [
     "src/CryptState.cpp",
     "src/Transport.cpp",
     "src/VarInt.cpp",
-    "src/mumlib.cpp"
+    "src/mumlib.cpp",
+    "build/Mumble.pb.cc"
 ]
-
+file = mumble_env.Command('', [], build_mumlib_proto)
+mumble_env.AlwaysBuild(file)
 mumble_env.Append(CPPPATH=[ thirdparty_dir + "/" + dir for dir in third_party_includes])
 mumble_env.add_source_files(env.modules_sources, [ thirdparty_dir + '/' + dir for dir in third_party_sources ])
 mumble_env.add_source_files(env.modules_sources,"*.cpp")
