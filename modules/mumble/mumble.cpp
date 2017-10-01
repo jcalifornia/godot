@@ -3,6 +3,11 @@
 #include "mumble.h"
 #include "callback.h"
 #include "utils.h"
+#include "os/thread.h"
+#include "print_string.h"
+#include <mumlib/Transport.hpp>
+#include <string>
+#include "scene/main/timer.h"
 
 
 void Mumble::_bind_methods() {
@@ -17,7 +22,20 @@ void Mumble::connect(String host, int port, String user, String password){
    std::string h = utils::gstr2cpp_str(host);
    std::string u = utils::gstr2cpp_str(user);
    std::string p = utils::gstr2cpp_str(password);
-   this->mum->connect(h, port,  u, p);
+   while(true){
+   try{
+      this->mum->connect(h, port,  u, p);
+      this->mum->run();
+   }catch (mumlib::TransportException &exp) {
+      print_line( "Mumble: error " + utils::cpp_str2gstr(exp.what()));
+      print_line( "Mumble: attempting to reconnect in 5s. ");
+      Timer * sleep = memnew(Timer);
+      sleep -> set_wait_time(5.0);
+      sleep -> start();
+      memdelete(sleep);
+      
+   }
+   }
 }
 void Mumble::setCallback(Object * callback){
    SimpleCallback *cb = Object::cast_to<SimpleCallback>(callback);
