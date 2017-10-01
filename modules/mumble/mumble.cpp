@@ -1,6 +1,7 @@
 /* mumble.cpp */
 
 #include "mumble.h"
+#include "callback.h"
 #include "utils.h"
 
 
@@ -19,8 +20,8 @@ void Mumble::connect(String host, int port, String user, String password){
    this->mum->connect(h, port,  u, p);
 }
 void Mumble::setCallback(Object * callback){
-//   SimpleCallback *cb = callback->cast_to<SimpleCallback>();
-//   mum = new mumlib::Mumlib(*cb);
+   SimpleCallback *cb = Object::cast_to<SimpleCallback>(callback);
+   mum = new mumlib::Mumlib(*cb);
 }
 
 
