@@ -217,21 +217,28 @@ sources = [
     "callback.cpp"
     "utils.cpp"
 ]
-thirdparty_dir = "#thirdparty/mumlib/"
+thirdparty_dir = "#thirdparty"
 
 third_party_includes = [
-    "include",
-    "include/mumlib",
-    "build"
+    "mumlib/include",
+    "mumlib/build"
 ]
 third_party_sources = [
-    "src/Audio.cpp",
-    "src/Callback.cpp",
-    "src/CryptState.cpp",
-    "src/Transport.cpp",
-    "src/VarInt.cpp",
-    "src/mumlib.cpp",
-    "build/Mumble.pb.cc"
+    "mumlib/src/Audio.cpp",
+    "mumlib/src/Callback.cpp",
+    "mumlib/src/CryptState.cpp",
+    "mumlib/src/Transport.cpp",
+    "mumlib/src/VarInt.cpp",
+    "mumlib/src/mumlib.cpp",
+    "mumlib/build/Mumble.pb.cc"
+]
+third_party_system_lib = [
+    "/usr/lib64/",
+    "/usr/lib"
+
+]
+third_party_system_include = [
+    "/usr/include"
 ]
 build_mumlib_proto = "pushd ../../thirdparty/mumlib; mkdir build;" + \
 "protoc --proto_path=. --cpp_out=build/ Mumble.proto; popd;"
@@ -243,6 +250,10 @@ def subprocess_cmd(command):
 
 ## build .pb.h files
 subprocess_cmd(build_mumlib_proto)
+
+mumble_env.Append(CPPPATH=third_party_system_lib)
+mumble_env.Append(CPPPATH=third_party_system_include)
+mumble_env.Append(LIBS=['boost_system', 'protobuf', 'log4cpp'])
 
 mumble_env.Append(CPPPATH=[ thirdparty_dir + "/" + dir for dir in third_party_includes])
 mumble_env.add_source_files(env.modules_sources, [ thirdparty_dir + '/' + dir for dir in third_party_sources ])
