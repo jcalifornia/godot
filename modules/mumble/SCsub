@@ -1,0 +1,12 @@
+# SCsub
+Import('env')
+
+
+sources = [
+    "register_types.cpp",
+    "mumble.cpp"
+]
+
+module_env = env.Clone()
+module_env.add_source_files(env.modules_sources,"*.cpp")
+module_env.Append(CXXFLAGS=['-O2', '-std=c++11'])
