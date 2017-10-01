@@ -5,6 +5,7 @@ Import('env')
 sources = [
     "register_types.cpp",
     "mumble.cpp"
+    "callback.cpp"
 ]
 
 module_env = env.Clone()
