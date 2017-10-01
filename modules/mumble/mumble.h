@@ -8,6 +8,8 @@
 class Mumble :  public Reference {
     GDCLASS(Mumble,Reference);
     int count;
+private:
+    mumlib::MumlibConfiguration conf;
     mumlib::Mumlib *mum;
 
 protected:
@@ -17,6 +19,8 @@ public:
     void add(int value);
     void reset();
     int get_total() const;
+    void connect(String host, int port, String user, String password);
+    void setCallback( Object * o );
 
     Mumble();
 };

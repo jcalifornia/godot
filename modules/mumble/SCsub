@@ -235,7 +235,6 @@ third_party_sources = [
 third_party_system_lib = [
     "/usr/lib64",
     "/usr/lib"
-
 ]
 third_party_system_include = [
     "/usr/include",
@@ -252,9 +251,9 @@ def subprocess_cmd(command):
 ## build .pb.h files
 subprocess_cmd(build_mumlib_proto)
 
-mumble_env.Append(LIBPATH=third_party_system_lib)
-mumble_env.Append(CPPPATH=third_party_system_include)
-mumble_env.Append(LIBS=['protobuf', 'log4cpp'])
+#mumble_env.Append(LIBPATH=third_party_system_lib)
+#mumble_env.Append(CPPPATH=third_party_system_include)
+#mumble_env.Append(LIBS=['protobuf', 'log4cpp'])
 
 mumble_env.Append(CPPPATH=[ thirdparty_dir + "/" + dir for dir in third_party_includes])
 mumble_env.add_source_files(env.modules_sources, [ thirdparty_dir + '/' + dir for dir in third_party_sources ])
