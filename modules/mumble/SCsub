@@ -1,10 +1,5 @@
 # SCsub
 
-build_mumlib_proto = "pushd ../../thirdparty/mumlib; \
-mkdir build; \
-protoc --proto_path=. --cpp_out=build/ Mumble.proto \
-popd;"
-
 Import('env')
 
 
@@ -237,8 +232,17 @@ third_party_sources = [
     "src/mumlib.cpp",
     "build/Mumble.pb.cc"
 ]
-file = mumble_env.Command('', [], build_mumlib_proto)
-mumble_env.AlwaysBuild(file)
+build_mumlib_proto = "pushd ../../thirdparty/mumlib; mkdir build;" + \
+"protoc --proto_path=. --cpp_out=build/ Mumble.proto; popd;"
+
+import subprocess
+def subprocess_cmd(command):
+    process = subprocess.Popen(command,stdout=subprocess.PIPE, shell=True)
+    proc_stdout = process.communicate()[0].strip()
+
+## build .pb.h files
+subprocess_cmd(build_mumlib_proto)
+
 mumble_env.Append(CPPPATH=[ thirdparty_dir + "/" + dir for dir in third_party_includes])
 mumble_env.add_source_files(env.modules_sources, [ thirdparty_dir + '/' + dir for dir in third_party_sources ])
 mumble_env.add_source_files(env.modules_sources,"*.cpp")
