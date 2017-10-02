@@ -25,6 +25,7 @@ void Mumble::engage(String host, int port, String user, String password) {
    while(true){
    try{
       this->mum->connect(h, port,  u, p);
+      print_line( "Mumble: connecting to " + host );
       this->mum->run();
    }catch (mumlib::TransportException &exp) {
       print_line( "Mumble: error " + utils::cpp_str2gstr(exp.what()));
@@ -39,7 +40,7 @@ void Mumble::engage(String host, int port, String user, String password) {
 }
 void Mumble::setCallback(Object * callback){
    SimpleCallback *cb = Object::cast_to<SimpleCallback>(callback);
-   mum = new mumlib::Mumlib(*cb);
+   mum = new mumlib::Mumlib(*cb,conf);
 }
 
 

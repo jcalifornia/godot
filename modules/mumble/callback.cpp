@@ -1,6 +1,7 @@
 #include "callback.h"
 #include "utils.h"
 #include "variant.h"
+#include "print_string.h"
 
 SimpleCallback::SimpleCallback(){
 }
@@ -11,8 +12,19 @@ void SimpleCallback::audio( int target,
                        int sessionId,
                        int sequenceNumber,
                        int16_t *pcm_data,
-                        uint32_t pcm_data_size){
-   int i = 0;
+                       uint32_t pcm_data_size){
+
+   Variant *tar = memnew( Variant(target) );
+   Variant *sid = memnew( Variant(sessionId) );
+   Variant *snum = memnew( Variant(sequenceNumber) );
+   Variant *pcm = utils::short2byte(pcm_data, pcm_data_size);
+   Variant::CallError err;
+   const Variant *args[4] = {tar, sid, snum, pcm};
+   Variant result = audio_handler->call_func( args, 4, err);
+   memdelete( tar);
+   memdelete( sid);
+   memdelete( snum);
+   memdelete( pcm);
 }
 
 
@@ -37,6 +49,15 @@ void SimpleCallback::textMessage(
    memdelete( t);
    memdelete( m);
 
+}
+void SimpleCallback::version(
+                uint16_t major,
+                uint8_t minor,
+                uint8_t patch,
+                std::string release,
+                std::string os,
+                std::string os_version){
+      print_line("processing os: " + String(os.c_str()) );
 }
 void SimpleCallback::_bind_methods(){
    ClassDB::bind_method(D_METHOD("setAudioHandler", "handler"), &SimpleCallback::setAudioHandler);
