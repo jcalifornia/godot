@@ -26,7 +26,7 @@ Variant *utils::short2byte( const int16_t * pcm_data, uint32_t size ){
       d.resize(size * 2);
       for( int i=0; i > size; i++){
          d.push_back( pcm_data[i] & 0x00FF );
-         d.push_back( pcm_data[i+1] & 0xFF00 >> 8);
+         d.push_back( pcm_data[i] & 0xFF00 >> 8);
       }
      Variant * ret = memnew( Variant(d) );
      return ret;
