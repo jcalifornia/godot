@@ -13,18 +13,19 @@ void SimpleCallback::audio( int target,
                        int sequenceNumber,
                        int16_t *pcm_data,
                        uint32_t pcm_data_size){
-
-   Variant *tar = memnew( Variant(target) );
-   Variant *sid = memnew( Variant(sessionId) );
-   Variant *snum = memnew( Variant(sequenceNumber) );
-   Variant *pcm = utils::short2byte(pcm_data, pcm_data_size);
-   Variant::CallError err;
-   const Variant *args[4] = {tar, sid, snum, pcm};
-   Variant result = _audio_handler->call_func( args, 4, err);
-   memdelete( tar);
-   memdelete( sid);
-   memdelete( snum);
-   memdelete( pcm);
+   if(_audio_handler != NULL){
+    Variant *tar = memnew( Variant(target) );
+    Variant *sid = memnew( Variant(sessionId) );
+    Variant *snum = memnew( Variant(sequenceNumber) );
+    Variant *pcm = utils::short2byte(pcm_data, pcm_data_size);
+    Variant::CallError err;
+    const Variant *args[4] = {tar, sid, snum, pcm};
+    Variant result = _audio_handler->call_func( args, 4, err);
+    memdelete( tar);
+    memdelete( sid);
+    memdelete( snum);
+    memdelete( pcm);
+   }
 }
 
 
@@ -35,11 +36,12 @@ void SimpleCallback::textMessage(
             std::vector<uint32_t> tree_id,
 	    std::string message) {
    if(this->_text_handler != NULL){
+       print_line("internal message: " + String(message.c_str()) );
         Variant *s = utils::cpp_vec2garr(session);
         Variant *c = utils::cpp_vec2garr(channel_id);
         Variant *t = utils::cpp_vec2garr(tree_id);
         Variant *a = memnew( Variant(actor) );
-        Variant *m = memnew( Variant(String(message.c_str())));
+        Variant *m = memnew( Variant());
         Variant::CallError err;
         const Variant *args[5] = {a, s, c, t, m};
         Variant result =  this->_text_handler->call_func( args, 5, err );
