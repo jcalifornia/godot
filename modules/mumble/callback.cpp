@@ -20,7 +20,7 @@ void SimpleCallback::audio( int target,
    Variant *pcm = utils::short2byte(pcm_data, pcm_data_size);
    Variant::CallError err;
    const Variant *args[4] = {tar, sid, snum, pcm};
-   Variant result = audio_handler->call_func( args, 4, err);
+   Variant result = _audio_handler->call_func( args, 4, err);
    memdelete( tar);
    memdelete( sid);
    memdelete( snum);
@@ -34,20 +34,21 @@ void SimpleCallback::textMessage(
             std::vector<uint32_t> channel_id,
             std::vector<uint32_t> tree_id,
 	    std::string message) {
-
-   Variant *s = utils::cpp_vec2garr(session);
-   Variant *c = utils::cpp_vec2garr(channel_id);
-   Variant *t = utils::cpp_vec2garr(tree_id);
-   Variant *a = memnew( Variant(actor) );
-   Variant *m = memnew( Variant(String(message.c_str())));
-   Variant::CallError err;
-   const Variant *args[5] = {a, s, c, t, m};
-   Variant result =  this->text_handler->call_func( args, 5, err );
-   memdelete( a);
-   memdelete( s);
-   memdelete( c);
-   memdelete( t);
-   memdelete( m);
+   if(this->_text_handler != NULL){
+        Variant *s = utils::cpp_vec2garr(session);
+        Variant *c = utils::cpp_vec2garr(channel_id);
+        Variant *t = utils::cpp_vec2garr(tree_id);
+        Variant *a = memnew( Variant(actor) );
+        Variant *m = memnew( Variant(String(message.c_str())));
+        Variant::CallError err;
+        const Variant *args[5] = {a, s, c, t, m};
+        Variant result =  this->_text_handler->call_func( args, 5, err );
+        memdelete( a);
+        memdelete( s);
+        memdelete( c);
+        memdelete( t);
+        memdelete( m);
+   }
 
 }
 void SimpleCallback::version(
@@ -64,8 +65,8 @@ void SimpleCallback::_bind_methods(){
    ClassDB::bind_method(D_METHOD("setTextHandler", "handler"), &SimpleCallback::setTextHandler);
 }
 void SimpleCallback::setAudioHandler( Object * handler){
-   this->audio_handler = (FuncRef *)handler;
+   this->_audio_handler = (FuncRef *)handler;
 }
 void SimpleCallback::setTextHandler( Object * handler){
-   this->text_handler = (FuncRef *)handler;
+   this->_text_handler = (FuncRef *)handler;
 }

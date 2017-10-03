@@ -13,8 +13,8 @@ class SimpleCallback : public mumlib::Callback, public Reference {
     GDCLASS(SimpleCallback,Reference);
 
 private:
-    FuncRef *audio_handler;
-    FuncRef *text_handler;
+    FuncRef *_audio_handler;
+    FuncRef *_text_handler;
 
 protected:
 //    bool _set(const StringName &p_name, const Variant &p_value);

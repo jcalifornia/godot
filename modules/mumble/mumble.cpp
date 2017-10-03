@@ -23,24 +23,24 @@ void Mumble::engage(String host, int port, String user, String password) {
    std::string u = utils::gstr2cpp_str(user);
    std::string p = utils::gstr2cpp_str(password);
    while(true){
-   try{
-      this->mum->connect(h, port,  u, p);
-      print_line( "Mumble: connecting to " + host );
-      this->mum->run();
-   }catch (mumlib::TransportException &exp) {
-      print_line( "Mumble: error " + utils::cpp_str2gstr(exp.what()));
-      print_line( "Mumble: attempting to reconnect in 5s. ");
-      Timer * sleep = memnew(Timer);
-      sleep -> set_wait_time(5.0);
-      sleep -> start();
-      memdelete(sleep);
-      
-   }
+        try{
+            this->_mum->connect(h, port,  u, p);
+            print_line( "Mumble: connecting to " + host );
+            this->_mum->run();
+        }catch (mumlib::TransportException &exp) {
+            print_line( "Mumble: error " + utils::cpp_str2gstr(exp.what()));
+            print_line( "Mumble: attempting to reconnect in 5s. ");
+            Timer * sleep = memnew(Timer);
+            sleep -> set_wait_time(5.0);
+            sleep -> start();
+            memdelete(sleep);
+            
+        }
    }
 }
 void Mumble::setCallback(Object * callback){
    SimpleCallback *cb = Object::cast_to<SimpleCallback>(callback);
-   mum = new mumlib::Mumlib(*cb,conf);
+   _mum = new mumlib::Mumlib(*cb);
 }
 
 

@@ -9,8 +9,8 @@ class Mumble :  public Reference {
     GDCLASS(Mumble,Reference);
     int count;
 private:
-    mumlib::MumlibConfiguration conf;
-    mumlib::Mumlib *mum;
+    mumlib::MumlibConfiguration _conf;
+    mumlib::Mumlib *_mum;
 
 protected:
     static void _bind_methods();
