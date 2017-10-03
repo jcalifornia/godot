@@ -41,7 +41,7 @@ void SimpleCallback::textMessage(
         Variant *c = utils::cpp_vec2garr(channel_id);
         Variant *t = utils::cpp_vec2garr(tree_id);
         Variant *a = memnew( Variant(actor) );
-        Variant *m = memnew( Variant());
+        Variant *m = memnew( Variant(String(message.c_str())));
         Variant::CallError err;
         const Variant *args[5] = {a, s, c, t, m};
         Variant result =  this->_text_handler->call_func( args, 5, err );
