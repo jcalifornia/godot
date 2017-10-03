@@ -17,6 +17,7 @@ void Mumble::_bind_methods() {
 
    ClassDB::bind_method(D_METHOD("engage", "host", "port", "user", "password"), &Mumble::engage);
    ClassDB::bind_method(D_METHOD("setCallback", "callback"), &Mumble::setCallback);
+   ClassDB::bind_method(D_METHOD("sendText", "text"), &Mumble::sendText);
 }
 void Mumble::engage(String host, int port, String user, String password) {
    std::string h = utils::gstr2cpp_str(host);
@@ -41,6 +42,9 @@ void Mumble::engage(String host, int port, String user, String password) {
 void Mumble::setCallback(Object * callback){
    SimpleCallback *cb = Object::cast_to<SimpleCallback>(callback);
    _mum = new mumlib::Mumlib(*cb);
+}
+void Mumble::sendText(String text){
+   _mum -> sendTextMessage( utils::gstr2cpp_str(text) );
 }
 
 

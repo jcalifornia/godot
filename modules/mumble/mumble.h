@@ -20,8 +20,8 @@ public:
     void reset();
     int get_total() const;
     void engage(String host, int port, String user, String password);
+    void sendText(String s);
     void setCallback( Object * o );
-
     Mumble();
 };
 
