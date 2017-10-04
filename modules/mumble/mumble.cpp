@@ -40,11 +40,13 @@ void Mumble::engage(String host, int port, String user, String password) {
         }
    }
 }
+
 void Mumble::setCallback(Object * callback){
    SimpleCallback *cb = Object::cast_to<SimpleCallback>(callback);
    _mum = new mumlib::Mumlib(*(cb->get_callback()));
 }
 void Mumble::sendText(String text){
+    print_line("i am sending this message: " + text);
    _mum -> sendTextMessage( utils::gstr2cpp_str(text) );
 }
 

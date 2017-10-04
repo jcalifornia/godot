@@ -57,6 +57,7 @@ void SimpleCallback::MyCallBack::version(
 void SimpleCallback::_bind_methods(){
    ClassDB::bind_method(D_METHOD("setAudioHandler", "handler"), &SimpleCallback::setAudioHandler);
    ClassDB::bind_method(D_METHOD("setTextHandler", "handler"), &SimpleCallback::setTextHandler);
+
 }
 void SimpleCallback::setAudioHandler(  Ref<FuncRef> handler){
    this->_audio_handler = handler;
