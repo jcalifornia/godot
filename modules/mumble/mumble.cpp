@@ -10,6 +10,7 @@
 #include "scene/main/timer.h"
 
 
+
 void Mumble::_bind_methods() {
     ClassDB::bind_method(D_METHOD("add", "value"), &Mumble::add);
     ClassDB::bind_method(D_METHOD("reset"), &Mumble::reset);
@@ -41,7 +42,7 @@ void Mumble::engage(String host, int port, String user, String password) {
 }
 void Mumble::setCallback(Object * callback){
    SimpleCallback *cb = Object::cast_to<SimpleCallback>(callback);
-   _mum = new mumlib::Mumlib(*cb);
+   _mum = new mumlib::Mumlib(*(cb->get_callback()));
 }
 void Mumble::sendText(String text){
    _mum -> sendTextMessage( utils::gstr2cpp_str(text) );

@@ -3,38 +3,37 @@
 #include "variant.h"
 #include "print_string.h"
 
-SimpleCallback::SimpleCallback(){
-    
+SimpleCallback::SimpleCallback() : _callback(*this) { }
+SimpleCallback::~SimpleCallback() { }
+mumlib::Callback *SimpleCallback::get_callback(){
+    return &_callback;
 }
-SimpleCallback::~SimpleCallback(){
-}
-
-void SimpleCallback::audio( int target,
+void SimpleCallback::MyCallBack::audio( int target,
                        int sessionId,
                        int sequenceNumber,
                        int16_t *pcm_data,
                        uint32_t pcm_data_size){
-   if(_audio_handler != NULL){
+   if(!_cb._audio_handler.is_null()){
     Variant tar =  Variant(target);
     Variant sid =  Variant(sessionId);
     Variant snum =  Variant(sequenceNumber);
     Variant *pcm = utils::short2byte(pcm_data, pcm_data_size);
     Variant::CallError err;
     const Variant *args[4] = {&tar, &sid, &snum, pcm};
-    Variant result = _audio_handler->call_func( args, 4, err);
+    Variant result =  _cb._audio_handler->call_func( args, 4, err);
     memdelete( pcm);
    }
 }
 
 
-void SimpleCallback::textMessage(
+void SimpleCallback::MyCallBack::textMessage(
             uint32_t actor,
             std::vector<uint32_t> session,
             std::vector<uint32_t> channel_id,
             std::vector<uint32_t> tree_id,
 	    std::string message) {
-   if(this->_text_handler != NULL){
-       print_line("internal message: " + String(message.c_str()) );
+   if(!_cb._text_handler.is_null()){
+        print_line("internal message: " + String(message.c_str()) );
         print_line( session.size() + ":" +channel_id.size() );
         Variant s = utils::cpp_uint32vec2Variant(session);
         Variant c = utils::cpp_uint32vec2Variant(channel_id);
@@ -43,11 +42,11 @@ void SimpleCallback::textMessage(
         Variant m = Variant(String(message.c_str()));
         Variant::CallError err;
         const Variant *args[5] = {&a, &s, &c, &t, &m};
-        Variant result =  this->_text_handler->call_func( args, 5, err );
+        Variant result =  _cb._text_handler->call_func( args, 5, err );
    }
 
 }
-void SimpleCallback::version(
+void SimpleCallback::MyCallBack::version(
                 uint16_t major,
                 uint8_t minor,
                 uint8_t patch,
@@ -63,9 +62,5 @@ void SimpleCallback::setAudioHandler(  Ref<FuncRef> handler){
    this->_audio_handler = handler;
 }
 void SimpleCallback::setTextHandler( Ref<FuncRef> handler){
-    print_line("cb type :" + handler->get_class());
-    print_line("is null :" + (this->_text_handler.is_null() == true) ? "True" : "False" );
-    this->_text_handler.unref();
-   this->_text_handler = handler.get_ref_ptr();
-   //this-> _text_handler = memnew(FuncRef);
+   this->_text_handler = handler;
 }
