@@ -49,13 +49,15 @@
 
 #define DISTANCE_DEFAULT 4
 
-#define GIZMO_ARROW_SIZE 0.3
+#define GIZMO_ARROW_SIZE 0.35
 #define GIZMO_RING_HALF_WIDTH 0.1
 //#define GIZMO_SCALE_DEFAULT 0.28
 #define GIZMO_SCALE_DEFAULT 0.15
 #define GIZMO_PLANE_SIZE 0.2
 #define GIZMO_PLANE_DST 0.3
-#define GIZMO_CIRCLE_SIZE 0.9
+#define GIZMO_CIRCLE_SIZE 1.1
+#define GIZMO_SCALE_OFFSET (GIZMO_CIRCLE_SIZE + 0.3)
+#define GIZMO_ARROW_OFFSET (GIZMO_CIRCLE_SIZE + 0.3)
 
 #define ZOOM_MIN_DISTANCE 0.001
 #define ZOOM_MULTIPLIER 1.08
@@ -538,8 +540,6 @@ void SpatialEditorViewport::_compute_edit(const Point2 &p_point) {
 
 	List<Node *> &selection = editor_selection->get_selected_node_list();
 
-	//Vector3 center;
-	//int nc=0;
 	for (List<Node *>::Element *E = selection.front(); E; E = E->next()) {
 
 		Spatial *sp = Object::cast_to<Spatial>(E->get());
@@ -551,14 +551,8 @@ void SpatialEditorViewport::_compute_edit(const Point2 &p_point) {
 			continue;
 
 		se->original = se->sp->get_global_transform();
-		//center+=se->original.origin;
-		//nc++;
+		se->original_local = se->sp->get_transform();
 	}
-
-	/*
-	if (nc)
-		_edit.center=center/float(nc);
-	*/
 }
 
 static int _get_key_modifier_setting(const String &p_property) {
@@ -609,7 +603,7 @@ bool SpatialEditorViewport::_gizmo_select(const Vector2 &p_screenpos, bool p_hig
 
 		for (int i = 0; i < 3; i++) {
 
-			Vector3 grabber_pos = gt.origin + gt.basis.get_axis(i) * gs;
+			Vector3 grabber_pos = gt.origin + gt.basis.get_axis(i) * gs * (GIZMO_ARROW_OFFSET + (GIZMO_ARROW_SIZE * 0.5));
 			float grabber_radius = gs * GIZMO_ARROW_SIZE;
 
 			Vector3 r;
@@ -624,7 +618,7 @@ bool SpatialEditorViewport::_gizmo_select(const Vector2 &p_screenpos, bool p_hig
 		}
 
 		bool is_plane_translate = false;
-		// second try
+		// plane select
 		if (col_axis == -1) {
 			col_d = 1e20;
 
@@ -703,6 +697,43 @@ bool SpatialEditorViewport::_gizmo_select(const Vector2 &p_screenpos, bool p_hig
 			} else {
 				//handle rotate
 				_edit.mode = TRANSFORM_ROTATE;
+				_compute_edit(Point2(p_screenpos.x, p_screenpos.y));
+				_edit.plane = TransformPlane(TRANSFORM_X_AXIS + col_axis);
+			}
+			return true;
+		}
+	}
+
+	if (spatial_editor->get_tool_mode() == SpatialEditor::TOOL_MODE_SCALE) {
+
+		int col_axis = -1;
+		float col_d = 1e20;
+
+		for (int i = 0; i < 3; i++) {
+
+			Vector3 grabber_pos = gt.origin + gt.basis.get_axis(i) * gs * GIZMO_SCALE_OFFSET;
+			float grabber_radius = gs * GIZMO_ARROW_SIZE;
+
+			Vector3 r;
+
+			if (Geometry::segment_intersects_sphere(ray_pos, ray_pos + ray * 10000.0, grabber_pos, grabber_radius, &r)) {
+				float d = r.distance_to(ray_pos);
+				if (d < col_d) {
+					col_d = d;
+					col_axis = i;
+				}
+			}
+		}
+
+		if (col_axis != -1) {
+
+			if (p_highlight_only) {
+
+				spatial_editor->select_gizmo_highlight_axis(col_axis + 9);
+
+			} else {
+				//handle scale
+				_edit.mode = TRANSFORM_SCALE;
 				_compute_edit(Point2(p_screenpos.x, p_screenpos.y));
 				_edit.plane = TransformPlane(TRANSFORM_X_AXIS + col_axis);
 			}
@@ -1182,7 +1213,28 @@ void SpatialEditorViewport::_sinput(const Ref<InputEvent> &p_event) {
 
 					case TRANSFORM_SCALE: {
 
-						Plane plane = Plane(_edit.center, _get_camera_normal());
+						Vector3 motion_mask;
+						Plane plane;
+						bool plane_mv;
+
+						switch (_edit.plane) {
+							case TRANSFORM_VIEW:
+								motion_mask = Vector3(0, 0, 0);
+								plane = Plane(_edit.center, _get_camera_normal());
+								break;
+							case TRANSFORM_X_AXIS:
+								motion_mask = spatial_editor->get_gizmo_transform().basis.get_axis(0);
+								plane = Plane(_edit.center, motion_mask.cross(motion_mask.cross(_get_camera_normal())).normalized());
+								break;
+							case TRANSFORM_Y_AXIS:
+								motion_mask = spatial_editor->get_gizmo_transform().basis.get_axis(1);
+								plane = Plane(_edit.center, motion_mask.cross(motion_mask.cross(_get_camera_normal())).normalized());
+								break;
+							case TRANSFORM_Z_AXIS:
+								motion_mask = spatial_editor->get_gizmo_transform().basis.get_axis(2);
+								plane = Plane(_edit.center, motion_mask.cross(motion_mask.cross(_get_camera_normal())).normalized());
+								break;
+						}
 
 						Vector3 intersection;
 						if (!plane.intersects_ray(ray_pos, ray, &intersection))
@@ -1192,42 +1244,78 @@ void SpatialEditorViewport::_sinput(const Ref<InputEvent> &p_event) {
 						if (!plane.intersects_ray(_edit.click_ray_pos, _edit.click_ray, &click))
 							break;
 
-						float center_click_dist = click.distance_to(_edit.center);
-						float center_inters_dist = intersection.distance_to(_edit.center);
-						if (center_click_dist == 0)
-							break;
+						Vector3 motion = intersection - click;
+						print_line(String(intersection) + " --- " + String(click));
+						if (motion_mask != Vector3()) {
 
-						float scale = (center_inters_dist / center_click_dist) * 100.0;
+							motion = motion_mask.dot(motion) * motion_mask;
+						} else {
 
-						if (_edit.snap || spatial_editor->is_snap_enabled()) {
+							float center_click_dist = click.distance_to(_edit.center);
+							float center_inters_dist = intersection.distance_to(_edit.center);
+							if (center_click_dist == 0)
+								break;
 
-							scale = Math::stepify(scale, spatial_editor->get_scale_snap());
+							float scale = center_inters_dist - center_click_dist;
+							motion = Vector3(scale, scale, scale);
 						}
 
-						set_message(vformat(TTR("Scaling to %s%%."), String::num(scale, 1)));
-						scale /= 100.0;
-
-						Transform r;
-						r.basis.scale(Vector3(scale, scale, scale));
-
 						List<Node *> &selection = editor_selection->get_selected_node_list();
+
+						bool local_coords = (spatial_editor->are_local_coords_enabled() && motion_mask != Vector3()); // Disable local transformation for TRANSFORM_VIEW
+
+						float snap = 0;
+						if (_edit.snap || spatial_editor->is_snap_enabled()) {
+
+							snap = spatial_editor->get_scale_snap() / 100;
+						}
 
 						for (List<Node *>::Element *E = selection.front(); E; E = E->next()) {
 
 							Spatial *sp = Object::cast_to<Spatial>(E->get());
-							if (!sp)
+							if (!sp) {
 								continue;
+							}
 
 							SpatialEditorSelectedItem *se = editor_selection->get_node_editor_data<SpatialEditorSelectedItem>(sp);
-							if (!se)
+							if (!se) {
 								continue;
+							}
 
 							Transform original = se->original;
-
+							Transform original_local = se->original_local;
 							Transform base = Transform(Basis(), _edit.center);
-							Transform t = base * (r * (base.inverse() * original));
+							Transform t;
+							Vector3 local_scale;
 
-							sp->set_global_transform(t);
+							if (local_coords) {
+
+								Basis g = original.basis.orthonormalized();
+								Vector3 local_motion = g.inverse().xform(motion);
+
+								if (_edit.snap || spatial_editor->is_snap_enabled()) {
+									local_motion.snap(Vector3(snap, snap, snap));
+								}
+
+								local_scale = original_local.basis.get_scale() * (local_motion + Vector3(1, 1, 1));
+
+							} else {
+
+								if (_edit.snap || spatial_editor->is_snap_enabled()) {
+									motion.snap(Vector3(snap, snap, snap));
+								}
+
+								Transform r;
+								r.basis.scale(motion + Vector3(1, 1, 1));
+								t = base * (r * (base.inverse() * original));
+							}
+
+							// Apply scale
+							if (local_coords) {
+								sp->set_scale(local_scale);
+							} else {
+								sp->set_global_transform(t);
+							}
 						}
 
 						surface->update();
@@ -1850,7 +1938,7 @@ void SpatialEditorViewport::_notification(int p_what) {
 				last_message = message;
 			}
 
-			message_time -= get_fixed_process_delta_time();
+			message_time -= get_physics_process_delta_time();
 			if (message_time < 0)
 				surface->update();
 		}
@@ -2271,6 +2359,14 @@ void SpatialEditorViewport::_init_gizmo_instance(int p_idx) {
 		//VS::get_singleton()->instance_geometry_set_flag(rotate_gizmo_instance[i],VS::INSTANCE_FLAG_DEPH_SCALE,true);
 		VS::get_singleton()->instance_geometry_set_cast_shadows_setting(rotate_gizmo_instance[i], VS::SHADOW_CASTING_SETTING_OFF);
 		VS::get_singleton()->instance_set_layer_mask(rotate_gizmo_instance[i], layer);
+
+		scale_gizmo_instance[i] = VS::get_singleton()->instance_create();
+		VS::get_singleton()->instance_set_base(scale_gizmo_instance[i], spatial_editor->get_scale_gizmo(i)->get_rid());
+		VS::get_singleton()->instance_set_scenario(scale_gizmo_instance[i], get_tree()->get_root()->get_world()->get_scenario());
+		VS::get_singleton()->instance_set_visible(scale_gizmo_instance[i], false);
+		//VS::get_singleton()->instance_geometry_set_flag(scale_gizmo_instance[i],VS::INSTANCE_FLAG_DEPH_SCALE,true);
+		VS::get_singleton()->instance_geometry_set_cast_shadows_setting(scale_gizmo_instance[i], VS::SHADOW_CASTING_SETTING_OFF);
+		VS::get_singleton()->instance_set_layer_mask(scale_gizmo_instance[i], layer);
 	}
 }
 
@@ -2280,6 +2376,7 @@ void SpatialEditorViewport::_finish_gizmo_instances() {
 		VS::get_singleton()->free(move_gizmo_instance[i]);
 		VS::get_singleton()->free(move_plane_gizmo_instance[i]);
 		VS::get_singleton()->free(rotate_gizmo_instance[i]);
+		VS::get_singleton()->free(scale_gizmo_instance[i]);
 	}
 }
 void SpatialEditorViewport::_toggle_camera_preview(bool p_activate) {
@@ -2374,6 +2471,8 @@ void SpatialEditorViewport::update_transform_gizmo_view() {
 		VisualServer::get_singleton()->instance_set_visible(move_plane_gizmo_instance[i], spatial_editor->is_gizmo_visible() && (spatial_editor->get_tool_mode() == SpatialEditor::TOOL_MODE_SELECT || spatial_editor->get_tool_mode() == SpatialEditor::TOOL_MODE_MOVE));
 		VisualServer::get_singleton()->instance_set_transform(rotate_gizmo_instance[i], xform);
 		VisualServer::get_singleton()->instance_set_visible(rotate_gizmo_instance[i], spatial_editor->is_gizmo_visible() && (spatial_editor->get_tool_mode() == SpatialEditor::TOOL_MODE_SELECT || spatial_editor->get_tool_mode() == SpatialEditor::TOOL_MODE_ROTATE));
+		VisualServer::get_singleton()->instance_set_transform(scale_gizmo_instance[i], xform);
+		VisualServer::get_singleton()->instance_set_visible(scale_gizmo_instance[i], spatial_editor->is_gizmo_visible() && (spatial_editor->get_tool_mode() == SpatialEditor::TOOL_MODE_SCALE));
 	}
 }
 
@@ -2842,7 +2941,7 @@ SpatialEditorViewport::SpatialEditorViewport(SpatialEditor *p_spatial_editor, Ed
 	ViewportContainer *c = memnew(ViewportContainer);
 	c->set_stretch(true);
 	add_child(c);
-	c->set_area_as_parent_rect();
+	c->set_anchors_and_margins_preset(Control::PRESET_WIDE);
 	viewport = memnew(Viewport);
 	viewport->set_disable_input(true);
 
@@ -2850,7 +2949,7 @@ SpatialEditorViewport::SpatialEditorViewport(SpatialEditor *p_spatial_editor, Ed
 	surface = memnew(Control);
 	surface->set_drag_forwarding(this);
 	add_child(surface);
-	surface->set_area_as_parent_rect();
+	surface->set_anchors_and_margins_preset(Control::PRESET_WIDE);
 	surface->set_clip_contents(true);
 	camera = memnew(Camera);
 	camera->set_disable_gizmo(true);
@@ -3259,6 +3358,7 @@ void SpatialEditor::select_gizmo_highlight_axis(int p_axis) {
 		move_gizmo[i]->surface_set_material(0, i == p_axis ? gizmo_hl : gizmo_color[i]);
 		move_plane_gizmo[i]->surface_set_material(0, (i + 6) == p_axis ? gizmo_hl : plane_gizmo_color[i]);
 		rotate_gizmo[i]->surface_set_material(0, (i + 3) == p_axis ? gizmo_hl : gizmo_color[i]);
+		scale_gizmo[i]->surface_set_material(0, (i + 9) == p_axis ? gizmo_hl : gizmo_color[i]);
 	}
 }
 
@@ -3269,7 +3369,7 @@ void SpatialEditor::update_transform_gizmo() {
 	bool first = true;
 
 	Basis gizmo_basis;
-	bool local_gizmo_coords = transform_menu->get_popup()->is_item_checked(transform_menu->get_popup()->get_item_index(MENU_TRANSFORM_LOCAL_COORDS));
+	bool local_gizmo_coords = are_local_coords_enabled();
 
 	for (List<Node *>::Element *E = selection.front(); E; E = E->next()) {
 
@@ -3720,19 +3820,12 @@ void SpatialEditor::_menu_item_pressed(int p_option) {
 
 void SpatialEditor::_init_indicators() {
 
-	//RID mat = VisualServer::get_singleton()->fixed_material_create();
-	///VisualServer::get_singleton()->fixed_material_set_flag(mat, VisualServer::FIXED_MATERIAL_FLAG_USE_ALPHA,true);
-	//VisualServer::get_singleton()->fixed_material_set_flag(mat, VisualServer::FIXED_MATERIAL_FLAG_USE_COLOR_ARRAY,true);
-
 	{
 
 		indicator_mat.instance();
 		indicator_mat->set_flag(SpatialMaterial::FLAG_UNSHADED, true);
-		//indicator_mat->set_flag(SpatialMaterial::FLAG_ONTOP,true);
 		indicator_mat->set_flag(SpatialMaterial::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
 		indicator_mat->set_flag(SpatialMaterial::FLAG_SRGB_VERTEX_COLOR, true);
-
-		indicator_mat->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
 
 		PoolVector<Color> grid_colors[3];
 		PoolVector<Vector3> grid_points[3];
@@ -3753,50 +3846,31 @@ void SpatialEditor::_init_indicators() {
 			origin_colors.push_back(Color(axis.x, axis.y, axis.z));
 			origin_points.push_back(axis * 4096);
 			origin_points.push_back(axis * -4096);
-#define ORIGIN_GRID_SIZE 100
+#define ORIGIN_GRID_SIZE 50
 
 			for (int j = -ORIGIN_GRID_SIZE; j <= ORIGIN_GRID_SIZE; j++) {
 
-				for (int k = -ORIGIN_GRID_SIZE; k <= ORIGIN_GRID_SIZE; k++) {
+				Vector3 p1 = axis_n1 * j + axis_n2 * -ORIGIN_GRID_SIZE;
+				Vector3 p1_dest = p1 * (-axis_n2 + axis_n1);
+				Vector3 p2 = axis_n2 * j + axis_n1 * -ORIGIN_GRID_SIZE;
+				Vector3 p2_dest = p2 * (-axis_n1 + axis_n2);
 
-					Vector3 p = axis_n1 * j + axis_n2 * k;
-					float trans = Math::pow(MAX(0, 1.0 - (Vector2(j, k).length() / ORIGIN_GRID_SIZE)), 2);
-
-					Vector3 pj = axis_n1 * (j + 1) + axis_n2 * k;
-					float transj = Math::pow(MAX(0, 1.0 - (Vector2(j + 1, k).length() / ORIGIN_GRID_SIZE)), 2);
-
-					Vector3 pk = axis_n1 * j + axis_n2 * (k + 1);
-					float transk = Math::pow(MAX(0, 1.0 - (Vector2(j, k + 1).length() / ORIGIN_GRID_SIZE)), 2);
-
-					Color trans_color = grid_color;
-					trans_color.a *= trans;
-
-					Color transk_color = grid_color;
-					transk_color.a *= transk;
-
-					Color transj_color = grid_color;
-					transj_color.a *= transj;
-
-					if (j % 10 == 0 || k % 10 == 0) {
-						trans_color.a *= 2;
-					}
-					if ((k + 1) % 10 == 0) {
-						transk_color.a *= 2;
-					}
-					if ((j + 1) % 10 == 0) {
-						transj_color.a *= 2;
-					}
-
-					grid_points[i].push_back(p);
-					grid_points[i].push_back(pk);
-					grid_colors[i].push_back(trans_color);
-					grid_colors[i].push_back(transk_color);
-
-					grid_points[i].push_back(p);
-					grid_points[i].push_back(pj);
-					grid_colors[i].push_back(trans_color);
-					grid_colors[i].push_back(transj_color);
+				Color line_color = grid_color;
+				if (j == 0) {
+					continue;
+				} else if (j % 10 == 0) {
+					line_color *= 1.5;
 				}
+
+				grid_points[i].push_back(p1);
+				grid_points[i].push_back(p1_dest);
+				grid_colors[i].push_back(line_color);
+				grid_colors[i].push_back(line_color);
+
+				grid_points[i].push_back(p2);
+				grid_points[i].push_back(p2_dest);
+				grid_colors[i].push_back(line_color);
+				grid_colors[i].push_back(line_color);
 			}
 
 			grid[i] = VisualServer::get_singleton()->mesh_create();
@@ -3840,32 +3914,6 @@ void SpatialEditor::_init_indicators() {
 	}
 
 	{
-		cursor_mesh = VisualServer::get_singleton()->mesh_create();
-		PoolVector<Vector3> cursor_points;
-		float cs = 0.25;
-		cursor_points.push_back(Vector3(+cs, 0, 0));
-		cursor_points.push_back(Vector3(-cs, 0, 0));
-		cursor_points.push_back(Vector3(0, +cs, 0));
-		cursor_points.push_back(Vector3(0, -cs, 0));
-		cursor_points.push_back(Vector3(0, 0, +cs));
-		cursor_points.push_back(Vector3(0, 0, -cs));
-		cursor_material.instance();
-		cursor_material->set_albedo(Color(0, 1, 1));
-		cursor_material->set_flag(SpatialMaterial::FLAG_UNSHADED, true);
-
-		Array d;
-		d.resize(VS::ARRAY_MAX);
-		d[VS::ARRAY_VERTEX] = cursor_points;
-		VisualServer::get_singleton()->mesh_add_surface_from_arrays(cursor_mesh, VS::PRIMITIVE_LINES, d);
-		VisualServer::get_singleton()->mesh_surface_set_material(cursor_mesh, 0, cursor_material->get_rid());
-
-		cursor_instance = VisualServer::get_singleton()->instance_create2(cursor_mesh, get_tree()->get_root()->get_world()->get_scenario());
-		VS::get_singleton()->instance_set_layer_mask(cursor_instance, 1 << SpatialEditorViewport::GIZMO_GRID_LAYER);
-
-		VisualServer::get_singleton()->instance_geometry_set_cast_shadows_setting(cursor_instance, VS::SHADOW_CASTING_SETTING_OFF);
-	}
-
-	{
 
 		//move gizmo
 
@@ -3883,6 +3931,7 @@ void SpatialEditor::_init_indicators() {
 			move_gizmo[i] = Ref<ArrayMesh>(memnew(ArrayMesh));
 			move_plane_gizmo[i] = Ref<ArrayMesh>(memnew(ArrayMesh));
 			rotate_gizmo[i] = Ref<ArrayMesh>(memnew(ArrayMesh));
+			scale_gizmo[i] = Ref<ArrayMesh>(memnew(ArrayMesh));
 
 			Ref<SpatialMaterial> mat = memnew(SpatialMaterial);
 			mat->set_flag(SpatialMaterial::FLAG_UNSHADED, true);
@@ -3905,25 +3954,25 @@ void SpatialEditor::_init_indicators() {
 			Vector3 ivec3;
 			ivec3[(i + 2) % 3] = 1;
 
+			//translate
 			{
 
 				Ref<SurfaceTool> surftool = memnew(SurfaceTool);
 				surftool->begin(Mesh::PRIMITIVE_TRIANGLES);
 
-				//translate
-
+				// Arrow profile
 				const int arrow_points = 5;
 				Vector3 arrow[5] = {
 					nivec * 0.0 + ivec * 0.0,
 					nivec * 0.01 + ivec * 0.0,
-					nivec * 0.01 + ivec * 1.0,
-					nivec * 0.1 + ivec * 1.0,
-					nivec * 0.0 + ivec * (1 + GIZMO_ARROW_SIZE),
+					nivec * 0.01 + ivec * GIZMO_ARROW_OFFSET,
+					nivec * 0.065 + ivec * GIZMO_ARROW_OFFSET,
+					nivec * 0.0 + ivec * (GIZMO_ARROW_OFFSET + GIZMO_ARROW_SIZE),
 				};
 
 				int arrow_sides = 6;
 
-				for (int k = 0; k < 7; k++) {
+				for (int k = 0; k < 6; k++) {
 
 					Basis ma(ivec, Math_PI * 2 * float(k) / arrow_sides);
 					Basis mb(ivec, Math_PI * 2 * float(k + 1) / arrow_sides);
@@ -3950,7 +3999,7 @@ void SpatialEditor::_init_indicators() {
 				surftool->commit(move_gizmo[i]);
 			}
 
-			// plane translation
+			// Plane Translation
 			{
 				Ref<SurfaceTool> surftool = memnew(SurfaceTool);
 				surftool->begin(Mesh::PRIMITIVE_TRIANGLES);
@@ -3993,6 +4042,7 @@ void SpatialEditor::_init_indicators() {
 				surftool->commit(move_plane_gizmo[i]);
 			}
 
+			// Rotate
 			{
 
 				Ref<SurfaceTool> surftool = memnew(SurfaceTool);
@@ -4006,7 +4056,7 @@ void SpatialEditor::_init_indicators() {
 					ivec * 0.02 + ivec2 * 0.02 + ivec2 * GIZMO_CIRCLE_SIZE,
 				};
 
-				for (int k = 0; k < 33; k++) {
+				for (int k = 0; k < 32; k++) {
 
 					Basis ma(ivec, Math_PI * 2 * float(k) / 32);
 					Basis mb(ivec, Math_PI * 2 * float(k + 1) / 32);
@@ -4032,19 +4082,55 @@ void SpatialEditor::_init_indicators() {
 				surftool->set_material(mat);
 				surftool->commit(rotate_gizmo[i]);
 			}
+
+			// Scale
+			{
+				Ref<SurfaceTool> surftool = memnew(SurfaceTool);
+				surftool->begin(Mesh::PRIMITIVE_TRIANGLES);
+
+				// Cube arrow profile
+				const int arrow_points = 6;
+				Vector3 arrow[6] = {
+					nivec * 0.0 + ivec * 0.0,
+					nivec * 0.01 + ivec * 0.0,
+					nivec * 0.01 + ivec * 1.0 * GIZMO_SCALE_OFFSET,
+					nivec * 0.07 + ivec * 1.0 * GIZMO_SCALE_OFFSET,
+					nivec * 0.07 + ivec * 1.11 * GIZMO_SCALE_OFFSET,
+					nivec * 0.0 + ivec * 1.11 * GIZMO_SCALE_OFFSET,
+				};
+
+				int arrow_sides = 4;
+
+				for (int k = 0; k < 4; k++) {
+
+					Basis ma(ivec, Math_PI * 2 * float(k) / arrow_sides);
+					Basis mb(ivec, Math_PI * 2 * float(k + 1) / arrow_sides);
+
+					for (int j = 0; j < arrow_points - 1; j++) {
+
+						Vector3 points[4] = {
+							ma.xform(arrow[j]),
+							mb.xform(arrow[j]),
+							mb.xform(arrow[j + 1]),
+							ma.xform(arrow[j + 1]),
+						};
+						surftool->add_vertex(points[0]);
+						surftool->add_vertex(points[1]);
+						surftool->add_vertex(points[2]);
+
+						surftool->add_vertex(points[0]);
+						surftool->add_vertex(points[2]);
+						surftool->add_vertex(points[3]);
+					}
+				}
+
+				surftool->set_material(mat);
+				surftool->commit(scale_gizmo[i]);
+			}
 		}
 	}
 
-	/*for(int i=0;i<4;i++) {
-
-		viewports[i]->init_gizmo_instance(i);
-	}*/
-
 	_generate_selection_box();
-
-	//Object::cast_to<EditorNode>(get_scene()->get_root_node())->get_scene_root()->add_child(camera);
-
-	//current_camera=camera;
 }
 
 void SpatialEditor::_finish_indicators() {
@@ -4058,9 +4144,6 @@ void SpatialEditor::_finish_indicators() {
 	//VisualServer::get_singleton()->free(poly);
 	//VisualServer::get_singleton()->free(indicators_instance);
 	//VisualServer::get_singleton()->free(indicators);
-
-	VisualServer::get_singleton()->free(cursor_instance);
-	VisualServer::get_singleton()->free(cursor_mesh);
 }
 
 bool SpatialEditor::is_any_freelook_active() const {
@@ -4222,7 +4305,7 @@ void SpatialEditor::_toggle_maximize_view(Object *p_viewport) {
 
 		for (uint32_t i = 0; i < VIEWPORTS_COUNT; i++) {
 			if (i == (uint32_t)index)
-				viewports[i]->set_area_as_parent_rect();
+				viewports[i]->set_anchors_and_margins_preset(Control::PRESET_WIDE);
 			else
 				viewports[i]->hide();
 		}
@@ -4648,7 +4731,7 @@ SpatialEditorPlugin::SpatialEditorPlugin(EditorNode *p_node) {
 	spatial_editor->set_v_size_flags(Control::SIZE_EXPAND_FILL);
 	editor->get_viewport()->add_child(spatial_editor);
 
-	//spatial_editor->set_area_as_parent_rect();
+	//spatial_editor->set_anchors_and_margins_preset(Control::PRESET_WIDE);
 	spatial_editor->hide();
 	spatial_editor->connect("transform_key_request", editor, "_transform_keyed");
 

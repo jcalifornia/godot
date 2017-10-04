@@ -49,6 +49,7 @@ def can_build():
 
 
 def get_opts():
+    from SCons.Variables import BoolVariable, EnumVariable
 
     mingw32 = ""
     mingw64 = ""
@@ -64,8 +65,8 @@ def get_opts():
     return [
         ('mingw_prefix_32', 'MinGW prefix (Win32)', mingw32),
         ('mingw_prefix_64', 'MinGW prefix (Win64)', mingw64),
-        ('use_lto', 'Use link time optimization (when using MingW)', 'no'),
-        ('debug_symbols', 'Add debug symbols to release version (yes/no/full)', 'yes')
+        BoolVariable('use_lto', 'Use link time optimization (when using MingW)', False),
+        EnumVariable('debug_symbols', 'Add debug symbols to release version', 'yes', ('yes', 'no', 'full')),
     ]
 
 
@@ -262,9 +263,12 @@ def configure(env):
         env['LD'] = mingw_prefix + "g++"
         env["x86_libtheora_opt_gcc"] = True
 
-        if (env["use_lto"] == "yes"):
+        if env['use_lto']:
             env.Append(CCFLAGS=['-flto'])
-            env.Append(LINKFLAGS=['-flto'])
+            if not env['use_llvm'] and env.GetOption("num_jobs") > 1:
+                env.Append(LINKFLAGS=['-flto=' + str(env.GetOption("num_jobs"))])
+            else:
+                env.Append(LINKFLAGS=['-flto'])
 
         ## Compile flags
 
