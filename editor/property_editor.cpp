@@ -1889,7 +1889,7 @@ CustomPropertyEditor::CustomPropertyEditor() {
 
 	text_edit = memnew(TextEdit);
 	add_child(text_edit);
-	text_edit->set_area_as_parent_rect(5);
+	text_edit->set_anchors_and_margins_preset(Control::PRESET_WIDE, Control::PRESET_MODE_MINSIZE, 5);
 	text_edit->set_margin(MARGIN_BOTTOM, -30);
 
 	text_edit->hide();
@@ -1948,12 +1948,12 @@ CustomPropertyEditor::CustomPropertyEditor() {
 
 	spinbox = memnew(SpinBox);
 	add_child(spinbox);
-	spinbox->set_area_as_parent_rect(5);
+	spinbox->set_anchors_and_margins_preset(Control::PRESET_WIDE, Control::PRESET_MODE_MINSIZE, 5);
 	spinbox->connect("value_changed", this, "_range_modified");
 
 	slider = memnew(HSlider);
 	add_child(slider);
-	slider->set_area_as_parent_rect(5);
+	slider->set_anchors_and_margins_preset(Control::PRESET_WIDE, Control::PRESET_MODE_MINSIZE, 5);
 	slider->connect("value_changed", this, "_range_modified");
 
 	create_dialog = NULL;
@@ -2433,7 +2433,7 @@ bool PropertyEditor::_is_drop_valid(const Dictionary &p_drag_data, const Diction
 void PropertyEditor::_mark_drop_fields(TreeItem *p_at) {
 
 	if (_is_drop_valid(get_viewport()->gui_get_drag_data(), p_at->get_metadata(0)))
-		p_at->set_custom_bg_color(1, Color(0.7, 0.5, 0.2), true);
+		p_at->set_custom_bg_color(1, get_color("accent_color", "Editor"), true);
 
 	if (p_at->get_children()) {
 		_mark_drop_fields(p_at->get_children());
@@ -2585,10 +2585,10 @@ void PropertyEditor::_notification(int p_what) {
 		}
 	}
 
-	if (p_what == NOTIFICATION_FIXED_PROCESS) {
+	if (p_what == NOTIFICATION_PHYSICS_PROCESS) {
 
 		if (refresh_countdown > 0) {
-			refresh_countdown -= get_fixed_process_delta_time();
+			refresh_countdown -= get_physics_process_delta_time();
 			if (refresh_countdown <= 0) {
 				TreeItem *root = tree->get_root();
 				_refresh_item(root);
@@ -2958,7 +2958,7 @@ void PropertyEditor::update_tree() {
 		item->set_metadata(1, p.name);
 
 		if (draw_red)
-			item->set_custom_color(0, Color(0.8, 0.4, 0.20));
+			item->set_custom_color(0, get_color("error_color", "Editor"));
 
 		if (p.name == selected_property) {
 
@@ -3538,14 +3538,14 @@ void PropertyEditor::_draw_transparency(Object *t, const Rect2 &p_rect) {
 		return;
 
 	Color color = obj->get(ti->get_metadata(1));
-	Ref<Texture> arrow = tree->get_icon("select_arrow");
+	Ref<Texture> arrow = tree->get_icon("select_option");
 
 	// make a little space between consecutive color fields
 	Rect2 area = p_rect;
 	area.position.y += 1;
 	area.size.height -= 2;
 	area.size.width -= arrow->get_size().width + 5;
-	tree->draw_texture_rect(get_icon("Transparent", "EditorIcons"), area, true);
+	tree->draw_texture_rect(get_icon("GuiMiniCheckerboard", "EditorIcons"), area, true);
 	tree->draw_rect(area, color);
 }
 
@@ -4227,7 +4227,7 @@ PropertyEditor::PropertyEditor() {
 
 	tree->set_drag_forwarding(this);
 
-	set_fixed_process(true);
+	set_physics_process(true);
 
 	custom_editor = memnew(CustomPropertyEditor);
 	add_child(custom_editor);
@@ -4257,7 +4257,7 @@ PropertyEditor::PropertyEditor() {
 	use_filter = false;
 	subsection_selectable = false;
 	property_selectable = false;
-	show_type_icons = EDITOR_DEF("interface/show_type_icons", false);
+	show_type_icons = EDITOR_DEF("interface/editor/show_type_icons", false);
 }
 
 PropertyEditor::~PropertyEditor() {

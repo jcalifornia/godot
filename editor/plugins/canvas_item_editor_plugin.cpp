@@ -1219,50 +1219,26 @@ void CanvasItemEditor::_viewport_base_gui_input(const Ref<InputEvent> &p_event) 
 		if (b->get_button_index() == BUTTON_WHEEL_DOWN) {
 			// Scroll or pan down
 			if (bool(EditorSettings::get_singleton()->get("editors/2d/scroll_to_pan"))) {
-
 				v_scroll->set_value(v_scroll->get_value() + int(EditorSettings::get_singleton()->get("editors/2d/pan_speed")) / zoom * b->get_factor());
-
+				_update_scroll(0);
+				viewport->update();
 			} else {
-
-				if (zoom < MIN_ZOOM)
-					return;
-
-				float prev_zoom = zoom;
-				zoom = zoom * (1 - (0.05 * b->get_factor()));
-				{
-					Point2 ofs = viewport_scrollable->get_transform().affine_inverse().xform(b->get_position());
-					ofs = ofs / prev_zoom - ofs / zoom;
-					h_scroll->set_value(h_scroll->get_value() + ofs.x);
-					v_scroll->set_value(v_scroll->get_value() + ofs.y);
-				}
+				_zoom_on_position(zoom * (1 - (0.05 * b->get_factor())), viewport_scrollable->get_transform().affine_inverse().xform(b->get_position()));
 			}
 
-			_update_scroll(0);
-			viewport->update();
 			return;
 		}
 
 		if (b->get_button_index() == BUTTON_WHEEL_UP) {
 			// Scroll or pan up
 			if (bool(EditorSettings::get_singleton()->get("editors/2d/scroll_to_pan"))) {
-
 				v_scroll->set_value(v_scroll->get_value() - int(EditorSettings::get_singleton()->get("editors/2d/pan_speed")) / zoom * b->get_factor());
-
+				_update_scroll(0);
+				viewport->update();
 			} else {
-				if (zoom > MAX_ZOOM) return;
-
-				float prev_zoom = zoom;
-				zoom = zoom * ((0.95 + (0.05 * b->get_factor())) / 0.95);
-				{
-					Point2 ofs = viewport_scrollable->get_transform().affine_inverse().xform(b->get_position());
-					ofs = ofs / prev_zoom - ofs / zoom;
-					h_scroll->set_value(h_scroll->get_value() + ofs.x);
-					v_scroll->set_value(v_scroll->get_value() + ofs.y);
-				}
+				_zoom_on_position(zoom * ((0.95 + (0.05 * b->get_factor())) / 0.95), viewport_scrollable->get_transform().affine_inverse().xform(b->get_position()));
 			}
 
-			_update_scroll(0);
-			viewport->update();
 			return;
 		}
 
@@ -2668,13 +2644,13 @@ void CanvasItemEditor::_draw_viewport() {
 		all_group = false;
 	} else {
 		for (List<Node *>::Element *E = selection.front(); E; E = E->next()) {
-			if (Object::cast_to<Control>(E->get()) && !Object::cast_to<Control>(E->get())->has_meta("_edit_lock_")) {
+			if (Object::cast_to<CanvasItem>(E->get()) && !Object::cast_to<CanvasItem>(E->get())->has_meta("_edit_lock_")) {
 				all_locked = false;
 				break;
 			}
 		}
 		for (List<Node *>::Element *E = selection.front(); E; E = E->next()) {
-			if (Object::cast_to<Control>(E->get()) && !Object::cast_to<Control>(E->get())->has_meta("_edit_group_")) {
+			if (Object::cast_to<CanvasItem>(E->get()) && !Object::cast_to<CanvasItem>(E->get())->has_meta("_edit_group_")) {
 				all_group = false;
 				break;
 			}
@@ -2704,11 +2680,12 @@ void CanvasItemEditor::_draw_viewport() {
 		over_plugin_list->forward_draw_over_canvas(transform, viewport);
 	}
 	_draw_focus();
+	_draw_bones();
 }
 
 void CanvasItemEditor::_notification(int p_what) {
 
-	if (p_what == NOTIFICATION_FIXED_PROCESS) {
+	if (p_what == NOTIFICATION_PHYSICS_PROCESS) {
 
 		EditorNode::get_singleton()->get_scene_root()->set_snap_controls_to_pixels(GLOBAL_GET("gui/common/snap_controls_to_pixels"));
 
@@ -3050,7 +3027,7 @@ void CanvasItemEditor::_set_full_rect() {
 
 		Control *c = Object::cast_to<Control>(E->get());
 
-		undo_redo->add_do_method(c, "set_anchors_preset", PRESET_WIDE);
+		undo_redo->add_do_method(c, "set_anchors_preset", Control::PRESET_WIDE);
 		undo_redo->add_do_method(c, "set_margin", MARGIN_LEFT, 0);
 		undo_redo->add_do_method(c, "set_margin", MARGIN_TOP, 0);
 		undo_redo->add_do_method(c, "set_margin", MARGIN_RIGHT, 0);
@@ -3068,31 +3045,32 @@ void CanvasItemEditor::_set_full_rect() {
 	undo_redo->commit_action();
 }
 
-void CanvasItemEditor::_zoom_minus() {
-	if (zoom < MIN_ZOOM)
+void CanvasItemEditor::_zoom_on_position(float p_zoom, Point2 p_position) {
+	if (p_zoom < MIN_ZOOM || p_zoom > MAX_ZOOM)
 		return;
-	zoom /= 2.0;
+
+	float prev_zoom = zoom;
+	zoom = p_zoom;
+	Point2 ofs = p_position;
+	ofs = ofs / prev_zoom - ofs / zoom;
+	h_scroll->set_value(h_scroll->get_value() + ofs.x);
+	v_scroll->set_value(v_scroll->get_value() + ofs.y);
 
 	_update_scroll(0);
 	viewport->update();
 	viewport_base->update();
+}
+
+void CanvasItemEditor::_zoom_minus() {
+	_zoom_on_position(zoom / 2.0, viewport_scrollable->get_size() / 2.0);
 }
 
 void CanvasItemEditor::_zoom_reset() {
-	zoom = 1;
-	_update_scroll(0);
-	viewport->update();
-	viewport_base->update();
+	_zoom_on_position(1.0, viewport_scrollable->get_size() / 2.0);
 }
 
 void CanvasItemEditor::_zoom_plus() {
-	if (zoom > MAX_ZOOM)
-		return;
-
-	zoom *= 2.0;
-	_update_scroll(0);
-	viewport->update();
-	viewport_base->update();
+	_zoom_on_position(zoom * 2.0, viewport_scrollable->get_size() / 2.0);
 }
 
 void CanvasItemEditor::_toggle_snap(bool p_status) {
@@ -3301,7 +3279,7 @@ void CanvasItemEditor::_popup_callback(int p_op) {
 			_set_anchors_preset(PRESET_HCENTER_WIDE);
 		} break;
 		case ANCHOR_ALIGN_WIDE: {
-			_set_anchors_preset(PRESET_WIDE);
+			_set_anchors_preset(Control::PRESET_WIDE);
 		} break;
 		case ANCHOR_ALIGN_WIDE_FIT: {
 			_set_full_rect();
@@ -3698,7 +3676,7 @@ CanvasItemEditor::CanvasItemEditor(EditorNode *p_editor) {
 
 	hb = memnew(HBoxContainer);
 	add_child(hb);
-	hb->set_area_as_parent_rect();
+	hb->set_anchors_and_margins_preset(Control::PRESET_WIDE);
 
 	bottom_split = memnew(VSplitContainer);
 	add_child(bottom_split);
@@ -3721,19 +3699,19 @@ CanvasItemEditor::CanvasItemEditor(EditorNode *p_editor) {
 	viewport_base->add_child(viewport_scrollable);
 	viewport_scrollable->set_mouse_filter(MOUSE_FILTER_PASS);
 	viewport_scrollable->set_draw_behind_parent(true);
-	viewport_scrollable->set_area_as_parent_rect();
+	viewport_scrollable->set_anchors_and_margins_preset(Control::PRESET_WIDE);
 	viewport_scrollable->set_begin(Point2(RULER_WIDTH, RULER_WIDTH));
 
 	ViewportContainer *scene_tree = memnew(ViewportContainer);
 	viewport_scrollable->add_child(scene_tree);
 	scene_tree->set_stretch(true);
-	scene_tree->set_area_as_parent_rect();
+	scene_tree->set_anchors_and_margins_preset(Control::PRESET_WIDE);
 	scene_tree->add_child(p_editor->get_scene_root());
 
 	viewport = memnew(CanvasItemEditorViewport(p_editor, this));
 	viewport_scrollable->add_child(viewport);
 	viewport->set_mouse_filter(MOUSE_FILTER_PASS);
-	viewport->set_area_as_parent_rect();
+	viewport->set_anchors_and_margins_preset(Control::PRESET_WIDE);
 	viewport->set_clip_contents(true);
 	viewport->connect("draw", this, "_draw_viewport");
 
@@ -3823,7 +3801,6 @@ CanvasItemEditor::CanvasItemEditor(EditorNode *p_editor) {
 
 	snap_config_menu = memnew(MenuButton);
 	hb->add_child(snap_config_menu);
-	snap_config_menu->get_popup()->connect("id_pressed", this, "_popup_callback");
 	snap_config_menu->set_h_size_flags(SIZE_SHRINK_END);
 	snap_config_menu->set_tooltip(TTR("Snapping options"));
 
@@ -3877,7 +3854,6 @@ CanvasItemEditor::CanvasItemEditor(EditorNode *p_editor) {
 
 	p = skeleton_menu->get_popup();
 	p->set_hide_on_checkable_item_selection(false);
-	p->connect("id_pressed", this, "_popup_callback");
 	p->add_shortcut(ED_SHORTCUT("canvas_item_editor/skeleton_make_bones", TTR("Make Bones"), KEY_MASK_CMD | KEY_MASK_SHIFT | KEY_B), SKELETON_MAKE_BONES);
 	p->add_shortcut(ED_SHORTCUT("canvas_item_editor/skeleton_clear_bones", TTR("Clear Bones")), SKELETON_CLEAR_BONES);
 	p->add_separator();
@@ -4034,14 +4010,14 @@ void CanvasItemEditorPlugin::make_visible(bool p_visible) {
 
 	if (p_visible) {
 		canvas_item_editor->show();
-		canvas_item_editor->set_fixed_process(true);
+		canvas_item_editor->set_physics_process(true);
 		VisualServer::get_singleton()->viewport_set_hide_canvas(editor->get_scene_root()->get_viewport_rid(), false);
 		canvas_item_editor->viewport_base->grab_focus();
 
 	} else {
 
 		canvas_item_editor->hide();
-		canvas_item_editor->set_fixed_process(false);
+		canvas_item_editor->set_physics_process(false);
 		VisualServer::get_singleton()->viewport_set_hide_canvas(editor->get_scene_root()->get_viewport_rid(), true);
 	}
 }
@@ -4061,7 +4037,7 @@ CanvasItemEditorPlugin::CanvasItemEditorPlugin(EditorNode *p_node) {
 	canvas_item_editor = memnew(CanvasItemEditor(editor));
 	canvas_item_editor->set_v_size_flags(Control::SIZE_EXPAND_FILL);
 	editor->get_viewport()->add_child(canvas_item_editor);
-	canvas_item_editor->set_area_as_parent_rect();
+	canvas_item_editor->set_anchors_and_margins_preset(Control::PRESET_WIDE);
 	canvas_item_editor->hide();
 }
 
@@ -4183,7 +4159,7 @@ void CanvasItemEditorViewport::_create_nodes(Node *parent, Node *child, String &
 	editor_data->get_undo_redo().add_do_property(child, property, texture);
 
 	// make visible for certain node type
-	if (default_type == "Patch9Rect") {
+	if (default_type == "NinePatchRect") {
 		editor_data->get_undo_redo().add_do_property(child, "rect/size", texture_size);
 	} else if (default_type == "Polygon2D") {
 		PoolVector<Vector2> list;
@@ -4201,7 +4177,7 @@ void CanvasItemEditorViewport::_create_nodes(Node *parent, Node *child, String &
 	}
 	Transform2D trans = canvas->get_canvas_transform();
 	Point2 target_position = (p_point - trans.get_origin()) / trans.get_scale().x - pos;
-	if (default_type == "Polygon2D" || default_type == "TouchScreenButton" || default_type == "TextureRect" || default_type == "Patch9Rect") {
+	if (default_type == "Polygon2D" || default_type == "TouchScreenButton" || default_type == "TextureRect" || default_type == "NinePatchRect") {
 		target_position -= texture_size / 2;
 	}
 	// there's nothing to be used as source position so snapping will work as absolute if enabled
@@ -4277,7 +4253,7 @@ void CanvasItemEditorViewport::_perform_drop_data() {
 				child = memnew(TouchScreenButton);
 			else if (default_type == "TextureRect")
 				child = memnew(TextureRect);
-			else if (default_type == "Patch9Rect")
+			else if (default_type == "NinePatchRect")
 				child = memnew(NinePatchRect);
 			else
 				child = memnew(Sprite); // default
@@ -4439,7 +4415,7 @@ CanvasItemEditorViewport::CanvasItemEditorViewport(EditorNode *p_node, CanvasIte
 	types.push_back("TouchScreenButton");
 	// Control
 	types.push_back("TextureRect");
-	types.push_back("Patch9Rect");
+	types.push_back("NinePatchRect");
 
 	target_node = NULL;
 	editor = p_node;
