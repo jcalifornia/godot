@@ -4,6 +4,7 @@
 #include "print_string.h"
 
 SimpleCallback::SimpleCallback(){
+    
 }
 SimpleCallback::~SimpleCallback(){
 }
@@ -14,9 +15,9 @@ void SimpleCallback::audio( int target,
                        int16_t *pcm_data,
                        uint32_t pcm_data_size){
    if(_audio_handler != NULL){
-    Variant tar = memnew( Variant(target) );
-    Variant sid = memnew( Variant(sessionId) );
-    Variant snum = memnew( Variant(sequenceNumber) );
+    Variant tar =  Variant(target);
+    Variant sid =  Variant(sessionId);
+    Variant snum =  Variant(sequenceNumber);
     Variant *pcm = utils::short2byte(pcm_data, pcm_data_size);
     Variant::CallError err;
     const Variant *args[4] = {&tar, &sid, &snum, pcm};
@@ -53,15 +54,18 @@ void SimpleCallback::version(
                 std::string release,
                 std::string os,
                 std::string os_version){
-      print_line("processing os: " + String(os.c_str()) );
 }
 void SimpleCallback::_bind_methods(){
    ClassDB::bind_method(D_METHOD("setAudioHandler", "handler"), &SimpleCallback::setAudioHandler);
    ClassDB::bind_method(D_METHOD("setTextHandler", "handler"), &SimpleCallback::setTextHandler);
 }
-void SimpleCallback::setAudioHandler( Object * handler){
-   this->_audio_handler = Object::cast_to<FuncRef>(handler);
+void SimpleCallback::setAudioHandler(  Ref<FuncRef> handler){
+   this->_audio_handler = handler;
 }
-void SimpleCallback::setTextHandler( Object * handler){
-   this->_text_handler = Object::cast_to<FuncRef>(handler);
+void SimpleCallback::setTextHandler( Ref<FuncRef> handler){
+    print_line("cb type :" + handler->get_class());
+    print_line("is null :" + (this->_text_handler.is_null() == true) ? "True" : "False" );
+    this->_text_handler.unref();
+   this->_text_handler = handler.get_ref_ptr();
+   //this-> _text_handler = memnew(FuncRef);
 }
