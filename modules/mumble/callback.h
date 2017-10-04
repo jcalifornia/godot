@@ -61,7 +61,6 @@ public:
    
     void setAudioHandler(Ref<FuncRef> handler);
     void setTextHandler(Ref<FuncRef> handler);
-    void sendText(String message);
 
 
 

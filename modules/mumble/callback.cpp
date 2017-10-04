@@ -52,8 +52,8 @@ void SimpleCallback::MyCallBack::version(
                 uint8_t patch,
                 std::string release,
                 std::string os,
-                std::string os_version){
-}
+                std::string os_version){ }
+                
 void SimpleCallback::_bind_methods(){
    ClassDB::bind_method(D_METHOD("setAudioHandler", "handler"), &SimpleCallback::setAudioHandler);
    ClassDB::bind_method(D_METHOD("setTextHandler", "handler"), &SimpleCallback::setTextHandler);
