@@ -862,6 +862,7 @@ void Tree::update_cache() {
 	cache.arrow_collapsed = get_icon("arrow_collapsed");
 	cache.arrow = get_icon("arrow");
 	cache.select_arrow = get_icon("select_arrow");
+	cache.select_option = get_icon("select_option");
 	cache.updown = get_icon("updown");
 
 	cache.custom_button = get_stylebox("custom_button");
@@ -2135,8 +2136,15 @@ void Tree::_gui_input(Ref<InputEvent> p_event) {
 					if (selected_item->get_children() != NULL && !selected_item->is_collapsed()) {
 						selected_item->set_collapsed(true);
 					} else {
-						selected_col = columns.size() - 1;
-						dobreak = false; // fall through to key_up
+						if (columns.size() == 1) { // goto parent with one column
+							TreeItem *parent = selected_item->get_parent();
+							if (selected_item != get_root() && parent && parent->is_selectable(selected_col) && !(hide_root && parent == get_root())) {
+								select_single_item(parent, get_root(), selected_col);
+							}
+						} else {
+							selected_col = columns.size() - 1;
+							dobreak = false; // fall through to key_up
+						}
 					}
 				} else {
 					if (select_mode == SELECT_MULTI) {
@@ -2149,6 +2157,7 @@ void Tree::_gui_input(Ref<InputEvent> p_event) {
 				}
 				update();
 				accept_event();
+				ensure_cursor_is_visible();
 
 				if (dobreak) {
 					break;
@@ -2484,7 +2493,7 @@ void Tree::_gui_input(Ref<InputEvent> p_event) {
 					if (drag_speed == 0) {
 						drag_touching_deaccel = false;
 						drag_touching = false;
-						set_fixed_process(false);
+						set_physics_process(false);
 					} else {
 
 						drag_touching_deaccel = true;
@@ -2550,7 +2559,7 @@ void Tree::_gui_input(Ref<InputEvent> p_event) {
 					break;
 
 				if (drag_touching) {
-					set_fixed_process(false);
+					set_physics_process(false);
 					drag_touching_deaccel = false;
 					drag_touching = false;
 					drag_speed = 0;
@@ -2565,7 +2574,7 @@ void Tree::_gui_input(Ref<InputEvent> p_event) {
 					drag_touching = OS::get_singleton()->has_touchscreen_ui_hint();
 					drag_touching_deaccel = false;
 					if (drag_touching) {
-						set_fixed_process(true);
+						set_physics_process(true);
 					}
 				}
 
@@ -2756,7 +2765,7 @@ void Tree::_notification(int p_what) {
 
 		drop_mode_flags = 0;
 		scrolling = false;
-		set_fixed_process(false);
+		set_physics_process(false);
 		update();
 	}
 	if (p_what == NOTIFICATION_DRAG_BEGIN) {
@@ -2764,23 +2773,23 @@ void Tree::_notification(int p_what) {
 		single_select_defer = NULL;
 		if (cache.scroll_speed > 0 && get_rect().has_point(get_viewport()->get_mouse_position() - get_global_position())) {
 			scrolling = true;
-			set_fixed_process(true);
+			set_physics_process(true);
 		}
 	}
-	if (p_what == NOTIFICATION_FIXED_PROCESS) {
+	if (p_what == NOTIFICATION_PHYSICS_PROCESS) {
 
 		if (drag_touching) {
 
 			if (drag_touching_deaccel) {
 
 				float pos = v_scroll->get_value();
-				pos += drag_speed * get_fixed_process_delta_time();
+				pos += drag_speed * get_physics_process_delta_time();
 
 				bool turnoff = false;
 				if (pos < 0) {
 					pos = 0;
 					turnoff = true;
-					set_fixed_process(false);
+					set_physics_process(false);
 					drag_touching = false;
 					drag_touching_deaccel = false;
 				}
@@ -2792,7 +2801,7 @@ void Tree::_notification(int p_what) {
 				v_scroll->set_value(pos);
 				float sgn = drag_speed < 0 ? -1 : 1;
 				float val = Math::abs(drag_speed);
-				val -= 1000 * get_fixed_process_delta_time();
+				val -= 1000 * get_physics_process_delta_time();
 
 				if (val < 0) {
 					turnoff = true;
@@ -2800,7 +2809,7 @@ void Tree::_notification(int p_what) {
 				drag_speed = sgn * val;
 
 				if (turnoff) {
-					set_fixed_process(false);
+					set_physics_process(false);
 					drag_touching = false;
 					drag_touching_deaccel = false;
 				}
@@ -2825,7 +2834,7 @@ void Tree::_notification(int p_what) {
 			} else {
 				point.y = 0;
 			}
-			point *= cache.scroll_speed * get_fixed_process_delta_time();
+			point *= cache.scroll_speed * get_physics_process_delta_time();
 			point += get_scroll();
 			h_scroll->set_value(point.x);
 			v_scroll->set_value(point.y);

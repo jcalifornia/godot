@@ -1418,7 +1418,7 @@ ProjectManager::ProjectManager() {
 	EditorSettings::get_singleton()->set_optimize_save(false); //just write settings as they came
 
 	{
-		int dpi_mode = EditorSettings::get_singleton()->get("interface/hidpi_mode");
+		int dpi_mode = EditorSettings::get_singleton()->get("interface/editor/hidpi_mode");
 		if (dpi_mode == 0) {
 			editor_set_scale(OS::get_singleton()->get_screen_dpi(0) >= 192 && OS::get_singleton()->get_screen_size(OS::get_singleton()->get_current_screen()).x > 2000 ? 2.0 : 1.0);
 		} else if (dpi_mode == 1) {
@@ -1434,21 +1434,21 @@ ProjectManager::ProjectManager() {
 
 	FileDialog::set_default_show_hidden_files(EditorSettings::get_singleton()->get("filesystem/file_dialog/show_hidden_files"));
 
-	set_area_as_parent_rect();
+	set_anchors_and_margins_preset(Control::PRESET_WIDE);
 	set_theme(create_editor_theme());
 
 	gui_base = memnew(Control);
 	add_child(gui_base);
-	gui_base->set_area_as_parent_rect();
+	gui_base->set_anchors_and_margins_preset(Control::PRESET_WIDE);
 	gui_base->set_theme(create_custom_theme());
 
 	Panel *panel = memnew(Panel);
 	gui_base->add_child(panel);
-	panel->set_area_as_parent_rect();
+	panel->set_anchors_and_margins_preset(Control::PRESET_WIDE);
 
 	VBoxContainer *vb = memnew(VBoxContainer);
 	panel->add_child(vb);
-	vb->set_area_as_parent_rect(20 * EDSCALE);
+	vb->set_anchors_and_margins_preset(Control::PRESET_WIDE, Control::PRESET_MODE_MINSIZE, 20 * EDSCALE);
 	vb->set_margin(MARGIN_TOP, 4 * EDSCALE);
 	vb->set_margin(MARGIN_BOTTOM, -4 * EDSCALE);
 	vb->add_constant_override("separation", 15 * EDSCALE);

@@ -85,7 +85,7 @@ public:
 	enum TextureFlags {
 		TEXTURE_FLAG_MIPMAPS = 1, /// Enable automatic mipmap generation - when available
 		TEXTURE_FLAG_REPEAT = 2, /// Repeat texture (Tiling), otherwise Clamping
-		TEXTURE_FLAG_FILTER = 4, /// Create texure with linear (or available) filter
+		TEXTURE_FLAG_FILTER = 4, /// Create texture with linear (or available) filter
 		TEXTURE_FLAG_ANISOTROPIC_FILTER = 8,
 		TEXTURE_FLAG_CONVERT_TO_LINEAR = 16,
 		TEXTURE_FLAG_MIRRORED_REPEAT = 32, /// Repeat texture, with alternate sections mirrored
@@ -637,7 +637,7 @@ public:
 
 	virtual void environment_set_background(RID p_env, EnvironmentBG p_bg) = 0;
 	virtual void environment_set_sky(RID p_env, RID p_sky) = 0;
-	virtual void environment_set_sky_scale(RID p_env, float p_scale) = 0;
+	virtual void environment_set_sky_custom_fov(RID p_env, float p_scale) = 0;
 	virtual void environment_set_bg_color(RID p_env, const Color &p_color) = 0;
 	virtual void environment_set_bg_energy(RID p_env, float p_energy) = 0;
 	virtual void environment_set_canvas_max_layer(RID p_env, int p_max_layer) = 0;
