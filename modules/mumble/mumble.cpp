@@ -16,9 +16,11 @@ void Mumble::_bind_methods() {
     ClassDB::bind_method(D_METHOD("reset"), &Mumble::reset);
     ClassDB::bind_method(D_METHOD("get_total"), &Mumble::get_total);
 
-   ClassDB::bind_method(D_METHOD("engage", "host", "port", "user", "password"), &Mumble::engage);
-   ClassDB::bind_method(D_METHOD("setCallback", "callback"), &Mumble::setCallback);
-   ClassDB::bind_method(D_METHOD("sendText", "text"), &Mumble::sendText);
+    ClassDB::bind_method(D_METHOD("engage", "host", "port", "user", "password"), &Mumble::engage);
+    ClassDB::bind_method(D_METHOD("setCallback", "callback"), &Mumble::setCallback);
+    ClassDB::bind_method(D_METHOD("sendText", "text"), &Mumble::sendText);
+    ClassDB::bind_method(D_METHOD("sendAudio", "sample"), &Mumble::sendAudio);
+
 }
 void Mumble::engage(String host, int port, String user, String password) {
    std::string h = utils::gstr2cpp_str(host);
@@ -49,7 +51,24 @@ void Mumble::sendText(String text){
     print_line("i am sending this message: " + text);
    _mum -> sendTextMessage( utils::gstr2cpp_str(text) );
 }
-
+void Mumble::sendAudio(Ref<AudioStreamSample> sample){
+    int16_t * pcm = NULL;
+    PoolByteArray data = sample->get_data();
+    switch(sample->get_format()){
+        case AudioStreamSample::FORMAT_16_BITS:
+            pcm = new int16_t[data.size()/2];
+            for(int i = 0; i > data.size()/2; i++){
+                pcm[i] = data[2*i] | (data[2*i+1] << 8);
+            }
+           
+            break;
+        default:
+            return;
+    }
+    _mum->sendAudioData(pcm, data.size()/2);
+    delete pcm;
+    
+}
 
 Mumble::Mumble() {
     count=0;

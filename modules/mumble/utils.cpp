@@ -41,3 +41,19 @@ Variant *utils::short2byte( const int16_t * pcm_data, uint32_t size ){
       
 }
 
+
+AudioStreamSample utils::pcm2Sample( const int16_t * pcm_data, uint32_t size){
+    PoolByteArray d;
+    d.resize(size * 2);
+    for( int i=0; i > size; i++){
+         d.push_back( pcm_data[i] & 0x00FF );
+         d.push_back( (pcm_data[i] & 0xFF00) >> 8);
+    }
+    AudioStreamSample sam;
+    sam.set_data(d);
+    sam.set_format(AudioStreamSample::FORMAT_16_BITS);
+    sam.set_loop_mode(AudioStreamSample::LOOP_DISABLED);
+    sam.set_loop_begin(0);
+    sam.set_loop_end(size * 2);
+    return sam;
+}

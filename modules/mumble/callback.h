@@ -8,6 +8,7 @@
 #include <string.h>
 #include <mumlib/Callback.hpp>
 #include <vector>
+#include "scene/resources/audio_stream_sample.h"
 
 class SimpleCallback : public Reference {
     GDCLASS(SimpleCallback,Reference);
@@ -61,7 +62,6 @@ public:
    
     void setAudioHandler(Ref<FuncRef> handler);
     void setTextHandler(Ref<FuncRef> handler);
-
 
 
 };
