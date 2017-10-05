@@ -22,7 +22,7 @@ public:
     int get_total() const;
     void engage(String host, int port, String user, String password);
     void setCallback( Object * o );
-    void sendText(String message);
+    void sendText(const String message);
     void sendAudio(Ref<AudioStreamSample> sample);
     Mumble();
 };

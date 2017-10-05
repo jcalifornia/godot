@@ -15,14 +15,14 @@ void SimpleCallback::MyCallBack::audio( int target,
                        int16_t *pcm_data,
                        uint32_t pcm_data_size){
    if(!_cb._audio_handler.is_null()){
-    Variant tar(target);
+   // Variant tar(target);
     Variant sid(sessionId);
     Variant snum(sequenceNumber);
-    AudioStreamSample sam = utils::pcm2Sample(pcm_data, pcm_data_size);
-    Variant pcm(&sam);
+    Ref<AudioStreamSample> sam = Ref<AudioStreamSample>(utils::pcm2Sample(pcm_data, pcm_data_size));    
+    Variant pcm(sam);
     Variant::CallError err;
-    const Variant *args[4] = {&tar, &sid, &snum, &pcm};
-    Variant result =  _cb._audio_handler->call_func( args, 4, err);
+    const Variant *args[3] = { &sid, &snum, &pcm};
+    Variant result =  _cb._audio_handler->call_func( args, 3, err);
    }
 }
 

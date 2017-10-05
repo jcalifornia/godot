@@ -8,6 +8,7 @@
 #include <mumlib/Transport.hpp>
 #include <string>
 #include "scene/main/timer.h"
+#include <stdlib.h>
 
 
 
@@ -45,28 +46,34 @@ void Mumble::engage(String host, int port, String user, String password) {
 
 void Mumble::setCallback(Object * callback){
    SimpleCallback *cb = Object::cast_to<SimpleCallback>(callback);
-   _mum = new mumlib::Mumlib(*(cb->get_callback()));
+   _mum = new mumlib::Mumlib(*(cb->get_callback()),_conf);
 }
-void Mumble::sendText(String text){
+void Mumble::sendText(const String text){
     print_line("i am sending this message: " + text);
    _mum -> sendTextMessage( utils::gstr2cpp_str(text) );
 }
 void Mumble::sendAudio(Ref<AudioStreamSample> sample){
-    int16_t * pcm = NULL;
-    PoolByteArray data = sample->get_data();
-    switch(sample->get_format()){
-        case AudioStreamSample::FORMAT_16_BITS:
-            pcm = new int16_t[data.size()/2];
-            for(int i = 0; i > data.size()/2; i++){
-                pcm[i] = data[2*i] | (data[2*i+1] << 8);
-            }
-           
-            break;
-        default:
-            return;
+
+    const PoolByteArray data = sample->get_data();
+
+    int32_t packet_size = 0;
+    int16_t pcm[5000]; //https://github.com/slomkowski/mumlib/blob/master/src/mumlib.cpp look at lib source
+       print_line("pcm_data" + itos(sample->get_format()) +" size :" + itos((int64_t)data.size()));
+
+    if(data.size() > 0){
+        switch(sample->get_format()){
+            case AudioStreamSample::FORMAT_16_BITS:         
+
+                packet_size = data.size()/2;
+                for(int i = 0; i > packet_size; i++){
+                    pcm[i] = data[2*i] | (data[2*i+1] << 8);
+                }
+                break;
+            default:
+                return;
+        }
+        _mum->sendAudioData(pcm, packet_size);
     }
-    _mum->sendAudioData(pcm, data.size()/2);
-    delete pcm;
     
 }
 
