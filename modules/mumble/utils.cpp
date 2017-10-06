@@ -21,7 +21,21 @@ Variant utils::cpp_uint32vec2Variant(  const std::vector<uint32_t> &v ){
         return ret;
 }
 
+PoolByteArray utils::pcm2ByteArray( const int16_t * pcm_data, uint32_t size){
+    PoolByteArray d;
+    d.resize(size * 2);
+    
+    for( int i=0; i < size; i++){
+         uint16_t sh = (uint16_t) pcm_data[i];
+         d.set( i*2 ,  (uint8_t) (sh & 0x00FF) );
+         d.set( i*2+1 , (uint8_t) ((sh >> 8) & 0x00FF ));
+    }
+            print_line( "utils: pcm value at 500: " + itos(pcm_data[500]));
 
+        print_line( "utils: pcm value at 500: " + itos(d[1000])+ " " + itos(d[1001]));
+
+    return d;
+}
 AudioStreamSample *utils::pcm2Sample( const int16_t * pcm_data, uint32_t size){
     PoolByteArray d;
     d.resize(size * 2);

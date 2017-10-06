@@ -5,6 +5,7 @@
 #include "reference.h"
 #include <mumlib.hpp>
 #include "scene/resources/audio_stream_sample.h"
+#include "variant.h"
 
 class Mumble :  public Reference {
     GDCLASS(Mumble,Reference);
@@ -23,7 +24,8 @@ public:
     void engage(String host, int port, String user, String password);
     void setCallback( Object * o );
     void sendText(const String message);
-    void sendAudio(Ref<AudioStreamSample> sample);
+    //void sendAudio(Ref<AudioStreamSample> sample);
+    void sendAudio(PoolByteArray sample);
     Mumble();
 };
 
