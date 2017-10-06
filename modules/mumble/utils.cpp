@@ -15,8 +15,8 @@ String utils::cpp_str2gstr(std::string s){
 Variant utils::cpp_uint32vec2Variant(  const std::vector<uint32_t> &v ){
         Vector<Variant> ret;
         ret.resize(v.size());
-        for( auto it = v.begin(); it != v.end(); it++){
-            ret.push_back(Variant( (uint64_t)*it));
+        for( int i = 0; i < v.size(); i++){
+            ret[i] = (Variant( (uint64_t)v[i]));
         }
         return ret;
 }
@@ -25,7 +25,7 @@ Variant utils::cpp_uint32vec2Variant(  const std::vector<uint32_t> &v ){
 AudioStreamSample *utils::pcm2Sample( const int16_t * pcm_data, uint32_t size){
     PoolByteArray d;
     d.resize(size * 2);
-    for( int i=0; i > size; i++){
+    for( int i=0; i < size; i++){
          d.set( i*2 ,  pcm_data[i] & 0x00FF );
          d.set( i*2+1 ,  (pcm_data[i] & 0xFF00) >> 8 );
     }

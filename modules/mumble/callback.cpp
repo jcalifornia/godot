@@ -35,7 +35,6 @@ void SimpleCallback::MyCallBack::textMessage(
 	    std::string message) {
    if(!_cb._text_handler.is_null()){
         print_line("internal message: " + String(message.c_str()) );
-        print_line( session.size() + ":" +channel_id.size() );
         Variant s = utils::cpp_uint32vec2Variant(session);
         Variant c = utils::cpp_uint32vec2Variant(channel_id);
         Variant t = utils::cpp_uint32vec2Variant(tree_id);

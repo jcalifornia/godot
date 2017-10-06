@@ -8,7 +8,6 @@
 #include <mumlib/Transport.hpp>
 #include <string>
 #include "scene/main/timer.h"
-#include <stdlib.h>
 
 
 
@@ -57,16 +56,15 @@ void Mumble::sendAudio(Ref<AudioStreamSample> sample){
     const PoolByteArray data = sample->get_data();
 
     int32_t packet_size = 0;
-    int16_t pcm[5000]; //https://github.com/slomkowski/mumlib/blob/master/src/mumlib.cpp look at lib source
-       print_line("pcm_data" + itos(sample->get_format()) +" size :" + itos((int64_t)data.size()));
-
+    print_line("pcm_data" + itos(sample->get_format()) +" size :" + itos((int64_t)data.size()));
+    int16_t pcm[4096];
     if(data.size() > 0){
         switch(sample->get_format()){
             case AudioStreamSample::FORMAT_16_BITS:         
 
                 packet_size = data.size()/2;
-                for(int i = 0; i > packet_size; i++){
-                    pcm[i] = data[2*i] | (data[2*i+1] << 8);
+                for(int i = 0; i < packet_size; i++){
+                    pcm[i] = (int16_t)(data[2*i] | (data[2*i+1] << 8));
                 }
                 break;
             default:
