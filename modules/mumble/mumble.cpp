@@ -56,16 +56,21 @@ void Mumble::sendAudio(Ref<AudioStreamSample> sample){
     const PoolByteArray data = sample->get_data();
 
     int32_t packet_size = 0;
+    int16_t pcm[5000];
     print_line("pcm_data" + itos(sample->get_format()) +" size :" + itos((int64_t)data.size()));
-    int16_t pcm[4096];
+    print_line( "sendaudio: pcm value at 500: " + itos(data[1000])+ " " + itos(data[1001]));
     if(data.size() > 0){
         switch(sample->get_format()){
             case AudioStreamSample::FORMAT_16_BITS:         
 
                 packet_size = data.size()/2;
                 for(int i = 0; i < packet_size; i++){
-                    pcm[i] = (int16_t)(data[2*i] | (data[2*i+1] << 8));
+                    uint16_t low = (uint16_t) data[2*i];
+                    uint16_t hi = (uint16_t) data[2*i+1];
+                    pcm[i] = ( low | ( hi << 8));
                 }
+                print_line( "pcm value at 500: " + itos(pcm[500]));
+
                 break;
             default:
                 return;

@@ -25,13 +25,20 @@ Variant utils::cpp_uint32vec2Variant(  const std::vector<uint32_t> &v ){
 AudioStreamSample *utils::pcm2Sample( const int16_t * pcm_data, uint32_t size){
     PoolByteArray d;
     d.resize(size * 2);
-    for( int i=0; i < size; i++){
-         d.set( i*2 ,  pcm_data[i] & 0x00FF );
-         d.set( i*2+1 ,  (pcm_data[i] & 0xFF00) >> 8 );
-    }
     AudioStreamSample *sam = memnew(AudioStreamSample);
-    sam->set_data(d);
     sam->set_format(AudioStreamSample::FORMAT_16_BITS);
     sam->set_loop_mode(AudioStreamSample::LOOP_DISABLED);
+    for( int i=0; i < size; i++){
+         uint16_t sh = (uint16_t) pcm_data[i];
+         d.set( i*2 ,  (uint8_t) (sh & 0x00FF) );
+         d.set( i*2+1 , (uint8_t) ((sh >> 8) & 0x00FF ));
+    }
+    print_line( "utils: pcm value at 500: " + itos(pcm_data[500]));
+    print_line( "utils: pcm value at 700: " + itos(pcm_data[700]));
+    print_line( "utils: pcm value at 500: " + itos(d[1000])+ " " + itos(d[1001]));
+    print_line( "before audiostreamsample-set_data: pcm value at 700: " + itos(d[1400])+ " " + itos(d[1401]));
+
+    sam->set_data(d);
+    print_line( "after audiostreamsample-set_data: pcm value at 500: " + itos(sam->get_data()[1000])+ " " + itos(sam->get_data()[1001]));
     return sam;
 }
