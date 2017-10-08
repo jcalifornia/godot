@@ -27,8 +27,8 @@ PoolByteArray utils::pcm2ByteArray( const int16_t * pcm_data, uint32_t size){
     
     for( int i=0; i < size; i++){
          uint16_t sh = (uint16_t) pcm_data[i];
-         d.set( i*2 ,  (uint8_t) (sh & 0x00FF) );
-         d.set( i*2+1 , (uint8_t) ((sh >> 8) & 0x00FF ));
+         d.set( i*2,   (uint8_t) (sh & 0xFF) );
+         d.set( i*2+1, (uint8_t) (sh >> 8));
     }
             print_line( "utils: pcm value at 500: " + itos(pcm_data[500]));
 
@@ -44,8 +44,8 @@ AudioStreamSample *utils::pcm2Sample( const int16_t * pcm_data, uint32_t size){
     sam->set_loop_mode(AudioStreamSample::LOOP_DISABLED);
     for( int i=0; i < size; i++){
          uint16_t sh = (uint16_t) pcm_data[i];
-         d.set( i*2 ,  (uint8_t) (sh & 0x00FF) );
-         d.set( i*2+1 , (uint8_t) ((sh >> 8) & 0x00FF ));
+         d.set( i*2 ,  (uint8_t) (sh & 0xFF) );
+         d.set( i*2+1 , (uint8_t) (sh >> 8));
     }
     print_line( "utils: pcm value at 500: " + itos(pcm_data[500]));
     print_line( "utils: pcm value at 700: " + itos(pcm_data[700]));

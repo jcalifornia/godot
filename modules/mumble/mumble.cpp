@@ -9,7 +9,44 @@
 #include <string>
 #include "scene/main/timer.h"
 
+Mumble::_PrivateMumble::_PrivateMumble( mumlib::Callback & c) : _mum(c) {
+}
+void Mumble::_PrivateMumble::engage(String host, int port, String user, String password){
+   std::string h = utils::gstr2cpp_str(host);
+   std::string u = utils::gstr2cpp_str(user);
+   std::string p = utils::gstr2cpp_str(password);
+   while(true){
+        try{
+            this->_mum.connect(h, port,  u, p);
+            print_line( "Mumble: connecting to " + host );
+            this->_mum.run();
+        }catch (mumlib::TransportException &exp) {
+            print_line( "Mumble: error " + utils::cpp_str2gstr(exp.what()));
+            print_line( "Mumble: attempting to reconnect in 5s. ");
+            Timer * sleep = memnew(Timer);
+            sleep -> set_wait_time(5.0);
+            sleep -> start();
+            memdelete(sleep);
+            
+        }
+   }
+}
 
+void Mumble::_PrivateMumble::sendText(const String text){
+    print_line("i am sending this message: " + text);
+   _mum.sendTextMessage( utils::gstr2cpp_str(text) );
+}
+
+void Mumble::_PrivateMumble::send16bAudio(const PoolByteArray & sample){
+    uint32_t pcm_len = sample.size()/2;
+    int16_t pcm[50000];
+    for(int i = 0; i < pcm_len; i++){
+        uint16_t low = (uint16_t) sample[2*i];
+        uint16_t hi = (uint16_t) sample[2*i+1];
+        pcm[i] = ( low | ( hi << 8));
+     }
+     _mum.sendAudioData(pcm, pcm_len);
+}
 
 void Mumble::_bind_methods() {
     ClassDB::bind_method(D_METHOD("add", "value"), &Mumble::add);
@@ -23,34 +60,17 @@ void Mumble::_bind_methods() {
 
 }
 void Mumble::engage(String host, int port, String user, String password) {
-   std::string h = utils::gstr2cpp_str(host);
-   std::string u = utils::gstr2cpp_str(user);
-   std::string p = utils::gstr2cpp_str(password);
-   while(true){
-        try{
-            this->_mum->connect(h, port,  u, p);
-            print_line( "Mumble: connecting to " + host );
-            this->_mum->run();
-        }catch (mumlib::TransportException &exp) {
-            print_line( "Mumble: error " + utils::cpp_str2gstr(exp.what()));
-            print_line( "Mumble: attempting to reconnect in 5s. ");
-            Timer * sleep = memnew(Timer);
-            sleep -> set_wait_time(5.0);
-            sleep -> start();
-            memdelete(sleep);
-            
-        }
-   }
+   _pMumble -> engage( host,  port,  user,  password);
 }
 
-void Mumble::setCallback(Object * callback){
-   SimpleCallback *cb = Object::cast_to<SimpleCallback>(callback);
-   _mum = new mumlib::Mumlib(*(cb->get_callback()),_conf);
+void Mumble::setCallback( Ref<SimpleCallback> cb){
+
+   _pMumble = Ref<_PrivateMumble>(memnew(_PrivateMumble(*(cb->get_callback()))));
 }
 void Mumble::sendText(const String text){
-    print_line("i am sending this message: " + text);
-   _mum -> sendTextMessage( utils::gstr2cpp_str(text) );
+   _pMumble -> sendText( text );
 }
+/*
 void Mumble::sendAudio(PoolByteArray sample){
     uint32_t pcm_len = sample.size()/2;
     int16_t pcm[5000];
@@ -65,36 +85,25 @@ void Mumble::sendAudio(PoolByteArray sample){
         _mum->sendAudioData(pcm, pcm_len);
     }
 }
-/*
+*/
 void Mumble::sendAudio(Ref<AudioStreamSample> sample){
 
     const PoolByteArray data = sample->get_data();
 
-    int32_t packet_size = 0;
-    int16_t pcm[5000];
-    print_line("pcm_data" + itos(sample->get_format()) +" size :" + itos((int64_t)data.size()));
-    print_line( "sendaudio: pcm value at 500: " + itos(data[1000])+ " " + itos(data[1001]));
+
     if(data.size() > 0){
         switch(sample->get_format()){
             case AudioStreamSample::FORMAT_16_BITS:         
-
-                packet_size = data.size()/2;
-                for(int i = 0; i < packet_size; i++){
-                    uint16_t low = (uint16_t) data[2*i];
-                    uint16_t hi = (uint16_t) data[2*i+1];
-                    pcm[i] = ( low | ( hi << 8));
-                }
-                print_line( "pcm value at 500: " + itos(pcm[500]));
-
-                break;
+                _pMumble->send16bAudio(data);
             default:
                 return;
         }
-        _mum->sendAudioData(pcm, packet_size);
     }
     
 }
-*/
+
+
+
 Mumble::Mumble() {
     count=0;
 }
