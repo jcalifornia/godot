@@ -33,7 +33,6 @@ void Mumble::_PrivateMumble::engage(String host, int port, String user, String p
 }
 
 void Mumble::_PrivateMumble::sendText(const String text){
-    print_line("i am sending this message: " + text);
    _mum.sendTextMessage( utils::gstr2cpp_str(text) );
 }
 
@@ -70,22 +69,7 @@ void Mumble::setCallback( Ref<SimpleCallback> cb){
 void Mumble::sendText(const String text){
    _pMumble -> sendText( text );
 }
-/*
-void Mumble::sendAudio(PoolByteArray sample){
-    uint32_t pcm_len = sample.size()/2;
-    int16_t pcm[5000];
-    if( pcm_len > 0){
-        for(int i = 0; i < pcm_len; i++){
-            uint16_t low = (uint16_t) sample[2*i];
-            uint16_t hi = (uint16_t) sample[2*i+1];
-            pcm[i] = ( low | ( hi << 8));
-        }
-            print_line( "sendaudio: pcm value at 500: " + itos(sample[1000])+ " " + itos(sample[1001]));
 
-        _mum->sendAudioData(pcm, pcm_len);
-    }
-}
-*/
 void Mumble::sendAudio(Ref<AudioStreamSample> sample){
 
     const PoolByteArray data = sample->get_data();

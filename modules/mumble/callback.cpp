@@ -15,13 +15,11 @@ void SimpleCallback::MyCallBack::audio( int target,
                        int16_t *pcm_data,
                        uint32_t pcm_data_size){
    if(!_cb._audio_handler.is_null()){
-    // Variant tar(target);
         Variant sid(sessionId);
         Variant snum(sequenceNumber);
         Ref<AudioStreamSample> sam = Ref<AudioStreamSample>(utils::pcm2Sample(pcm_data, pcm_data_size));    
         Variant pcm(sam);
-        print_line("sample is class : " + sam->get_class());
-    //    Variant pcm(utils::pcm2ByteArray(pcm_data,pcm_data_size));
+
         Variant::CallError err;
         const Variant *args[3] = { &sid, &snum, &pcm};
         Variant result =  _cb._audio_handler->call_func( args, 3, err);
@@ -36,7 +34,6 @@ void SimpleCallback::MyCallBack::textMessage(
             std::vector<uint32_t> tree_id,
 	    std::string message) {
    if(!_cb._text_handler.is_null()){
-        print_line("internal message: " + String(message.c_str()) );
         Variant s = utils::cpp_uint32vec2Variant(session);
         Variant c = utils::cpp_uint32vec2Variant(channel_id);
         Variant t = utils::cpp_uint32vec2Variant(tree_id);
