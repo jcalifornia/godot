@@ -234,10 +234,6 @@ third_party_sources = [
     "mumlib/src/mumlib.cpp",
     "mumlib/build/Mumble.pb.cc"
 ]
-third_party_system_lib = [
-    "/usr/lib64",
-    "/usr/lib"
-]
 third_party_system_include = [
     "/usr/include",
     "/usr/include/boost"

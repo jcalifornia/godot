@@ -4,4 +4,5 @@ def can_build(platform):
     return True
 
 def configure(env):
-    pass
+    env.Append(LIBS=['boost_system', 'protobuf', 'log4cpp'])
+    
