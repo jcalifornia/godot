@@ -9,12 +9,22 @@ thirdparty_dlib_srcs = [
     "dlib/all/source.cpp"
 ]
 thirdparty_dlib_sources = [ thirdparty_dlib_dir + dir for dir in thirdparty_dlib_srcs ]
+
+thirdparty_system_path = [
+    "/usr/lib/x86_64-linux-gnu/",
+    "/usr/lib/",
+    "/lib/",
+    "/lib64/"
+]
+
 motion_sense_env.Append(CCFLAGS=["-DLIB_NO_GUI_SUPPORT", "-DUSE_AVX_INSTRUCTIONS" ])
 motion_sense_env.Append(CPPPATH=[thirdparty_dlib_dir])
 motion_sense_env.add_source_files(env.modules_sources, thirdparty_dlib_sources)
     
+motion_sense_env.Append(LINKFLAGS=["-lopencv_core", "-lopencv" ] )
 
-
-#motion_sense_env.Append(LIBS=["pthread"]) 
 motion_sense_env.add_source_files(env.modules_sources,"*.cpp")
+motion_sense_env.Append(LIBS=["pthread"]) 
+motion_sense_env.Append(LIBPATH=thirdparty_system_path) 
+
 motion_sense_env.Append(CXXFLAGS=['-O3', '-mavx', '-std=c++11'])

@@ -4,8 +4,12 @@
 
 #include "reference.h"
 
+#include <opencv2/opencv.hpp>
+
 class FacialLandmark : public Reference {
     GDCLASS(FacialLandmark,Reference);
+private:
+ //   cv::VideoCapture _vc;
 
 
 protected:
