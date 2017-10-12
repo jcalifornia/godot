@@ -1,14 +1,21 @@
 /* facial_landmark.cpp */
 
-#include "facial_landmark.h"
 #include <dlib/image_processing/frontal_face_detector.h>
 #include <dlib/image_processing/render_face_detections.h>
 #include <dlib/image_processing.h>
+
+
+#include "facial_landmark.h"
+#include <string>
+#include <sstream>
+#include "vector.h"
 
 void FacialLandmark::_bind_methods() {
     
 }
 
-FacialLandmark::FacialLandmark()  {
+FacialLandmark::FacialLandmark() : _vc(0)  {
     
 }
+
+

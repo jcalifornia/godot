@@ -3,13 +3,14 @@
 #define FACIAL_LANDMARK_H
 
 #include "reference.h"
+#include "resource.h"
 
 #include <opencv2/opencv.hpp>
 
 class FacialLandmark : public Reference {
     GDCLASS(FacialLandmark,Reference);
 private:
- //   cv::VideoCapture _vc;
+    cv::VideoCapture _vc;
 
 
 protected:
@@ -19,6 +20,7 @@ public:
 
     FacialLandmark();
 };
+
 
 #endif
 
