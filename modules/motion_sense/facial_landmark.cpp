@@ -6,9 +6,7 @@
 
 
 #include "facial_landmark.h"
-#include <string>
-#include <sstream>
-#include "vector.h"
+
 
 void FacialLandmark::_bind_methods() {
     

@@ -2,8 +2,7 @@
 #define FACIAL_LANDMARK_LOADER_H
 
 #include "io/resource_loader.h"
-#include "os/file_access.h"
-#include <dlib/image_processing.h>
+
 
 class ResourceFormatFacialLandmark : public ResourceFormatLoader {
 public:
@@ -16,16 +15,5 @@ public:
 	virtual ~ResourceFormatFacialLandmark() {}
 };
 
-class FacialLandmarkModel : public Resource{
-    GDCLASS(FacialLandmarkModel, Resource);
-    
-public:
-    FacialLandmarkModel();
-    Error set_file(const String &p_file);
-private:
-    dlib::shape_predictor _pose_model;
-    String file;
-    
-};
 
 #endif // FACIAL_LANDMARK_LOADER_H

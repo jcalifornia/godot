@@ -2,6 +2,7 @@
 #include "class_db.h"
 #include "facial_landmark.h"
 #include "facial_landmark_loader.h"
+#include "data_models.h"
 
 static ResourceFormatFacialLandmark *facial_landmark_loader = NULL;
 

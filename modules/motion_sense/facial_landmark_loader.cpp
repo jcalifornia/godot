@@ -1,4 +1,5 @@
 #include "facial_landmark_loader.h"
+#include "data_models.h"
 
 ResourceFormatFacialLandmark::ResourceFormatFacialLandmark() {
 }
@@ -24,23 +25,4 @@ String ResourceFormatFacialLandmark::get_resource_type(const String &p_path) con
 
 bool ResourceFormatFacialLandmark::handles_type(const String &p_type) const {
 	return (p_type == "FacialLandmarkModel");
-}
-
-Error FacialLandmarkModel::set_file(const String &p_file) {
-    file = p_file;
-	Error err;
-	Vector<uint8_t> byteData = FileAccess::get_file_as_array(file);
-	if (err) {
-		ERR_FAIL_COND_V(err, err);
-	}
-
-    int _err;
-    //http://dlib.net/dlib/serialize.h.html
-    std::stringstream ss;
-    ss <<  byteData.ptr();
-    dlib::deserialize(_pose_model, ss);
-}
-
-FacialLandmarkModel::FacialLandmarkModel() {
-    
 }
