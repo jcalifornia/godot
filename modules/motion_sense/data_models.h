@@ -12,6 +12,7 @@ class FacialLandmarkModel : public Resource{
 public:
     FacialLandmarkModel();
     Error set_file(const String &p_file);
+    dlib::shape_predictor &get_data() { return _pose_model; }
 private:
     dlib::shape_predictor _pose_model;
     String file;
