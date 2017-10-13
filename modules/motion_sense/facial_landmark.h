@@ -29,6 +29,7 @@ public:
     FacialLandmark();
     void startStreaming();
     void stopStreaming();
+    void set_data(Ref<FacialLandmarkModel> m);
 };
 
 VARIANT_ENUM_CAST(FacialLandmark::Status);
