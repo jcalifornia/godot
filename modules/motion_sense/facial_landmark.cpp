@@ -19,7 +19,7 @@ void FacialLandmark::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_data", "trained_model"), &FacialLandmark::set_data);
 
 
-    ADD_SIGNAL(MethodInfo("facial_detect", PropertyInfo(Variant::POOL_VECTOR2_ARRAY, "points")));
+    ADD_SIGNAL(MethodInfo("facial_detect", PropertyInfo(Variant::RECT2, "bounding_box"), PropertyInfo(Variant::POOL_VECTOR2_ARRAY, "points")));
     
     BIND_ENUM_CONSTANT(STATUS_ERROR);
     BIND_ENUM_CONSTANT(STATUS_NONE);
@@ -65,7 +65,7 @@ void FacialLandmark::startStreaming(){
                 dlib::rectangle r = dobj.get_rect();
                 pts.set(i, Vector2(dobj.part(i).x()-r.left(),dobj.part(i).y()-r.top()));
             }
-            emit_signal("facial_detect", Variant(pts));
+            emit_signal("facial_detect", Variant(Rect2(0,0,0,0,)), Variant(pts));
         }
        // print_line("took X ms time processing: " + itos(os-> get_ticks_msec() -startTime));  
     }

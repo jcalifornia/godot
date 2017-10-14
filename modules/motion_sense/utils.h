@@ -1,6 +1,6 @@
 #include <dlib/geometry/rectangle.h>
 #include "math/math_2d.h"
-
+#include "math_funcs.h"
 
 /*images seem to be lefthanded such as
  * 0123
