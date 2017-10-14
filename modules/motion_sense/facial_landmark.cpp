@@ -65,7 +65,7 @@ void FacialLandmark::startStreaming(){
                 dlib::rectangle r = dobj.get_rect();
                 pts.set(i, Vector2(dobj.part(i).x()-r.left(),dobj.part(i).y()-r.top()));
             }
-            emit_signal("facial_detect", Variant(Rect2(0,0,0,0,)), Variant(pts));
+            emit_signal("facial_detect", Variant(Rect2(0,0,0,0)), Variant(pts));
         }
        // print_line("took X ms time processing: " + itos(os-> get_ticks_msec() -startTime));  
     }
