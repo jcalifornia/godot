@@ -45,6 +45,7 @@
 #include "input_map.h"
 #include "io/resource_loader.h"
 #include "scene/main/scene_tree.h"
+#include "servers/arvr_server.h"
 #include "servers/audio_server.h"
 
 #include "io/resource_loader.h"
@@ -82,6 +83,7 @@ static InputMap *input_map = NULL;
 static bool _start_success = false;
 static ScriptDebugger *script_debugger = NULL;
 AudioServer *audio_server = NULL;
+ARVRServer *arvr_server = NULL;
 
 static MessageQueue *message_queue = NULL;
 static Performance *performance = NULL;
@@ -162,6 +164,7 @@ void Main::print_help(const char *p_binary) {
 #endif
 	OS::get_singleton()->print("  -l, --language <locale>          Use a specific locale (<locale> being a two-letter code).\n");
 	OS::get_singleton()->print("  --path <directory>               Path to a project (<directory> must contain a 'project.godot' file).\n");
+	OS::get_singleton()->print("  -u, --upwards                    Scan folders upwards for project.godot file.\n");
 	OS::get_singleton()->print("  --main-pack <file>               Path to a pack (.pck) file to load.\n");
 	OS::get_singleton()->print("  --render-thread <mode>           Render thread mode ('unsafe', 'safe', 'separate').\n");
 	OS::get_singleton()->print("  --remote-fs <address>            Remote filesystem (<host/IP>[:<port>] address).\n");
@@ -257,6 +260,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 
 	translation_server = memnew(TranslationServer);
 	performance = memnew(Performance);
+	ClassDB::register_class<Performance>();
 	globals->add_singleton(ProjectSettings::Singleton("Performance", performance));
 
 	GLOBAL_DEF("debug/settings/crash_handler/message", String("Please include this when reporting the bug on https://github.com/godotengine/godot/issues"));
@@ -289,6 +293,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	String video_driver = "";
 	String audio_driver = "";
 	String game_path = ".";
+	bool upwards = false;
 	String debug_mode;
 	String debug_host;
 	String main_pack;
@@ -497,6 +502,8 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 				OS::get_singleton()->print("Missing relative or absolute path, aborting.\n");
 				goto error;
 			}
+		} else if (I->get() == "-u" || I->get() == "--upwards") { // scan folders upwards
+			upwards = true;
 		} else if (I->get().ends_with("project.godot")) {
 			String path;
 			String file = I->get();
@@ -694,7 +701,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 
 #endif
 
-	if (globals->setup(game_path, main_pack) != OK) {
+	if (globals->setup(game_path, main_pack, upwards) != OK) {
 
 #ifdef TOOLS_ENABLED
 		editor = false;
@@ -934,10 +941,13 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 		OS::get_singleton()->set_window_position(init_custom_pos);
 	}
 
-	//right moment to create and initialize the audio server
+	// right moment to create and initialize the audio server
 
 	audio_server = memnew(AudioServer);
 	audio_server->init();
+
+	// also init our arvr_server from here
+	arvr_server = memnew(ARVRServer);
 
 	OS::get_singleton()->set_use_vsync(use_vsync);
 
@@ -1768,6 +1778,11 @@ void Main::cleanup() {
 	if (audio_server) {
 		audio_server->finish();
 		memdelete(audio_server);
+	}
+
+	if (arvr_server) {
+		// cleanup now before we pull the rug from underneath...
+		memdelete(arvr_server);
 	}
 
 	unregister_driver_types();
