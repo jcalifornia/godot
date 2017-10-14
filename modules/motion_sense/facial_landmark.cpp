@@ -11,7 +11,7 @@
 #include "math/math_2d.h"
 #include "print_string.h"
 #include "dvector.h"
-
+#include "os/os.h"
 
 void FacialLandmark::_bind_methods() {
     ClassDB::bind_method(D_METHOD("start"), &FacialLandmark::startStreaming);
@@ -41,10 +41,13 @@ void FacialLandmark::startStreaming(){
         ERR_PRINT("FacialLandmark: unable to connect to camera\n");
         _state = STATUS_ERROR;
     }
+    OS *os = OS::get_singleton();
     _state = STATUS_RUNNING;
     dlib::frontal_face_detector detector = dlib::get_frontal_face_detector();
     while( _state == STATUS_RUNNING ){
         cv::Mat temp;
+        
+        int startTime = os ->get_ticks_msec();
         if (!_vc.read(temp)){
             ERR_PRINT("FacialLandmark: unable to read to camera\n");
             break;
@@ -64,7 +67,7 @@ void FacialLandmark::startStreaming(){
             }
             emit_signal("facial_detect", Variant(pts));
         }
-        
+       // print_line("took X ms time processing: " + itos(os-> get_ticks_msec() -startTime));  
     }
     
 }

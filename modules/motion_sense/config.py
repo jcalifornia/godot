@@ -5,6 +5,7 @@ def can_build(platform):
 
 #TODO: needs to be tested on windows
 def configure(env):
+#env.Append(CXXFLAGS=['-mavx'])
     if env['platform'] == 'windows':
         env.Append(LIBS=["opencv"]) 
     else:

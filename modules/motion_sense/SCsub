@@ -21,7 +21,7 @@ motion_sense_env.Append(CCFLAGS=["-DLIB_NO_GUI_SUPPORT", "-DUSE_AVX_INSTRUCTIONS
 motion_sense_env.Append(CPPPATH=[thirdparty_dlib_dir])
 motion_sense_env.add_source_files(env.modules_sources, thirdparty_dlib_sources)
     
-motion_sense_env.Append(LINKFLAGS=["-lopencv_core", "-lopencv" ] )
+#motion_sense_env.Append(LINKFLAGS=["-lopencv_core", "-lopencv" ] )
 
 motion_sense_env.add_source_files(env.modules_sources,"*.cpp")
 motion_sense_env.Append(LIBS=["pthread", "opencv"]) 
