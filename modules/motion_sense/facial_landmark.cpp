@@ -59,15 +59,15 @@ void FacialLandmark::startStreaming(){
         PoolVector<Vector2> pts;
         if(faces.size()>0) {
             dlib::full_object_detection dobj = (_model->get_data())(cimg, faces[0]);
-            pts.resize(dobj.num_parts());
             dlib::rectangle r = dobj.get_rect();
+            pts.resize(dobj.num_parts());
             for( unsigned long i = 0; i < dobj.num_parts(); i++){
                 //shift it left cannot seem to find the faces in godot
                 pts.set(i, Vector2(dobj.part(i).x()-r.left(),dobj.part(i).y()-r.top()));
             }
             emit_signal("facial_detect", Variant(utils::to_gRect(r)), Variant(pts));
         }
-        print_line("took X ms time processing: " + itos(os-> get_ticks_msec() -startTime));  
+        print_line("took X ms time processing: " + itos(os-> get_ticks_msec() -startTime));
     }
     
 }
