@@ -41,13 +41,13 @@ void FacialLandmark::startStreaming(){
         ERR_PRINT("FacialLandmark: unable to connect to camera\n");
         _state = STATUS_ERROR;
     }
-    OS *os = OS::get_singleton();
+    //OS *os = OS::get_singleton();
     _state = STATUS_RUNNING;
     dlib::frontal_face_detector detector = dlib::get_frontal_face_detector();
     while( _state == STATUS_RUNNING ){
         cv::Mat temp;
         
-        int startTime = os ->get_ticks_msec();
+      //  int startTime = os ->get_ticks_msec();
         if (!_vc.read(temp)){
             ERR_PRINT("FacialLandmark: unable to read to camera\n");
             break;
@@ -60,14 +60,10 @@ void FacialLandmark::startStreaming(){
         if(faces.size()>0) {
             dlib::full_object_detection dobj = (_model->get_data())(cimg, faces[0]);
             dlib::rectangle r = dobj.get_rect();
-            pts.resize(dobj.num_parts());
-            for( unsigned long i = 0; i < dobj.num_parts(); i++){
-                //shift it left cannot seem to find the faces in godot
-                pts.set(i, Vector2(dobj.part(i).x()-r.left(),dobj.part(i).y()-r.top()));
-            }
+            
             emit_signal("facial_detect", Variant(utils::to_gRect(r)), Variant(pts));
         }
-        print_line("took X ms time processing: " + itos(os-> get_ticks_msec() -startTime));
+        //print_line("took X ms time processing: " + itos(os-> get_ticks_msec() -startTime));
     }
     
 }
