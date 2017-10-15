@@ -5,9 +5,8 @@ def can_build(platform):
 
 #TODO: needs to be tested on windows
 def configure(env):
-#env.Append(CXXFLAGS=['-mavx'])
-    if env['platform'] == 'windows':
-        env.Append(LIBS=["opencv"]) 
-    else:
-        env.ParseConfig('pkg-config opencv --cflags --libs')
-    pass
+    env.Append(LIBS=["opencv_core", "opencv_highgui"]) 
+    env.Append(CXXFLAGS=['-mavx'])
+
+    #env.Append(CCFLAGS=["-DLIB_NO_GUI_SUPPORT=1", "-DUSE_AVX_INSTRUCTIONS=1" ])
+    #env.ParseConfig('pkg-config opencv --cflags --libs')
