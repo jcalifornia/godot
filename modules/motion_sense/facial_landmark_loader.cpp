@@ -14,11 +14,11 @@ RES ResourceFormatFacialLandmark::load(const String &p_path, const String &p_ori
 
 void ResourceFormatFacialLandmark::get_recognized_extensions(List<String> *p_extensions) const {
 
-	p_extensions->push_back("dat");
+	p_extensions->push_back("f68");
 }
 String ResourceFormatFacialLandmark::get_resource_type(const String &p_path) const {
 
-	if (p_path.get_extension().to_lower() == "dat")
+	if (p_path.get_extension().to_lower() == "f68")
 		return "FacialLandmarkModel";
 	return "";
 }
