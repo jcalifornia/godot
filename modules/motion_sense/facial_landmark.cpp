@@ -54,13 +54,13 @@ void FacialLandmark::startStreaming(){
         }
         dlib::cv_image<dlib::bgr_pixel> cimg(temp);
         std::vector<dlib::rectangle> faces = detector(cimg);
-        //print_line("delected x faces: " + itos(faces.size()));
+        print_line("delected x faces: " + itos(faces.size()));
         
-        PoolVector<Vector2> pts;
         if(faces.size()>0) {
             dlib::full_object_detection dobj = (_model->get_data())(cimg, faces[0]);
             dlib::rectangle r = dobj.get_rect();
-            
+            PoolVector<Vector2> pts = utils::to_3dVec2(dobj);
+
             emit_signal("facial_detect", Variant(utils::to_gRect(r)), Variant(pts));
         }
         //print_line("took X ms time processing: " + itos(os-> get_ticks_msec() -startTime));

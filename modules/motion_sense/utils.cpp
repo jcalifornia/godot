@@ -17,8 +17,10 @@ PoolVector<Vector2> utils::to_3dVec2( dlib::full_object_detection &dobj ){
     for( unsigned long i = 0; i < dobj.num_parts(); i++){
         //shift it left cannot seem to find the faces in godot
         long x = (dobj.part(i).x()-r.left());
-        long y = height - (dobj.part(i).y() - r.top());
+        //long y = height - (dobj.part(i).y() - r.top());
+        long y = (dobj.part(i).y()-r.top());
         pts.set(i, Vector2(x, y));
         
     }
+    return pts;
 }
