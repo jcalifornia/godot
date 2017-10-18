@@ -392,6 +392,22 @@ namespace mumlib {
         int length = impl->audio.encodeAudioPacket(0, pcmData, pcmLength, encodedData, 5000);
         impl->transport.sendEncodedAudioPacket(encodedData, length);
     }
+    
+    void Mumlib::sendAudioData(int16_t *pcmData, int pcmLength, float position[3]) {
+        uint8_t encodedData[5000];
+        int length = impl->audio.encodeAudioPacket(0, pcmData, pcmLength, encodedData, 4988);
+        uint32_t * pos = (uint32_t *) position;
+        encodedData[length] = (pos[0] >> 24) & 0xFF; encodedData[length + 1] = (pos[0] >> 16) & 0xFF;
+        encodedData[length + 2] = (pos[0] >> 8) & 0xFF; encodedData[length + 3] = (pos[0] >> 0) & 0xFF;
+        
+        encodedData[length + 4] = (pos[1] >> 24) & 0xFF; encodedData[length + 5] = (pos[1] >> 16) & 0xFF;
+        encodedData[length + 6] = (pos[1] >> 8) & 0xFF; encodedData[length + 7] = (pos[1] >> 0) & 0xFF;
+        
+        encodedData[length + 8] = (pos[2] >> 24) & 0xFF; encodedData[length + 9] = (pos[2] >> 16) & 0xFF;
+        encodedData[length + 10] = (pos[2] >> 8) & 0xFF; encodedData[length + 11] = (pos[2] >> 0) & 0xFF;
+        
+        impl->transport.sendEncodedAudioPacket(encodedData, length + 12);
+    }
 
     void Mumlib::sendTextMessage(string message) {
         MumbleProto::TextMessage textMessage;

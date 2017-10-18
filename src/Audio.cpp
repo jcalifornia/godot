@@ -173,7 +173,7 @@ mumlib::IncomingAudioPacket mumlib::Audio::decodeIncomingAudioPacket(uint8_t *in
         throw AudioException((boost::format("invalid incoming audio packet (%d B): header %d B") % inputBufferLength %
                               dataPointer).str());
     }
-    //assume little endian
+    //https://commandcenter.blogspot.de/2012/04/byte-order-fallacy.html
     uint32_t * pos = (uint32_t *) incomingAudioPacket.position;
     pos[2] = (inputBuffer[inputBufferLength-4] << 0) | (inputBuffer[inputBufferLength-3] << 8) |(inputBuffer[inputBufferLength-2] << 16 ) | (inputBuffer[inputBufferLength-1] << 24); //set z
     pos[1] = (inputBuffer[inputBufferLength-8] << 0) | (inputBuffer[inputBufferLength-7] << 8) |(inputBuffer[inputBufferLength-6] << 16 ) | (inputBuffer[inputBufferLength-5] << 24); //set y
