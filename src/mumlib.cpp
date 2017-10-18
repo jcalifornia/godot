@@ -70,7 +70,8 @@ namespace mumlib {
                                    incomingAudioPacket.sessionId,
                                    incomingAudioPacket.sequenceNumber,
                                    pcmData,
-                                   status.first);
+                                   status.first,
+                                   incomingAudioPacket.position);
                 } else {
                     logger.warn("Incoming audio packet doesn't contain Opus data, calling unsupportedAudio callback.");
                     callback.unsupportedAudio(incomingAudioPacket.target,
@@ -197,6 +198,7 @@ namespace mumlib {
                     int32_t suppress = userState.has_suppress() ? userState.suppress() : -1;
                     int32_t self_mute = userState.has_self_mute() ? userState.self_mute() : -1;
                     int32_t self_deaf = userState.has_self_deaf() ? userState.self_deaf() : -1;
+                    std::string plugin_context = userState.has_plugin_context() ? userState.plugin_context() : "";
                     int32_t priority_speaker = userState.has_priority_speaker() ? userState.priority_speaker() : -1;
                     int32_t recording = userState.has_recording() ? userState.recording() : -1;
 
@@ -211,6 +213,7 @@ namespace mumlib {
                                        self_mute,
                                        self_deaf,
                                        userState.comment(),
+                                       plugin_context,
                                        priority_speaker,
                                        recording);
                 }

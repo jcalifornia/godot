@@ -24,6 +24,14 @@ namespace mumlib {
                 int sequenceNumber,
                 int16_t *pcm_data,
                 uint32_t pcm_data_size) { };
+                
+        virtual void audio(
+                int target,
+                int sessionId,
+                int sequenceNumber,
+                int16_t *pcm_data,
+                uint32_t pcm_data_size,
+                float position[3]) { };
 
         virtual void unsupportedAudio(
                 int target,
@@ -69,6 +77,7 @@ namespace mumlib {
                 int32_t self_mute,
                 int32_t self_deaf,
                 string comment,
+                string plugin_context,
                 int32_t priority_speaker,
                 int32_t recording) { };
 
@@ -167,6 +176,14 @@ namespace mumlib {
                 int sequenceNumber,
                 int16_t *pcm_data,
                 uint32_t pcm_data_size) override;
+                
+        virtual void audio(
+                int target,
+                int sessionId,
+                int sequenceNumber,
+                int16_t *pcm_data,
+                uint32_t pcm_data_size,
+                float position[3]) override;
 
         virtual void unsupportedAudio(
                 int target,
@@ -212,6 +229,7 @@ namespace mumlib {
                 int32_t self_mute,
                 int32_t self_deaf,
                 string comment,
+                string plugin_context,
                 int32_t priority_speaker,
                 int32_t recording) override;
 

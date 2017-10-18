@@ -24,6 +24,8 @@ namespace mumlib {
         int64_t sequenceNumber;
         uint8_t *audioPayload;
         int audioPayloadLength;
+        float position[3];
+
     };
 
     class Audio : boost::noncopyable {
