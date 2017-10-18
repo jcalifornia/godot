@@ -9,6 +9,10 @@
 #include <string>
 #include "scene/main/timer.h"
 
+Mumble::Mumble() : _cb(*this) {
+	_pMumble = Ref<_PrivateMumble>(memnew(_PrivateMumble(_cb)));
+}
+
 Mumble::_PrivateMumble::_PrivateMumble( mumlib::Callback & c) : _mum(c) {
 }
 void Mumble::_PrivateMumble::engage(String host, int port, String user, String password){
@@ -48,19 +52,16 @@ void Mumble::_PrivateMumble::send16bAudio(const PoolByteArray & sample){
 
 void Mumble::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("engage", "host", "port", "user", "password"), &Mumble::engage);
-	ClassDB::bind_method(D_METHOD("setCallback", "callback"), &Mumble::setCallback);
 	ClassDB::bind_method(D_METHOD("sendText", "text"), &Mumble::sendText);
 	ClassDB::bind_method(D_METHOD("sendAudio", "sample"), &Mumble::sendAudio);
+	ADD_SIGNAL(MethodInfo("audio_message", PropertyInfo(Variant::OBJECT, "audio_sample"), PropertyInfo(Variant::INT, "target"), PropertyInfo(Variant::INT, "session_id")));
+	ADD_SIGNAL(MethodInfo("text_message", PropertyInfo(Variant::STRING, "message"), PropertyInfo(Variant::INT, "actor")));
 
 }
 void Mumble::engage(String host, int port, String user, String password) {
 	_pMumble -> engage( host,  port,  user,  password);
 }
 
-void Mumble::setCallback( Ref<SimpleCallback> cb){
-
-	_pMumble = Ref<_PrivateMumble>(memnew(_PrivateMumble(*(cb->get_callback()))));
-}
 void Mumble::sendText(const String text){
 	_pMumble -> sendText( text );
 }
@@ -81,5 +82,3 @@ void Mumble::sendAudio(Ref<AudioStreamSample> sample){
     
 }
 
-Mumble::Mumble() {
-}

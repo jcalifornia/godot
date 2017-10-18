@@ -31,7 +31,7 @@ AudioStreamSample *utils::pcm2Sample( const int16_t * pcm_data, uint32_t size){
 	for( int i=0; i < size; i++){
 		uint16_t sh = (uint16_t) pcm_data[i];
 		d.set( i*2 ,  (uint8_t) (sh & 0xFF) );
-		d.set( i*2+1 , (uint8_t) (sh >> 8));
+		d.set( i*2+1, (uint8_t) (sh >> 8));
 	}
 
 	sam->set_data(d);

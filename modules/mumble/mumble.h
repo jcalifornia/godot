@@ -11,8 +11,6 @@
 class Mumble :  public Reference {
 	GDCLASS(Mumble,Reference);
 private:
-    
-    
 	class _PrivateMumble: public Reference {
 		GDCLASS(_PrivateMumble,Reference);
 	private:
@@ -31,12 +29,12 @@ protected:
 public:
 
 	void engage(String host, int port, String user, String password);
-	void setCallback( Ref<SimpleCallback> c );
 	void sendText(const String message);
 	void sendAudio(Ref<AudioStreamSample> sample);
-//    void sendAudio(PoolByteArray sample);
 	Mumble();
 //    ~Mumble();
+private:
+	MyCallBack _cb;
 };
 
 #endif

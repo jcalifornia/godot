@@ -8,7 +8,6 @@
 void register_mumble_types() {
 
 	ClassDB::register_class<Mumble>();
-	ClassDB::register_class<SimpleCallback>();
 }
 
 void unregister_mumble_types() {
