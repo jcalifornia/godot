@@ -20,6 +20,8 @@ private:
 		void engage(String host, int port, String user, String password);
 		void sendText(const String text);
 		void send16bAudio(const PoolByteArray & arr);
+		void disengage() { _mum.disconnect(); }
+		void start();
 	};
 	Ref<_PrivateMumble> _pMumble;
 
@@ -29,6 +31,8 @@ protected:
 public:
 
 	void engage(String host, int port, String user, String password);
+	void disengage();
+	void start();
 	void sendText(const String message);
 	void sendAudio(Ref<AudioStreamSample> sample);
 	Mumble();

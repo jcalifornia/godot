@@ -19,10 +19,12 @@ void Mumble::_PrivateMumble::engage(String host, int port, String user, String p
 	std::string h = utils::gstr2cpp_str(host);
 	std::string u = utils::gstr2cpp_str(user);
 	std::string p = utils::gstr2cpp_str(password);
+	this->_mum.connect(h, port,  u, p);
+	this -> start();
+}
+void Mumble::_PrivateMumble::start(){
 	while(true){
 		try{
-			this->_mum.connect(h, port,  u, p);
-			print_line( "Mumble: connecting to " + host );
 			this->_mum.run();
 		}catch (mumlib::TransportException &exp) {
 			print_line( "Mumble: error " + utils::cpp_str2gstr(exp.what()));
@@ -34,6 +36,8 @@ void Mumble::_PrivateMumble::engage(String host, int port, String user, String p
 		}
 	}
 }
+
+
 
 void Mumble::_PrivateMumble::sendText(const String text){
 	_mum.sendTextMessage( utils::gstr2cpp_str(text) );
@@ -52,6 +56,9 @@ void Mumble::_PrivateMumble::send16bAudio(const PoolByteArray & sample){
 
 void Mumble::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("engage", "host", "port", "user", "password"), &Mumble::engage);
+	ClassDB::bind_method(D_METHOD("disengage"), &Mumble::disengage);
+//	ClassDB::bind_method(D_METHOD("start"), &Mumble::start);
+
 	ClassDB::bind_method(D_METHOD("sendText", "text"), &Mumble::sendText);
 	ClassDB::bind_method(D_METHOD("sendAudio", "sample"), &Mumble::sendAudio);
 	ADD_SIGNAL(MethodInfo("audio_message", PropertyInfo(Variant::OBJECT, "audio_sample"), PropertyInfo(Variant::INT, "target"), PropertyInfo(Variant::INT, "session_id")));
@@ -62,6 +69,12 @@ void Mumble::engage(String host, int port, String user, String password) {
 	_pMumble -> engage( host,  port,  user,  password);
 }
 
+void Mumble::disengage(){
+	_pMumble->disengage();
+}
+void Mumble::start(){
+	_pMumble->start();
+}
 void Mumble::sendText(const String text){
 	_pMumble -> sendText( text );
 }
