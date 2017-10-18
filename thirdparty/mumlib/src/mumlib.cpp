@@ -70,7 +70,8 @@ namespace mumlib {
                                    incomingAudioPacket.sessionId,
                                    incomingAudioPacket.sequenceNumber,
                                    pcmData,
-                                   status.first);
+                                   status.first,
+                                   incomingAudioPacket.position);
                 } else {
                     logger.warn("Incoming audio packet doesn't contain Opus data, calling unsupportedAudio callback.");
                     callback.unsupportedAudio(incomingAudioPacket.target,
@@ -197,6 +198,7 @@ namespace mumlib {
                     int32_t suppress = userState.has_suppress() ? userState.suppress() : -1;
                     int32_t self_mute = userState.has_self_mute() ? userState.self_mute() : -1;
                     int32_t self_deaf = userState.has_self_deaf() ? userState.self_deaf() : -1;
+                    std::string plugin_context = userState.has_plugin_context() ? userState.plugin_context() : "";
                     int32_t priority_speaker = userState.has_priority_speaker() ? userState.priority_speaker() : -1;
                     int32_t recording = userState.has_recording() ? userState.recording() : -1;
 
@@ -211,6 +213,7 @@ namespace mumlib {
                                        self_mute,
                                        self_deaf,
                                        userState.comment(),
+                                       plugin_context,
                                        priority_speaker,
                                        recording);
                 }
@@ -388,6 +391,22 @@ namespace mumlib {
         uint8_t encodedData[5000];
         int length = impl->audio.encodeAudioPacket(0, pcmData, pcmLength, encodedData, 5000);
         impl->transport.sendEncodedAudioPacket(encodedData, length);
+    }
+    
+    void Mumlib::sendAudioData(int16_t *pcmData, int pcmLength, float position[3]) {
+        uint8_t encodedData[5000];
+        int length = impl->audio.encodeAudioPacket(0, pcmData, pcmLength, encodedData, 4988);
+        uint32_t * pos = (uint32_t *) position;
+        encodedData[length] = (pos[0] >> 24) & 0xFF; encodedData[length + 1] = (pos[0] >> 16) & 0xFF;
+        encodedData[length + 2] = (pos[0] >> 8) & 0xFF; encodedData[length + 3] = (pos[0] >> 0) & 0xFF;
+        
+        encodedData[length + 4] = (pos[1] >> 24) & 0xFF; encodedData[length + 5] = (pos[1] >> 16) & 0xFF;
+        encodedData[length + 6] = (pos[1] >> 8) & 0xFF; encodedData[length + 7] = (pos[1] >> 0) & 0xFF;
+        
+        encodedData[length + 8] = (pos[2] >> 24) & 0xFF; encodedData[length + 9] = (pos[2] >> 16) & 0xFF;
+        encodedData[length + 10] = (pos[2] >> 8) & 0xFF; encodedData[length + 11] = (pos[2] >> 0) & 0xFF;
+        
+        impl->transport.sendEncodedAudioPacket(encodedData, length + 12);
     }
 
     void Mumlib::sendTextMessage(string message) {

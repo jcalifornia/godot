@@ -41,8 +41,18 @@ void mumlib::BasicCallback::audio(
         int sequenceNumber,
         int16_t *pcmData,
         uint32_t pcm_data_size) {
-    impl->logger.debug("audio: %d bytes of raw PCM data, target: %d, session: %d, seq: %d.",
-                       pcm_data_size, target, sessionId, sequenceNumber);
+}
+
+void mumlib::BasicCallback::audio(
+        int target,
+        int sessionId,
+        int sequenceNumber,
+        int16_t *pcmData,
+        uint32_t pcm_data_size,
+        float position[3]) {
+    impl->logger.debug("audio: %d bytes of raw PCM data, target: %d, session: %d, seq: %d. pos: %f,%f,%f",
+                       pcm_data_size, target, sessionId, sequenceNumber, position[0], position[1], position[2]);
+    this -> audio(target, sessionId, sequenceNumber, pcmData, pcm_data_size);
 }
 
 void BasicCallback::unsupportedAudio(
@@ -68,18 +78,17 @@ void BasicCallback::channelRemove(uint32_t channel_id) {
 void BasicCallback::channelState(string name, int32_t channel_id, int32_t parent, string description,
                                  vector<uint32_t> links, vector<uint32_t> inks_add, vector<uint32_t> links_remove,
                                  bool temporary, int32_t position) {
-    impl->logger.debug("channelState: %d: %s, %s", channel_id, name.c_str(), description.c_str());
+    impl->logger.debug("channelState: %d: %s, %s, %d", channel_id, name.c_str(), description.c_str());
 }
 
 void BasicCallback::userRemove(uint32_t session, int32_t actor, string reason, bool ban) {
     impl->logger.debug("userRemove: session: %d, actor: %d, reason: %s, ban: %d.", session, actor, reason.c_str(), ban);
 }
 
-void BasicCallback::userState(int32_t session, int32_t actor, string name, int32_t user_id, int32_t channel_id,
-                              int32_t mute, int32_t deaf, int32_t suppress, int32_t self_mute, int32_t self_deaf,
-                              string comment, int32_t priority_speaker, int32_t recording) {
-    impl->logger.debug("userState: %s: mute: %d, deaf: %d, suppress: %d, self mute: %d, self deaf: %d",
-                       name.c_str(), mute, deaf, suppress, self_mute, self_deaf);
+void mumlib::BasicCallback::userState(int session, int actor, std::__cxx11::string name, int user_id, int channel_id, int mute, int deaf, int suppress, int self_mute, int self_deaf, std::__cxx11::string comment, std::__cxx11::string plugin_context, int priority_speaker, int recording)
+{
+    impl->logger.debug("userState: %s: mute: %d, deaf: %d, suppress: %d, self mute: %d, self deaf: %d, plugin context: %s",
+                       name.c_str(), mute, deaf, suppress, self_mute, self_deaf, plugin_context.c_str());
 }
 
 void BasicCallback::banList(const uint8_t *ip_data, uint32_t ip_data_size, uint32_t mask, string name, string hash,
