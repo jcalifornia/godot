@@ -2,6 +2,7 @@
 #include "utils.h"
 #include "variant.h"
 #include "print_string.h"
+#include "math/vector3.h"
 #include "scene/resources/audio_stream_sample.h"
 
 
@@ -14,8 +15,9 @@ void MyCallBack::audio( int target,
 	Ref<AudioStreamSample> sam = Ref<AudioStreamSample>(utils::pcm2Sample(pcm_data, pcm_data_size));    
 	Variant pcm(sam);
 	Variant tar(target);
+	Vector3 pos(position[0],position[1],position[2]);
 //	Variant::CallError err;
-	Variant result = _mumble_ref.emit_signal( "audio_message", pcm, tar, sid );
+	Variant result = _mumble_ref.emit_signal( "audio_message", pcm, pos, tar, sid );
 }
 
 

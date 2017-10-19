@@ -61,7 +61,7 @@ void Mumble::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("sendText", "text"), &Mumble::sendText);
 	ClassDB::bind_method(D_METHOD("sendAudio", "sample"), &Mumble::sendAudio);
-	ADD_SIGNAL(MethodInfo("audio_message", PropertyInfo(Variant::OBJECT, "audio_sample"), PropertyInfo(Variant::INT, "target"), PropertyInfo(Variant::INT, "session_id")));
+	ADD_SIGNAL(MethodInfo("audio_message", PropertyInfo(Variant::OBJECT, "audio_sample"), PropertyInfo(Variant::VECTOR3, "position"), PropertyInfo(Variant::INT, "target"), PropertyInfo(Variant::INT, "session_id")));
 	ADD_SIGNAL(MethodInfo("text_message", PropertyInfo(Variant::STRING, "message"), PropertyInfo(Variant::INT, "actor")));
 
 }
