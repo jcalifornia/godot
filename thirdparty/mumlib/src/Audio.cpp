@@ -173,15 +173,23 @@ mumlib::IncomingAudioPacket mumlib::Audio::decodeIncomingAudioPacket(uint8_t *in
         throw AudioException((boost::format("invalid incoming audio packet (%d B): header %d B") % inputBufferLength %
                               dataPointer).str());
     }
-
+    //https://commandcenter.blogspot.de/2012/04/byte-order-fallacy.html
+    uint32_t * pos = (uint32_t *) incomingAudioPacket.position;
+    pos[2] = (inputBuffer[inputBufferLength-4] << 0) | (inputBuffer[inputBufferLength-3] << 8) |(inputBuffer[inputBufferLength-2] << 16 ) | (inputBuffer[inputBufferLength-1] << 24); //set z
+    pos[1] = (inputBuffer[inputBufferLength-8] << 0) | (inputBuffer[inputBufferLength-7] << 8) |(inputBuffer[inputBufferLength-6] << 16 ) | (inputBuffer[inputBufferLength-5] << 24); //set y
+    pos[0] = (inputBuffer[inputBufferLength-12] << 0) | (inputBuffer[inputBufferLength-11] << 8) |(inputBuffer[inputBufferLength-10] << 16 ) | (inputBuffer[inputBufferLength-9] << 24); //set x
+    incomingAudioPacket.audioPayloadLength -= 12; //remove 12 bytes of position data
     logger.debug(
-            "Received %d B of audio packet, %d B header, %d B payload (target: %d, sessionID: %ld, seq num: %ld).",
+            "Received %d B of audio packet, %d B header, %d B payload (target: %d, sessionID: %ld, seq num: %ld). %f,%f,%f, position",
             inputBufferLength,
             dataPointer,
             incomingAudioPacket.audioPayloadLength,
             incomingAudioPacket.target,
             incomingAudioPacket.sessionId,
-            incomingAudioPacket.sequenceNumber);
+            incomingAudioPacket.sequenceNumber,
+            incomingAudioPacket.position[0],
+            incomingAudioPacket.position[1],
+            incomingAudioPacket.position[2]);
 
     return incomingAudioPacket;
 }

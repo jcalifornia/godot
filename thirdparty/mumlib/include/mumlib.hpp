@@ -49,6 +49,8 @@ namespace mumlib {
         ConnectionState getConnectionState();
 
         void sendAudioData(int16_t *pcmData, int pcmLength);
+        
+        void sendAudioData(int16_t *pcmData, int pcmLength, float position[3]);
 
         void sendTextMessage(std::string message);
 
