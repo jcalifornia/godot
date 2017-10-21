@@ -25,7 +25,8 @@ sources = [
     "register_types.cpp"
 ]
 
-motion_sense_env.Append(CCFLAGS=["-DLIB_NO_GUI_SUPPORT=1", "-DUSE_AVX_INSTRUCTIONS=1" ])
+#motion_sense_env.Append(CCFLAGS=["-DDLIB_NO_GUI_SUPPORT=1", "-DUSE_AVX_INSTRUCTIONS=1" ])
+motion_sense_env.Append(CCFLAGS=["-DUSE_AVX_INSTRUCTIONS=1" ])
 motion_sense_env.Append(CPPPATH=[thirdparty_dlib_dir])   
 #motion_sense_env.Append(LINKFLAGS=["-lopencv_core", "-lopencv" ] )
 
