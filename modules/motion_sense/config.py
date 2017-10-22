@@ -9,7 +9,9 @@ def configure(env):
 	env.Append(CXXFLAGS=['-mavx'])
 
 	#env.Append(CCFLAGS=["-DLIB_NO_GUI_SUPPORT=1", "-DUSE_AVX_INSTRUCTIONS=1" ])
-	#env.ParseConfig('pkg-config opencv --cflags --libs')
+	#
 	if env['platform'] == 'osx':
+		env.ParseConfig('pkg-config opencv --cflags --libs')
 		env.Append(CPPPATH=["/opt/X11/include/"])
 		env.Append(LIBS=["X11"]) 
+		env.Append(LIBPATH=["/opt/X11/lib"]) 
