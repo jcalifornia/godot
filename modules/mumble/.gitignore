@@ -1,0 +1,4 @@
+*.backup
+*.back
+*.pyc
+*.o
