@@ -108,36 +108,6 @@ const char *BindingsGenerator::TypeInterface::DEFAULT_VARARG_C_IN = "\t%0 %1_in 
 
 bool BindingsGenerator::verbose_output = false;
 
-static bool is_csharp_keyword(const String &p_name) {
-
-	// Reserved keywords
-
-	return p_name == "abstract" || p_name == "as" || p_name == "base" || p_name == "bool" ||
-		   p_name == "break" || p_name == "byte" || p_name == "case" || p_name == "catch" ||
-		   p_name == "char" || p_name == "checked" || p_name == "class" || p_name == "const" ||
-		   p_name == "continue" || p_name == "decimal" || p_name == "default" || p_name == "delegate" ||
-		   p_name == "do" || p_name == "double" || p_name == "else" || p_name == "enum" ||
-		   p_name == "event" || p_name == "explicit" || p_name == "extern" || p_name == "false" ||
-		   p_name == "finally" || p_name == "fixed" || p_name == "float" || p_name == "for" ||
-		   p_name == "forech" || p_name == "goto" || p_name == "if" || p_name == "implicit" ||
-		   p_name == "in" || p_name == "int" || p_name == "interface" || p_name == "internal" ||
-		   p_name == "is" || p_name == "lock" || p_name == "long" || p_name == "namespace" ||
-		   p_name == "new" || p_name == "null" || p_name == "object" || p_name == "operator" ||
-		   p_name == "out" || p_name == "override" || p_name == "params" || p_name == "private" ||
-		   p_name == "protected" || p_name == "public" || p_name == "readonly" || p_name == "ref" ||
-		   p_name == "return" || p_name == "sbyte" || p_name == "sealed" || p_name == "short" ||
-		   p_name == "sizeof" || p_name == "stackalloc" || p_name == "static" || p_name == "string" ||
-		   p_name == "struct" || p_name == "switch" || p_name == "this" || p_name == "throw" ||
-		   p_name == "true" || p_name == "try" || p_name == "typeof" || p_name == "uint" || p_name == "ulong" ||
-		   p_name == "unchecked" || p_name == "unsafe" || p_name == "ushort" || p_name == "using" ||
-		   p_name == "virtual" || p_name == "volatile" || p_name == "void" || p_name == "while";
-}
-
-inline static String escape_csharp_keyword(const String &p_name) {
-
-	return is_csharp_keyword(p_name) ? "@" + p_name : p_name;
-}
-
 static String snake_to_pascal_case(const String &p_identifier) {
 
 	String ret;
@@ -808,8 +778,8 @@ Error BindingsGenerator::_generate_cs_type(const TypeInterface &itype, const Str
 		cs_file.push_back(itype.proxy_name);
 		cs_file.push_back("(IntPtr " BINDINGS_PTR_FIELD ")\n" OPEN_BLOCK_L2 "this." BINDINGS_PTR_FIELD " = " BINDINGS_PTR_FIELD ";\n" CLOSE_BLOCK_L2);
 
-		cs_file.push_back(MEMBER_BEGIN "public bool HasValidHandle()\n" OPEN_BLOCK_L2
-									   "return " BINDINGS_PTR_FIELD " == IntPtr.Zero;\n" CLOSE_BLOCK_L2);
+		cs_file.push_back(MEMBER_BEGIN "public IntPtr NativeInstance\n" OPEN_BLOCK_L2
+									   "get { return " BINDINGS_PTR_FIELD "; }\n" CLOSE_BLOCK_L2);
 	} else if (itype.is_singleton) {
 		// Add the type name and the singleton pointer as static fields
 
@@ -871,8 +841,8 @@ Error BindingsGenerator::_generate_cs_type(const TypeInterface &itype, const Str
 		// Add methods
 
 		if (!is_derived_type) {
-			cs_file.push_back(MEMBER_BEGIN "public bool HasValidHandle()\n" OPEN_BLOCK_L2
-										   "return " BINDINGS_PTR_FIELD " == IntPtr.Zero;\n" CLOSE_BLOCK_L2);
+			cs_file.push_back(MEMBER_BEGIN "public IntPtr NativeInstance\n" OPEN_BLOCK_L2
+										   "get { return " BINDINGS_PTR_FIELD "; }\n" CLOSE_BLOCK_L2);
 
 			cs_file.push_back(MEMBER_BEGIN "internal static IntPtr " CS_SMETHOD_GETINSTANCE "(Object instance)\n" OPEN_BLOCK_L2
 										   "return instance == null ? IntPtr.Zero : instance." BINDINGS_PTR_FIELD ";\n" CLOSE_BLOCK_L2);
@@ -903,10 +873,6 @@ Error BindingsGenerator::_generate_cs_type(const TypeInterface &itype, const Str
 				ERR_PRINT("BUG: Array type interface not found!");
 				return ERR_BUG;
 			}
-
-			cs_file.push_back(MEMBER_BEGIN "private void _AwaitedSignalCallback(");
-			cs_file.push_back(array_itype->get().cs_type);
-			cs_file.push_back(" args, SignalAwaiter awaiter)\n" OPEN_BLOCK_L2 "awaiter.SignalCallback(args);\n" CLOSE_BLOCK_L2);
 
 			Map<String, TypeInterface>::Element *object_itype = obj_types.find("Object");
 
