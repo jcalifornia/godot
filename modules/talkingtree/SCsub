@@ -2,5 +2,14 @@
 Import('env')
 
 env_talkingtree = env.Clone()
+
+talkingtree_dir = '#modules/talkingtree/'
+protobuf_proto = 'TalkingTree.proto'
+
+	
+protobuf_target = env_talkingtree.Command( 'TalkingTree.pb.cc', \
+	protobuf_proto, \
+	"protoc --proto_path=. --cpp_out=. $SOURCE") 
+Depends( env.modules_sources, protobuf_target)
 env_talkingtree.add_source_files(env.modules_sources,"*.cpp")
 env_talkingtree.Append(CXXFLAGS=['-O2', '-std=c++11'])
