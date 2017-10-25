@@ -1,0 +1,4 @@
+package TalkingTreeProto;
+
+option optimize_for = SPEED;
+

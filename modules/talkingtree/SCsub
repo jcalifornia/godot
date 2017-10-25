@@ -1,0 +1,6 @@
+# SCsub
+Import('env')
+
+env_talkingtree = env.Clone()
+env_talkingtree.add_source_files(env.modules_sources,"*.cpp")
+env_talkingtree.Append(CXXFLAGS=['-O2', '-std=c++11'])
