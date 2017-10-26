@@ -2,6 +2,19 @@ package TalkingTreeProto;
 
 option optimize_for = SPEED;
 
+
+message Version {
+	// 2-byte Major, 1-byte Minor and 1-byte Patch version number.
+	optional uint32 version = 1;
+	// Client release name.
+	optional string release = 2;
+	// Client OS name.
+	optional string os = 3;
+	// Client OS version.
+	optional string os_version = 4;
+}
+
+
 // Used to send and broadcast text messages.
 message TextMessage {
 	// The message sender, identified by its session.

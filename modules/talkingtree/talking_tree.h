@@ -3,18 +3,26 @@
 #define TALKING_TREE_H
 
 #include "reference.h"
-#include "TalkingTree.pb.h"
+#include "io/networked_multiplayer_peer.h"
+#include "ustring.h"
 
 class TalkingTree : public Reference {
-    GDCLASS(TalkingTree, Reference);
-
-    int count;
+	GDCLASS(TalkingTree, Reference);
 
 protected:
-    static void _bind_methods();
+	static void _bind_methods();
 
 public:
-    TalkingTree();
+	TalkingTree();
+	void set_network_peer(const Ref<NetworkedMultiplayerPeer> &p_network_peer);
+	bool is_network_server() const;
+	bool has_network_peer() const;
+	void sendText(String msg);
+private:
+	Set<int> connected_peers;
+	int last_send_cache_id;
+
+	Ref<NetworkedMultiplayerPeer> network_peer;
 };
 
 #endif
