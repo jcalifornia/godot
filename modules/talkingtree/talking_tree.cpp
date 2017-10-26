@@ -4,6 +4,7 @@
 #include "talking_tree_enum.h"
 
 #include "TalkingTree.pb.h"
+#include "io/marshalls.h"
 
 
 void TalkingTree::_bind_methods() {
@@ -16,7 +17,17 @@ TalkingTree::TalkingTree() {
 }
 void TalkingTree::sendText(String msg) {
 	TalkingTreeProto::TextMessage txtMsg;
+	CharString m = msg.utf8();
+	txtMsg.set_message(m.get_data(), m.length());
 }
+void TalkingTree::sendPacket(PacketType type, google::protobuf::Message &message){
+	Vector<uint8_t> packet;
+	packet.resize(1 + 4 + message.ByteSize());
+	packet[0] = (uint8_t)type;
+	encode_uint32(message.ByteSize(), &packet[1]);
+	message.SerializeToArray( &packet[5], message.ByteSize());
+}
+
 bool TalkingTree::is_network_server() const {
 
 	ERR_FAIL_COND_V(!network_peer.is_valid(), false);

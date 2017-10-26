@@ -5,6 +5,8 @@
 #include "reference.h"
 #include "io/networked_multiplayer_peer.h"
 #include "ustring.h"
+#include "talking_tree_enum.h"
+#include <google/protobuf/message.h>
 
 class TalkingTree : public Reference {
 	GDCLASS(TalkingTree, Reference);
@@ -21,8 +23,8 @@ public:
 private:
 	Set<int> connected_peers;
 	int last_send_cache_id;
-
 	Ref<NetworkedMultiplayerPeer> network_peer;
+	void sendPacket(PacketType type, google::protobuf::Message &message);
 };
 
 #endif
