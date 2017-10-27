@@ -12,7 +12,7 @@ void TalkingTree::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_network_server"), &TalkingTree::is_network_server);
 	ClassDB::bind_method(D_METHOD("has_network_peer"), &TalkingTree::has_network_peer);
 	ClassDB::bind_method(D_METHOD("get_network_connected_peers"), &TalkingTree::get_network_connected_peers);
-
+	ADD_SIGNAL(MethodInfo("text_message", PropertyInfo(Variant::STRING, "message"), PropertyInfo(Variant::INT, "sender_id")));
 }
 
 TalkingTree::TalkingTree() {
@@ -21,16 +21,35 @@ void TalkingTree::send_text(String msg) {
 	TalkingTreeProto::TextMessage txtMsg;
 	CharString m = msg.utf8();
 	txtMsg.set_message(m.get_data(), m.length());
+	
 }
-void TalkingTree::_send_packet(PacketType type, google::protobuf::Message &message){
+void TalkingTree::_send_packet(PacketType type, google::protobuf::Message &message, NetworkedMultiplayerPeer::TransferMode transferMode){
 	Vector<uint8_t> packet;
 	packet.resize(1 + 4 + message.ByteSize());
 	packet[0] = (uint8_t)type;
 	encode_uint32(message.ByteSize(), &packet[1]);
 	message.SerializeToArray( &packet[5], message.ByteSize());
+	network_peer->set_transfer_mode(transferMode);
+	
+	
 }
 void TalkingTree::_serialize_packet(int p_from, const uint8_t *p_packet, int p_packet_len) {
-	uint8_t packet_type = p_packet[0];
+	PacketType packet_type = (PacketType) p_packet[0];
+	switch(packet_type){
+		case PacketType::VERSION: {
+		} break;
+		case PacketType::UDPTUNNEL: {
+		} break;
+		case PacketType::TEXTMESSAGE: {
+			TalkingTreeProto::TextMessage txtMsg;
+			txtMsg.ParseFromArray( p_packet, p_packet_len );
+			String msg;
+			msg.parse_utf8(txtMsg.message().c_str(), txtMsg.message().length());
+			this->emit_signal("text_message", msg, p_from);
+		} break;
+		default:
+			break;
+	}
 }
 
 bool TalkingTree::is_network_server() const {
