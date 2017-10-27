@@ -12,13 +12,14 @@
 #include "print_string.h"
 #include "dvector.h"
 #include "os/os.h"
+#include <Eigen/Eigen>
+#include <Eigen/Geometry>
 #include <UKF/Types.h>
 #include <UKF/Integrator.h>
 #include <UKF/StateVector.h>
 #include <UKF/MeasurementVector.h>
-#include <Eigen/Eigen>
-
 #include <UKF/Core.h>
+
 
 void FacialLandmark::_bind_methods() {
     ClassDB::bind_method(D_METHOD("start"), &FacialLandmark::startStreaming);
