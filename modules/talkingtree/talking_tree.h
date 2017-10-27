@@ -17,14 +17,16 @@ protected:
 public:
 	TalkingTree();
 	void set_network_peer(const Ref<NetworkedMultiplayerPeer> &p_network_peer);
+	Vector<int> get_network_connected_peers() const;
 	bool is_network_server() const;
 	bool has_network_peer() const;
-	void sendText(String msg);
+	void send_text(String msg);
 private:
 	Set<int> connected_peers;
 	int last_send_cache_id;
 	Ref<NetworkedMultiplayerPeer> network_peer;
-	void sendPacket(PacketType type, google::protobuf::Message &message);
+	void _send_packet(PacketType type, google::protobuf::Message &message);
+	void _serialize_packet(int p_from, const uint8_t *p_packet, int p_packet_len);
 };
 
 #endif

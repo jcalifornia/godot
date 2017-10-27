@@ -30,3 +30,8 @@ message TextMessage {
 	// The UTF-8 encoded message. May be HTML if the server allows.
 	required string message = 5;
 }
+
+message UDPTunnel {
+	// Not used.
+	required bytes packet = 1;
+}
