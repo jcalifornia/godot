@@ -34,5 +34,33 @@ public:
 };
 
 VARIANT_ENUM_CAST(FacialLandmark::Status);
+
+
+
+// UKF
+
+#define UKF_STATE_DIM 136
+#define UKF_MEASUREMENT_DIM 68
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+enum ukf_precision_t {
+    UKF_PRECISION_FLOAT = 0,
+    UKF_PRECISION_DOUBLE = 1
+};
+
+uint32_t ukf_config_get_state_dim(void);
+uint32_t ukf_config_get_measurement_dim(void);
+uint32_t ukf_config_get_control_dim(void);
+enum ukf_precision_t ukf_config_get_precision(void);
+
+#ifdef __cplusplus
+}
+#endif
+
+
+
 #endif
 
