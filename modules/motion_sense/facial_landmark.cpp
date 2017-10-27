@@ -12,7 +12,13 @@
 #include "print_string.h"
 #include "dvector.h"
 #include "os/os.h"
-//#include "UKF/Core.h"
+#include <UKF/Types.h>
+#include <UKF/Integrator.h>
+#include <UKF/StateVector.h>
+#include <UKF/MeasurementVector.h>
+#include <Eigen/Eigen>
+
+#include <UKF/Core.h>
 
 void FacialLandmark::_bind_methods() {
     ClassDB::bind_method(D_METHOD("start"), &FacialLandmark::startStreaming);
@@ -74,4 +80,45 @@ void FacialLandmark::stopStreaming(){
     }
 }
 
+/*************************************************
+ *  filter stuff
+ *  State space consists of position and velocity for 68 landmarks
+ * @TODO: add in pose/angular changes
+ */
+ 
+ 
+ enum MyFields {
+    Landmarks,
+    LandmarkVelocity,
+    dlibLandmarks
+};
+
+using MyStateVector = UKF::StateVector<
+    UKF::Field<Landmarks, UKF::Vector<68>>,
+    UKF::Field<LandmarkVelocity, UKF::Vector<68*2>>
+>;
+ 
+ 
+using MyMeasurementVector = UKF::DynamicMeasurementVector<
+    UKF::Field<dlibLandmarks, UKF::Vector<68>>
+>;
+
+using MyCore = UKF::Core<
+    MyStateVector,
+    MyMeasurementVector,
+    UKF::IntegratorRK4
+>;
+
+using ProcessModelTestStateVector = UKF::StateVector<
+    UKF::Field<Landmarks, UKF::Vector<68>>,
+    UKF::Field<LandmarkVelocity, UKF::Vector<68*2>>
+>;
+ 
+ enum ukf_precision_t ukf_config_get_precision() {
+    if(sizeof(real_t) == 8) {
+        return UKF_PRECISION_DOUBLE;
+    } else {
+        return UKF_PRECISION_FLOAT;
+    }
+}
 

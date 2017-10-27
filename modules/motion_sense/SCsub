@@ -13,7 +13,7 @@ thirdparty_eigen_dir = "#thirdparty/eigen3/"
 thirdparty_ukf_dir = "#thirdparty/ukf/"
 
 thirdparty_dlib_sources = [ thirdparty_dlib_dir + dir for dir in thirdparty_dlib_srcs ]
-thirdparty_ukf_sources = "#thirdparty/ukf/include"
+
 
 thirdparty_system_path = [
     "/usr/lib/x86_64-linux-gnu/",
@@ -40,4 +40,4 @@ motion_sense_env.add_source_files(env.modules_sources,sources+thirdparty_dlib_so
 motion_sense_env.Append(LIBS=["pthread"]) 
 motion_sense_env.Append(LIBPATH=thirdparty_system_path) 
 
-motion_sense_env.Append(CXXFLAGS=['-O3', '-mavx', '-std=c++11'])
+motion_sense_env.Append(CXXFLAGS=['-O3', '-mavx', '-std=c++14'])

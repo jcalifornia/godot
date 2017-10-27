@@ -41,6 +41,7 @@ VARIANT_ENUM_CAST(FacialLandmark::Status);
 
 #define UKF_STATE_DIM 136
 #define UKF_MEASUREMENT_DIM 68
+#define UKF_SINGLE_PRECISION 1
 
 #ifdef __cplusplus
 extern "C" {
