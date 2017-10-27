@@ -25,7 +25,7 @@ private:
 	Set<int> connected_peers;
 	int last_send_cache_id;
 	Ref<NetworkedMultiplayerPeer> network_peer;
-	void _send_packet(PacketType type, google::protobuf::Message &message, NetworkedMultiplayerPeer::TransferMode transfer);
+	void _send_packet(int p_to, PacketType type, google::protobuf::Message &message, NetworkedMultiplayerPeer::TransferMode transfer);
 	void _serialize_packet(int p_from, const uint8_t *p_packet, int p_packet_len);
 };
 

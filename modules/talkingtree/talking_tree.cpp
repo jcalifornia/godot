@@ -21,17 +21,17 @@ void TalkingTree::send_text(String msg) {
 	TalkingTreeProto::TextMessage txtMsg;
 	CharString m = msg.utf8();
 	txtMsg.set_message(m.get_data(), m.length());
-	
+	_send_packet(0, PacketType::TEXTMESSAGE, txtMsg, NetworkedMultiplayerPeer::TRANSFER_MODE_RELIABLE);
 }
-void TalkingTree::_send_packet(PacketType type, google::protobuf::Message &message, NetworkedMultiplayerPeer::TransferMode transferMode){
+void TalkingTree::_send_packet(int p_to, PacketType type, google::protobuf::Message &message, NetworkedMultiplayerPeer::TransferMode transferMode){
 	Vector<uint8_t> packet;
 	packet.resize(1 + 4 + message.ByteSize());
 	packet[0] = (uint8_t)type;
 	encode_uint32(message.ByteSize(), &packet[1]);
 	message.SerializeToArray( &packet[5], message.ByteSize());
 	network_peer->set_transfer_mode(transferMode);
-	
-	
+	network_peer->set_target_peer(0);
+	network_peer->put_packet(packet.ptr(), packet.size());
 }
 void TalkingTree::_serialize_packet(int p_from, const uint8_t *p_packet, int p_packet_len) {
 	PacketType packet_type = (PacketType) p_packet[0];
