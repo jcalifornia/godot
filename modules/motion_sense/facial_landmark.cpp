@@ -92,7 +92,6 @@ void FacialLandmark::startStreaming(){
 		prevTrackPts[i] = cv::Point2f(0, 0);
 	}
 	
-	
 	std::vector<cv::Point2f> predict_points(points_num);
 	std::vector<cv::Point2f> kalman_points(points_num);
 
@@ -130,37 +129,94 @@ void FacialLandmark::startStreaming(){
 					shapes[i] = (_model->get_data())(cimg, faces[i]);
 					rects[i] = shapes[i].get_rect();
 				}
-				PoolVector<Vector2> pts = utils::to_3dVec2(shapes[0]); // just use the first one
-				print_line("sending landmarks");
-				emit_signal("facial_detect", Variant(utils::to_gRect(rects[0])), Variant(pts));
-			}
+				//PoolVector<Vector2> pts = utils::to_3dVec2(shapes[0]); // just use the first one
+				//emit_signal("facial_detect", Variant(utils::to_gRect(rects[0])), Variant(pts));
 			
 			
-			// Filter stuff goes below!
-			///*
-			dlib::full_object_detection& shape = shapes[0];
-			if (!started) {
-				cv::cvtColor(cloned, prevgray, CV_BGR2GRAY);
-				for (int i = 0; i < shape.num_parts(); i++) {
-					prevTrackPts[i].x = shape.part(i).x();
-					prevTrackPts[i].y = shape.part(i).y();
+			
+				// Filter stuff goes below!
+				///*
+				dlib::full_object_detection& shape = shapes[0];
+				if (!started) {
+					cv::cvtColor(cloned, prevgray, CV_BGR2GRAY);
+					for (int i = 0; i < shape.num_parts(); i++) {
+						prevTrackPts[i].x = shape.part(i).x();
+						prevTrackPts[i].y = shape.part(i).y();
+					}
+					started = 1; 
 				}
-				started = 1; 
-			}
-			
-			// update filter observations
-			if (shapes.size() == 1) {
-				for (int i = 0; i < shape.num_parts(); i++) {
-					kalman_points[i].x = shape.part(i).x();
-					kalman_points[i].y = shape.part(i).y();
+				
+				// update filter observations
+				if (shapes.size() == 1) {
+					for (int i = 0; i < shape.num_parts(); i++) {
+						kalman_points[i].x = shape.part(i).x();
+						kalman_points[i].y = shape.part(i).y();
+						
+					}
+					//print_line(itos(kalman_points[4].x));
 				}
-			}
 
-			// update prediction
-			cv::Mat prediction = KF.predict();
-			for (int i = 0; i < points_num; i++) {
-				predict_points[i].x = prediction.at<float>(i * 2);
-				predict_points[i].y = prediction.at<float>(i * 2 + 1);
+				// update prediction
+				cv::Mat prediction = KF.predict();
+				
+				for (int i = 0; i < points_num; i++) {
+					predict_points[i].x = prediction.at<float>(i * 2);
+					predict_points[i].y = prediction.at<float>(i * 2 + 1);
+				}
+				
+				// Update Measurement
+				for (int i = 0; i < 136; i++) {
+					if (i % 2 == 0) {
+						measurement.at<float>(i) = (float)kalman_points[i / 2].x;
+					} else {
+						measurement.at<float>(i) = (float)kalman_points[(i - 1) / 2].y;
+					}
+				}
+
+				measurement += KF.measurementMatrix * state;
+
+				// Correct Measurement
+				KF.correct(measurement);
+
+				if (shapes.size() == 1) {
+					cv::cvtColor(cloned, gray, CV_BGR2GRAY);
+					if (prevgray.data) {
+						std::vector<uchar> status;
+						std::vector<float> err;
+						cv::calcOpticalFlowPyrLK(prevgray, gray, prevTrackPts, nextTrackPts, status, err);
+						std::cout << "variance:" <<variance(prevTrackPts, nextTrackPts) << std::endl;
+						// if the face is moving so fast, use dlib to detect the face
+						double diff = variance(prevTrackPts, nextTrackPts);
+						if (diff > 1.0) {
+							const dlib::full_object_detection& d = shapes[0];
+							std::cout<< "DLIB" << std::endl;
+							for (int i = 0; i < d.num_parts(); i++) {
+								nextTrackPts[i].x = d.part(i).x();
+								nextTrackPts[i].y = d.part(i).y();
+							}
+						} /*else if (diff <= 1.0 && diff > 0.005){
+							// In this case, use Optical Flow
+							print_line("OF");
+							for (int i = 0; i < nextTrackPts.size(); i++) {
+
+							}
+						}*/ else {
+							// In this case, use Kalman Filter
+							print_line("KF");
+							for (int i = 0; i < predict_points.size(); i++) {
+								nextTrackPts[i].x = predict_points[i].x;
+								nextTrackPts[i].y = predict_points[i].y;
+								//print_line(""+itos(nextTrackPts[i].x) +"," + 
+								//itos(nextTrackPts[i].y));
+							}
+							PoolVector<Vector2> pts = 
+							utils::to_3dVec2(shapes[0],nextTrackPts); // just use the first one
+							emit_signal("facial_detect", Variant(utils::to_gRect(rects[0])), Variant(pts));
+						}
+					} 
+					std::swap(prevTrackPts, nextTrackPts);
+					std::swap(prevgray, gray);
+				} 
 			}
 			//* */
 			
@@ -172,6 +228,26 @@ void FacialLandmark::startStreaming(){
 	}
 	
 }
+
+double variance(std::vector<cv::Point2f> curPoints, std::vector<cv::Point2f> lastPoints) {
+    double variance = 0.0;
+    double sum = 0.0;
+    std::vector<double> diffs;
+    if (curPoints.size() == lastPoints.size()) {
+        for (int i = 0; i < curPoints.size(); i++) {
+            double diff = std::sqrt(std::pow(curPoints[i].x - lastPoints[i].x, 2.0) + std::pow(curPoints[i].y - lastPoints[i].y, 2.0));
+            sum += diff;
+            diffs.push_back(diff);
+        }
+        double mean = sum / diffs.size();
+        for (int i = 0; i < curPoints.size(); i++) {
+            variance += std::pow(diffs[i] - mean, 2);
+        }
+        return variance / diffs.size();
+    }
+    return variance;
+}
+
 void FacialLandmark::stopStreaming(){
 	if( _state == STATUS_RUNNING ){
 		_state = STATUS_STOPPED;

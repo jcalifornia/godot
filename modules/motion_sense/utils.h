@@ -25,6 +25,6 @@ namespace utils{
     //http://dlib.net/dlib/geometry/rectangle.h.html
     Rect2 to_gRect( dlib::rectangle &r );
     PoolVector<Vector2> to_3dVec2( dlib::full_object_detection &obj);
-    PoolVector<Vector2> to_3dVec2(std::vector<cv::Point2f> &out_pts);
+    PoolVector<Vector2> to_3dVec2(dlib::full_object_detection &dobj, std::vector<cv::Point2f> &out_pts);
     
 }

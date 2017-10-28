@@ -37,6 +37,8 @@ public:
     void set_data(Ref<FacialLandmarkModel> m);
 };
 
+double variance(std::vector<cv::Point2f> curPoints, std::vector<cv::Point2f> lastPoints);
+
 VARIANT_ENUM_CAST(FacialLandmark::Status);
 
 #endif
