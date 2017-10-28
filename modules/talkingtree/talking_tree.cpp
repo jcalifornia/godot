@@ -12,6 +12,7 @@ void TalkingTree::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_network_server"), &TalkingTree::is_network_server);
 	ClassDB::bind_method(D_METHOD("has_network_peer"), &TalkingTree::has_network_peer);
 	ClassDB::bind_method(D_METHOD("get_network_connected_peers"), &TalkingTree::get_network_connected_peers);
+	ClassDB::bind_method(D_METHOD("send_text", "message"), &TalkingTree::send_text);
 	ADD_SIGNAL(MethodInfo("text_message", PropertyInfo(Variant::STRING, "message"), PropertyInfo(Variant::INT, "sender_id")));
 }
 
@@ -25,6 +26,7 @@ void TalkingTree::send_text(String msg) {
 }
 void TalkingTree::_send_packet(int p_to, PacketType type, google::protobuf::Message &message, NetworkedMultiplayerPeer::TransferMode transferMode){
 	Vector<uint8_t> packet;
+	//incorrect
 	packet.resize(1 + 4 + message.ByteSize());
 	packet[0] = (uint8_t)type;
 	encode_uint32(message.ByteSize(), &packet[1]);
@@ -33,8 +35,10 @@ void TalkingTree::_send_packet(int p_to, PacketType type, google::protobuf::Mess
 	network_peer->set_target_peer(0);
 	network_peer->put_packet(packet.ptr(), packet.size());
 }
-void TalkingTree::_serialize_packet(int p_from, const uint8_t *p_packet, int p_packet_len) {
+void TalkingTree::_network_process_packet(int p_from, const uint8_t *p_packet, int p_packet_len) {
 	PacketType packet_type = (PacketType) p_packet[0];
+	const uint8_t * proto_packet = &p_packet[5];
+	int proto_packet_len = p_packet_len - 5;
 	switch(packet_type){
 		case PacketType::VERSION: {
 		} break;
@@ -42,7 +46,7 @@ void TalkingTree::_serialize_packet(int p_from, const uint8_t *p_packet, int p_p
 		} break;
 		case PacketType::TEXTMESSAGE: {
 			TalkingTreeProto::TextMessage txtMsg;
-			txtMsg.ParseFromArray( p_packet, p_packet_len );
+			txtMsg.ParseFromArray( proto_packet, proto_packet_len );
 			String msg;
 			msg.parse_utf8(txtMsg.message().c_str(), txtMsg.message().length());
 			this->emit_signal("text_message", msg, p_from);
@@ -91,4 +95,33 @@ Vector<int> TalkingTree::get_network_connected_peers() const {
 		ret.push_back(E->get());
 	}
 	return ret;
+}
+
+void TalkingTree::_network_poll() {
+	
+if (!network_peer.is_valid() || network_peer->get_connection_status() == NetworkedMultiplayerPeer::CONNECTION_DISCONNECTED)
+	return;
+
+	network_peer->poll();
+
+	if (!network_peer.is_valid()) //it's possible that polling might have resulted in a disconnection, so check here
+		return;
+
+	while (network_peer->get_available_packet_count()) {
+
+		int sender = network_peer->get_packet_peer();
+		const uint8_t *packet;
+		int len;
+
+		Error err = network_peer->get_packet(&packet, len);
+		if (err != OK) {
+			ERR_PRINT("Error getting packet!");
+		}
+
+		_network_process_packet(sender, packet, len);
+
+		if (!network_peer.is_valid()) {
+			break; //it's also possible that a packet or RPC caused a disconnection, so also check here
+		}
+	}
 }
