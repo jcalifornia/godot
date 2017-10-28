@@ -6,7 +6,11 @@
 #include "resource.h"
 #include "data_models.h"
 #include <opencv2/opencv.hpp>
+#include <dlib/image_processing/frontal_face_detector.h>
 
+
+#define FACE_DOWNSAMPLE_RATIO 2
+#define SKIP_FRAMES 1
 
 class FacialLandmark : public Reference {
     GDCLASS(FacialLandmark,Reference);
@@ -34,34 +38,6 @@ public:
 };
 
 VARIANT_ENUM_CAST(FacialLandmark::Status);
-
-
-
-// UKF
-
-#define UKF_STATE_DIM 136
-#define UKF_MEASUREMENT_DIM 68
-#define UKF_SINGLE_PRECISION 1
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-enum ukf_precision_t {
-    UKF_PRECISION_FLOAT = 0,
-    UKF_PRECISION_DOUBLE = 1
-};
-
-uint32_t ukf_config_get_state_dim(void);
-uint32_t ukf_config_get_measurement_dim(void);
-uint32_t ukf_config_get_control_dim(void);
-enum ukf_precision_t ukf_config_get_precision(void);
-
-#ifdef __cplusplus
-}
-#endif
-
-
 
 #endif
 

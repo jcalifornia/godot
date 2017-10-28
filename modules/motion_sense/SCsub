@@ -41,3 +41,17 @@ motion_sense_env.Append(LIBS=["pthread"])
 motion_sense_env.Append(LIBPATH=thirdparty_system_path) 
 
 motion_sense_env.Append(CXXFLAGS=['-O3', '-mavx', '-std=c++14'])
+
+motion_sense_env.Append(CPPFLAGS=["-lopencv_core"])
+motion_sense_env.Append(CPPFLAGS=["-lopencv_imgproc"])
+motion_sense_env.Append(CPPFLAGS=["-lopencv_highgui"])
+motion_sense_env.Append(CPPFLAGS=["-lopencv_objdetect"])
+motion_sense_env.Append(CPPFLAGS=["-lopencv_gpu"])
+motion_sense_env.Append(CPPFLAGS=["-pthread"])
+
+motion_sense_env.Append(LINKFLAGS=["-lopencv_core"])
+motion_sense_env.Append(LINKFLAGS=["-lopencv_imgproc"])
+motion_sense_env.Append(LINKFLAGS=["-lopencv_highgui"])
+motion_sense_env.Append(LINKFLAGS=["-lopencv_objdetect"])
+motion_sense_env.Append(LINKFLAGS=["-lopencv_gpu"])
+motion_sense_env.Append(LINKFLAGS=["-pthread"])

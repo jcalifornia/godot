@@ -1,5 +1,7 @@
 #include "utils.h"
-
+#include <dlib/opencv.h>
+#include <opencv2/core/core.hpp>
+#include <opencv2/opencv.hpp>
 #define ABS(x) x > 0 ? x : -x
 
 Rect2 utils::to_gRect( dlib::rectangle &r ){
@@ -23,4 +25,14 @@ PoolVector<Vector2> utils::to_3dVec2( dlib::full_object_detection &dobj ){
         
     }
     return pts;
+}
+
+PoolVector<Vector2> utils::to_3dVec2(std::vector<cv::Point2f> &out_pts){
+	PoolVector<Vector2> pts;
+	pts.resize(out_pts.size());
+	for(unsigned long i =0; i<pts.size(); i++){
+		pts.set(i,Vector2(out_pts[i].x,out_pts[i].y));
+	}
+	return pts;
+		
 }
