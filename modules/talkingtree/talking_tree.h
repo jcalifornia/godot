@@ -6,6 +6,7 @@
 #include "io/networked_multiplayer_peer.h"
 #include "ustring.h"
 #include "talking_tree_enum.h"
+#include "scene/main/timer.h"
 #include <google/protobuf/message.h>
 
 class TalkingTree : public Reference {
@@ -21,6 +22,7 @@ public:
 	bool is_network_server() const;
 	bool has_network_peer() const;
 	void send_text(String msg);
+	void poll();
 private:
 	Set<int> connected_peers;
 	int last_send_cache_id;
@@ -28,6 +30,7 @@ private:
 	void _send_packet(int p_to, PacketType type, google::protobuf::Message &message, NetworkedMultiplayerPeer::TransferMode transfer);
 	void _network_process_packet(int p_from, const uint8_t *p_packet, int p_packet_len);
 	void _network_poll();
+	//Ref<Timer> _timer;
 };
 
 #endif

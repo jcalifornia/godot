@@ -13,10 +13,12 @@ void TalkingTree::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("has_network_peer"), &TalkingTree::has_network_peer);
 	ClassDB::bind_method(D_METHOD("get_network_connected_peers"), &TalkingTree::get_network_connected_peers);
 	ClassDB::bind_method(D_METHOD("send_text", "message"), &TalkingTree::send_text);
+	ClassDB::bind_method(D_METHOD("poll"), &TalkingTree::poll);
+	
 	ADD_SIGNAL(MethodInfo("text_message", PropertyInfo(Variant::STRING, "message"), PropertyInfo(Variant::INT, "sender_id")));
 }
 
-TalkingTree::TalkingTree() {
+TalkingTree::TalkingTree(){
 }
 void TalkingTree::send_text(String msg) {
 	TalkingTreeProto::TextMessage txtMsg;
@@ -99,8 +101,8 @@ Vector<int> TalkingTree::get_network_connected_peers() const {
 
 void TalkingTree::_network_poll() {
 	
-if (!network_peer.is_valid() || network_peer->get_connection_status() == NetworkedMultiplayerPeer::CONNECTION_DISCONNECTED)
-	return;
+	if (!network_peer.is_valid() || network_peer->get_connection_status() == NetworkedMultiplayerPeer::CONNECTION_DISCONNECTED)
+		return;
 
 	network_peer->poll();
 
@@ -123,5 +125,13 @@ if (!network_peer.is_valid() || network_peer->get_connection_status() == Network
 		if (!network_peer.is_valid()) {
 			break; //it's also possible that a packet or RPC caused a disconnection, so also check here
 		}
+	}
+}
+
+void TalkingTree::poll(){
+	while(true){
+		//_timer->set_wait_time(500.0/1000.0);
+		_network_poll();
+		//_timer->start();
 	}
 }
