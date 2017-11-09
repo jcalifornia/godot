@@ -1,6 +1,46 @@
 # SCsub
 Import('env')
 
+
+import os.path
+
+
 env_talkingtree = env.Clone()
-env_talkingtree.add_source_files(env.modules_sources,"*.cpp")
+
+talkingtree_dir = '#modules/talkingtree/'
+protobuf_proto = 'TalkingTree.proto'
+
+protobuf_suffix = ".proto"
+#protobuf_target = env_talkingtree.Command( ['TalkingTree.pb.cc', 'TalkingTree.pb.h'], \
+#	protobuf_proto, \
+#	"protoc --proto_path=. --cpp_out=. $SOURCE") 
+#Depends(,protobuf_target )
+
+def _protobuf_emitter(target, source, env):
+	target = []
+	for s in source:
+		src = str(s)
+		if src.endswith(protobuf_suffix):
+			p_stem = src[:-len(protobuf_suffix)]
+		else:
+			p_stem = src
+		target.append(p_stem + '.pb.h')
+		target.append(p_stem + '.pb.cc')
+	return target, source
+
+def filter_headers(f_list):
+	l = []
+	for f in f_list:
+		if os.path.splitext(f.rstr())[1] != '.h':
+			l.append(f)
+	return l	
+
+bld = Builder(action="protoc --proto_path=. --cpp_out=. $SOURCE", \
+#	suffix = '.pb.cc', \
+	src_suffix = [protobuf_suffix], \
+	emitter = _protobuf_emitter)
+env_talkingtree['BUILDERS']['Protoc'] = bld
+protobuf_target = env_talkingtree.Protoc( protobuf_proto )
+sources = Glob("*.cpp")+filter_headers(protobuf_target)
+env_talkingtree.add_source_files(env.modules_sources, sources )
 env_talkingtree.Append(CXXFLAGS=['-O2', '-std=c++11'])
