@@ -40,8 +40,6 @@
 #include "os/os.h"
 #include "power_uwp.h"
 #include "servers/audio_server.h"
-#include "servers/physics/physics_server_sw.h"
-#include "servers/physics_2d/physics_2d_server_sw.h"
 #include "servers/visual/rasterizer.h"
 #include "servers/visual_server.h"
 
@@ -94,8 +92,6 @@ private:
 	int old_x, old_y;
 	Point2i center;
 	VisualServer *visual_server;
-	PhysicsServer *physics_server;
-	Physics2DServer *physics_2d_server;
 	int pressrc;
 
 	ContextEGL *gl_context;
@@ -157,8 +153,6 @@ private:
 protected:
 	virtual int get_video_driver_count() const;
 	virtual const char *get_video_driver_name(int p_driver) const;
-
-	virtual VideoMode get_default_video_mode() const;
 
 	virtual int get_audio_driver_count() const;
 	virtual const char *get_audio_driver_name(int p_driver) const;

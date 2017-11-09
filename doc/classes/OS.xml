@@ -196,7 +196,7 @@
 			</return>
 			<description>
 				Returns the current latin keyboard variant as a String.
-				Possible return values are: "QWERTY", "AZERTY", "QZERTY", "DVORAK", "NEO" or "ERROR"
+				Possible return values are: "QWERTY", "AZERTY", "QZERTY", "DVORAK", "NEO", "COLEMAK" or "ERROR".
 			</description>
 		</method>
 		<method name="get_locale" qualifiers="const">
@@ -376,7 +376,7 @@
 			<return type="String">
 			</return>
 			<description>
-				Returns a unique string.
+				Returns a string that is unique to the device. Currently only works on Android and iOS. Returns empty string on other platforms.
 			</description>
 		</method>
 		<method name="get_unix_time" qualifiers="const">

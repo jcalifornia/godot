@@ -104,7 +104,9 @@ void OSIPhone::initialize_core() {
 void OSIPhone::initialize_logger() {
 	Vector<Logger *> loggers;
 	loggers.push_back(memnew(SyslogLogger));
-	loggers.push_back(memnew(RotatedFileLogger("user://logs/log.txt")));
+	// FIXME: Reenable once we figure out how to get this properly in user://
+	// instead of littering the user's working dirs (res:// + pwd) with log files (GH-12277)
+	//loggers.push_back(memnew(RotatedFileLogger("user://logs/log.txt")));
 	_set_logger(memnew(CompositeLogger(loggers)));
 }
 
@@ -135,13 +137,6 @@ void OSIPhone::initialize(const VideoMode &p_desired, int p_video_driver, int p_
 
 	AudioDriverManager::add_driver(&audio_driver);
 	AudioDriverManager::initialize(p_audio_driver);
-
-	// init physics servers
-	physics_server = memnew(PhysicsServerSW);
-	physics_server->init();
-	//physics_2d_server = memnew( Physics2DServerSW );
-	physics_2d_server = Physics2DServerWrapMT::init_server<Physics2DServerSW>();
-	physics_2d_server->init();
 
 	input = memnew(InputDefault);
 
@@ -381,12 +376,6 @@ void OSIPhone::finalize() {
 	visual_server->finish();
 	memdelete(visual_server);
 	//	memdelete(rasterizer);
-
-	physics_server->finish();
-	memdelete(physics_server);
-
-	physics_2d_server->finish();
-	memdelete(physics_2d_server);
 
 	memdelete(input);
 };

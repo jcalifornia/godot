@@ -766,10 +766,10 @@ ShaderCompilerGLES3::ShaderCompilerGLES3() {
 	//builtins
 
 	actions[VS::SHADER_SPATIAL].renames["TIME"] = "time";
-	//actions[VS::SHADER_SPATIAL].renames["VIEWPORT_SIZE"]=ShaderLanguage::TYPE_VEC2;
+	actions[VS::SHADER_SPATIAL].renames["VIEWPORT_SIZE"] = "viewport_size";
 
 	actions[VS::SHADER_SPATIAL].renames["FRAGCOORD"] = "gl_FragCoord";
-	actions[VS::SHADER_SPATIAL].renames["FRONT_FACING"] = "gl_FrotFacing";
+	actions[VS::SHADER_SPATIAL].renames["FRONT_FACING"] = "gl_FrontFacing";
 	actions[VS::SHADER_SPATIAL].renames["NORMALMAP"] = "normalmap";
 	actions[VS::SHADER_SPATIAL].renames["NORMALMAP_DEPTH"] = "normaldepth";
 	actions[VS::SHADER_SPATIAL].renames["ALBEDO"] = "albedo";

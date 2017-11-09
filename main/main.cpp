@@ -47,6 +47,8 @@
 #include "scene/main/scene_tree.h"
 #include "servers/arvr_server.h"
 #include "servers/audio_server.h"
+#include "servers/physics_2d_server.h"
+#include "servers/physics_server.h"
 
 #include "io/resource_loader.h"
 #include "script_language.h"
@@ -84,6 +86,8 @@ static bool _start_success = false;
 static ScriptDebugger *script_debugger = NULL;
 AudioServer *audio_server = NULL;
 ARVRServer *arvr_server = NULL;
+PhysicsServer *physics_server = NULL;
+Physics2DServer *physics_2d_server = NULL;
 
 static MessageQueue *message_queue = NULL;
 static Performance *performance = NULL;
@@ -119,6 +123,35 @@ static bool disable_render_loop = false;
 static int fixed_fps = -1;
 
 static OS::ProcessID allow_focus_steal_pid = 0;
+
+void initialize_physics() {
+
+	/// 3D Physics Server
+	physics_server = PhysicsServerManager::new_server(ProjectSettings::get_singleton()->get(PhysicsServerManager::setting_property_name));
+	if (!physics_server) {
+		// Physics server not found, Use the default physics
+		physics_server = PhysicsServerManager::new_default_server();
+	}
+	ERR_FAIL_COND(!physics_server);
+	physics_server->init();
+
+	/// 2D Physics server
+	physics_2d_server = Physics2DServerManager::new_server(ProjectSettings::get_singleton()->get(Physics2DServerManager::setting_property_name));
+	if (!physics_2d_server) {
+		// Physics server not found, Use the default physics
+		physics_2d_server = Physics2DServerManager::new_default_server();
+	}
+	ERR_FAIL_COND(!physics_2d_server);
+	physics_2d_server->init();
+}
+
+void finalize_physics() {
+	physics_server->finish();
+	memdelete(physics_server);
+
+	physics_2d_server->finish();
+	memdelete(physics_2d_server);
+}
 
 static String unescape_cmdline(const String &p_str) {
 
@@ -287,8 +320,6 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	}
 
 	I = args.front();
-
-	video_mode = OS::get_singleton()->get_default_video_mode();
 
 	String video_driver = "";
 	String audio_driver = "";
@@ -746,38 +777,41 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	//if (video_driver == "") // useless for now, so removing
 	//	video_driver = GLOBAL_DEF("display/driver/name", Variant((const char *)OS::get_singleton()->get_video_driver_name(0)));
 
-	if (!force_res && use_custom_res && globals->has_setting("display/window/size/width"))
-		video_mode.width = globals->get("display/window/size/width");
-	if (!force_res && use_custom_res && globals->has_setting("display/window/size/height"))
-		video_mode.height = globals->get("display/window/size/height");
-	if (!editor && ((globals->has_setting("display/window/dpi/allow_hidpi") && !globals->get("display/window/dpi/allow_hidpi")) || force_lowdpi)) {
-		OS::get_singleton()->_allow_hidpi = false;
-	}
-	if (use_custom_res && globals->has_setting("display/window/size/fullscreen"))
-		video_mode.fullscreen = globals->get("display/window/size/fullscreen");
-	if (use_custom_res && globals->has_setting("display/window/size/resizable"))
-		video_mode.resizable = globals->get("display/window/size/resizable");
-	if (use_custom_res && globals->has_setting("display/window/size/borderless"))
-		video_mode.borderless_window = globals->get("display/window/size/borderless");
-
-	if (!force_res && use_custom_res && globals->has_setting("display/window/size/test_width") && globals->has_setting("display/window/size/test_height")) {
-		int tw = globals->get("display/window/size/test_width");
-		int th = globals->get("display/window/size/test_height");
-		if (tw > 0 && th > 0) {
-			video_mode.width = tw;
-			video_mode.height = th;
-		}
-	}
-
-	GLOBAL_DEF("display/window/size/width", video_mode.width);
-	GLOBAL_DEF("display/window/size/height", video_mode.height);
-	GLOBAL_DEF("display/window/dpi/allow_hidpi", false);
-	GLOBAL_DEF("display/window/size/fullscreen", video_mode.fullscreen);
-	GLOBAL_DEF("display/window/size/resizable", video_mode.resizable);
-	GLOBAL_DEF("display/window/size/borderless", video_mode.borderless_window);
-	use_vsync = GLOBAL_DEF("display/window/vsync/use_vsync", use_vsync);
+	GLOBAL_DEF("display/window/size/width", 1024);
+	GLOBAL_DEF("display/window/size/height", 600);
+	GLOBAL_DEF("display/window/size/resizable", true);
+	GLOBAL_DEF("display/window/size/borderless", false);
+	GLOBAL_DEF("display/window/size/fullscreen", false);
 	GLOBAL_DEF("display/window/size/test_width", 0);
 	GLOBAL_DEF("display/window/size/test_height", 0);
+
+	if (use_custom_res) {
+
+		if (!force_res) {
+			video_mode.width = GLOBAL_GET("display/window/size/width");
+			video_mode.height = GLOBAL_GET("display/window/size/height");
+
+			if (globals->has_setting("display/window/size/test_width") && globals->has_setting("display/window/size/test_height")) {
+				int tw = globals->get("display/window/size/test_width");
+				int th = globals->get("display/window/size/test_height");
+				if (tw > 0 && th > 0) {
+					video_mode.width = tw;
+					video_mode.height = th;
+				}
+			}
+		}
+
+		video_mode.resizable = GLOBAL_GET("display/window/size/resizable");
+		video_mode.borderless_window = GLOBAL_GET("display/window/size/borderless");
+		video_mode.fullscreen = GLOBAL_GET("display/window/size/fullscreen");
+	}
+
+	if (!force_lowdpi) {
+		OS::get_singleton()->_allow_hidpi = GLOBAL_DEF("display/window/dpi/allow_hidpi", false);
+	}
+
+	use_vsync = GLOBAL_DEF("display/window/vsync/use_vsync", true);
+
 	GLOBAL_DEF("rendering/quality/intended_usage/framebuffer_allocation", 2);
 	GLOBAL_DEF("rendering/quality/intended_usage/framebuffer_allocation.mobile", 3);
 
@@ -1072,9 +1106,13 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 		OS::get_singleton()->enable_for_stealing_focus(allow_focus_steal_pid);
 	}
 
-	MAIN_PRINT("Main: Load Scripts, Modules, Drivers");
+	MAIN_PRINT("Main: Load Modules, Physics, Drivers, Scripts");
 
 	register_module_types();
+
+	initialize_physics();
+	register_server_singletons();
+
 	register_driver_types();
 
 	ScriptServer::init_languages();
@@ -1791,6 +1829,7 @@ void Main::cleanup() {
 	unregister_server_types();
 
 	OS::get_singleton()->finalize();
+	finalize_physics();
 
 	if (packed_data)
 		memdelete(packed_data);
