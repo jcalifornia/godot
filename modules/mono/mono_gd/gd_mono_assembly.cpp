@@ -52,11 +52,11 @@ MonoAssembly *GDMonoAssembly::_search_hook(MonoAssemblyName *aname, void *user_d
 	if (no_search)
 		return NULL;
 
-	no_search = true; // Avoid the recursion madness
-
 	GDMonoAssembly **loaded_asm = GDMono::get_singleton()->get_loaded_assembly(has_extension ? name.get_basename() : name);
 	if (loaded_asm)
 		return (*loaded_asm)->get_assembly();
+
+	no_search = true; // Avoid the recursion madness
 
 	String path;
 	MonoAssembly *res = NULL;
@@ -95,7 +95,9 @@ MonoAssembly *GDMonoAssembly::_preload_hook(MonoAssemblyName *aname, char **asse
 	(void)user_data; // UNUSED
 
 	if (search_dirs.empty()) {
+#ifdef TOOLS_DOMAIN
 		search_dirs.push_back(GodotSharpDirs::get_res_temp_assemblies_dir());
+#endif
 		search_dirs.push_back(GodotSharpDirs::get_res_assemblies_dir());
 		search_dirs.push_back(OS::get_singleton()->get_resource_dir());
 		search_dirs.push_back(OS::get_singleton()->get_executable_path().get_base_dir());
@@ -105,10 +107,11 @@ MonoAssembly *GDMonoAssembly::_preload_hook(MonoAssemblyName *aname, char **asse
 			search_dirs.push_back(String(rootdir).plus_file("mono").plus_file("4.5"));
 		}
 
-		while (assemblies_path) {
-			if (*assemblies_path)
+		if (assemblies_path) {
+			while (*assemblies_path) {
 				search_dirs.push_back(*assemblies_path);
-			++assemblies_path;
+				++assemblies_path;
+			}
 		}
 	}
 

@@ -90,19 +90,28 @@ void TabContainer::_gui_input(const Ref<InputEvent> &p_event) {
 			return;
 		}
 
+		// Do not activate tabs when tabs is empty
+		if (get_tab_count() == 0)
+			return;
+
 		Vector<Control *> tabs = _get_tabs();
 
 		// Handle navigation buttons.
 		if (buttons_visible_cache) {
+			int popup_ofs = 0;
+			if (popup) {
+				popup_ofs = menu->get_width();
+			}
+
 			Ref<Texture> increment = get_icon("increment");
 			Ref<Texture> decrement = get_icon("decrement");
-			if (pos.x > size.width - increment->get_width()) {
+			if (pos.x > size.width - increment->get_width() - popup_ofs) {
 				if (last_tab_cache < tabs.size() - 1) {
 					first_tab_cache += 1;
 					update();
 				}
 				return;
-			} else if (pos.x > size.width - increment->get_width() - decrement->get_width()) {
+			} else if (pos.x > size.width - increment->get_width() - decrement->get_width() - popup_ofs) {
 				if (first_tab_cache > 0) {
 					first_tab_cache -= 1;
 					update();
@@ -293,6 +302,8 @@ void TabContainer::_notification(int p_what) {
 }
 
 int TabContainer::_get_tab_width(int p_index) const {
+
+	ERR_FAIL_INDEX_V(p_index, get_tab_count(), 0);
 	Control *control = Object::cast_to<Control>(_get_tabs()[p_index]);
 	if (!control || control->is_set_as_toplevel())
 		return 0;
@@ -664,6 +675,7 @@ void TabContainer::_bind_methods() {
 TabContainer::TabContainer() {
 
 	first_tab_cache = 0;
+	last_tab_cache = 0;
 	buttons_visible_cache = false;
 	tabs_ofs_cache = 0;
 	current = 0;

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 import fnmatch
 import os
@@ -250,15 +250,16 @@ class ClassStatus:
         for tag in list(c):
             if tag.tag in ['methods']:
                 for sub_tag in list(tag):
-                    methods.append(sub_tag.find('name'))
+                    methods.append(sub_tag.attrib['name'])
             if tag.tag in ['members']:
                 for sub_tag in list(tag):
                     try:
-                        methods.remove(sub_tag.find('setter'))
-                        methods.remove(sub_tag.find('getter'))
+                        if(sub_tag.attrib['setter'].startswith('_') == False):
+                            methods.remove(sub_tag.attrib['setter'])
+                        if(sub_tag.attrib['getter'].startswith('_') == False):
+                            methods.remove(sub_tag.attrib['getter'])
                     except:
                         pass
-
         for tag in list(c):
 
             if tag.tag == 'brief_description':
@@ -269,7 +270,7 @@ class ClassStatus:
 
             elif tag.tag in ['methods', 'signals']:
                 for sub_tag in list(tag):
-                    if sub_tag.find('name') in methods or tag.tag == 'signals':
+                    if sub_tag.attrib['name'] in methods or tag.tag == 'signals':
                         descr = sub_tag.find('description')
                         status.progresses[tag.tag].increment(len(descr.text.strip()) > 0)
             elif tag.tag in ['constants', 'members']:
@@ -297,17 +298,21 @@ input_class_list = []
 merged_file = ""
 
 for arg in sys.argv[1:]:
-    if arg.startswith('--'):
-        flags[long_flags[arg[2:]]] = not flags[long_flags[arg[2:]]]
-    elif arg.startswith('-'):
-        for f in arg[1:]:
-            flags[f] = not flags[f]
-    elif os.path.isdir(arg):
-        for f in os.listdir(arg):
-            if f.endswith('.xml'):
-                input_file_list.append(os.path.join(arg, f));
-    else:
-        input_class_list.append(arg)
+    try:
+        if arg.startswith('--'):
+            flags[long_flags[arg[2:]]] = not flags[long_flags[arg[2:]]]
+        elif arg.startswith('-'):
+            for f in arg[1:]:
+                flags[f] = not flags[f]
+        elif os.path.isdir(arg):
+            for f in os.listdir(arg):
+                if f.endswith('.xml'):
+                    input_file_list.append(os.path.join(arg, f));
+        else:
+            input_class_list.append(arg)
+    except KeyError:
+        print("Unknown command line flag: " + arg)
+        sys.exit(1)
 
 if flags['i']:
     for r in ['methods', 'constants', 'members', 'signals']:

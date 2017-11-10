@@ -11,7 +11,8 @@ import glob
 import sys
 import methods
 
-methods.update_version()
+# moved below to compensate with module version string
+# methods.update_version()
 
 # scan possible build platforms
 
@@ -72,6 +73,7 @@ env_base.AppendENVPath('PATH', os.getenv('PATH'))
 env_base.AppendENVPath('PKG_CONFIG_PATH', os.getenv('PKG_CONFIG_PATH'))
 env_base.global_defaults = global_defaults
 env_base.android_maven_repos = []
+env_base.android_flat_dirs = []
 env_base.android_dependencies = []
 env_base.android_gradle_plugins = []
 env_base.android_gradle_classpath = []
@@ -86,6 +88,7 @@ env_base.android_appattributes_chunk = ""
 env_base.disabled_modules = []
 env_base.use_ptrcall = False
 env_base.split_drivers = False
+env_base.module_version_string = ""
 
 # To decide whether to rebuild a file, use the MD5 sum only if the timestamp has changed.
 # http://scons.org/doc/production/HTML/scons-user/ch06.html#idm139837621851792
@@ -96,6 +99,7 @@ env_base.SetOption('implicit_cache', 1)
 
 
 env_base.__class__.android_add_maven_repository = methods.android_add_maven_repository
+env_base.__class__.android_add_flat_dir = methods.android_add_flat_dir
 env_base.__class__.android_add_dependency = methods.android_add_dependency
 env_base.__class__.android_add_java_dir = methods.android_add_java_dir
 env_base.__class__.android_add_res_dir = methods.android_add_res_dir
@@ -108,6 +112,8 @@ env_base.__class__.android_add_to_attributes = methods.android_add_to_attributes
 env_base.__class__.android_add_gradle_plugin = methods.android_add_gradle_plugin
 env_base.__class__.android_add_gradle_classpath = methods.android_add_gradle_classpath
 env_base.__class__.disable_module = methods.disable_module
+
+env_base.__class__.add_module_version_string = methods.add_module_version_string
 
 env_base.__class__.add_source_files = methods.add_source_files
 env_base.__class__.use_windows_spawn_fix = methods.use_windows_spawn_fix
@@ -137,6 +143,7 @@ opts.Add('p', "Platform (alias for 'platform')", '')
 opts.Add('platform', "Target platform (%s)" % ('|'.join(platform_list), ), '')
 opts.Add(EnumVariable('target', "Compilation target", 'debug', ('debug', 'release_debug', 'release')))
 opts.Add(BoolVariable('tools', "Build the tools a.k.a. the Godot editor", True))
+opts.Add(BoolVariable('use_lto', 'Use linking time optimization', False))
 
 # Components
 opts.Add(BoolVariable('deprecated', "Enable deprecated features", True))
@@ -356,11 +363,6 @@ if selected_platform in platform_list:
 
     suffix += env.extra_suffix
 
-    env["PROGSUFFIX"] = suffix + env["PROGSUFFIX"]
-    env["OBJSUFFIX"] = suffix + env["OBJSUFFIX"]
-    env["LIBSUFFIX"] = suffix + env["LIBSUFFIX"]
-    env["SHLIBSUFFIX"] = suffix + env["SHLIBSUFFIX"]
-
     sys.path.remove("./platform/" + selected_platform)
     sys.modules.pop('detect')
 
@@ -388,6 +390,15 @@ if selected_platform in platform_list:
 
         sys.path.remove(tmppath)
         sys.modules.pop('config')
+
+    methods.update_version(env.module_version_string)
+
+    suffix += env.module_version_string
+
+    env["PROGSUFFIX"] = suffix + env["PROGSUFFIX"]
+    env["OBJSUFFIX"] = suffix + env["OBJSUFFIX"]
+    env["LIBSUFFIX"] = suffix + env["LIBSUFFIX"]
+    env["SHLIBSUFFIX"] = suffix + env["SHLIBSUFFIX"]
 
     if (env.use_ptrcall):
         env.Append(CPPFLAGS=['-DPTRCALL_ENABLED'])
