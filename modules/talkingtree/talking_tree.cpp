@@ -82,18 +82,18 @@ void TalkingTree::send_text(String msg) {
 void TalkingTree::_send_packet(int p_to, PacketType type, google::protobuf::Message &message, NetworkedMultiplayerPeer::TransferMode transferMode){
 	Vector<uint8_t> packet;
 	//incorrect
-	packet.resize(1 + 4 + message.ByteSize());
+	packet.resize(1 + message.ByteSize());
 	packet[0] = (uint8_t)type;
 	encode_uint32(message.ByteSize(), &packet[1]);
-	message.SerializeToArray( &packet[5], message.ByteSize());
+	message.SerializeToArray( &packet[1], message.ByteSize());
 	network_peer->set_transfer_mode(transferMode);
 	network_peer->set_target_peer(0);
 	network_peer->put_packet(packet.ptr(), packet.size());
 }
 void TalkingTree::_network_process_packet(int p_from, const uint8_t *p_packet, int p_packet_len) {
 	PacketType packet_type = (PacketType) p_packet[0];
-	const uint8_t * proto_packet = &p_packet[5];
-	int proto_packet_len = p_packet_len - 5;
+	const uint8_t * proto_packet = &p_packet[1];
+	int proto_packet_len = p_packet_len - 1;
 	switch(packet_type){
 		case PacketType::VERSION: {
 		} break;
