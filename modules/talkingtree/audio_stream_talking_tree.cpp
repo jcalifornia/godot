@@ -109,9 +109,11 @@ Ref<AudioStreamPlayback> AudioStreamTalkingTree::instance_playback(){
 }
 
 Error AudioStreamTalkingTree::append_data(const uint8_t * pcm_data, int p_bytes){
+	AudioServer::get_singleton()->lock();
 	for(int i = 0; i < p_bytes; i++){
 		data.push_back(pcm_data[i]);
 	}
+	AudioServer::get_singleton()->unlock();
 	emit_signal("audio_recieved");
 	return OK;
 }
@@ -120,12 +122,14 @@ int AudioStreamTalkingTree::get_available_bytes() const {
 }
 
 int AudioStreamTalkingTree::get_16() {
+	AudioServer::get_singleton()->lock();
 	int16_t buf;
 	uint8_t *ptr = (uint8_t *)&buf;
 	ptr[0] = data[0];
 	ptr[1] = data[1];
 	data.pop_front();
 	data.pop_front();
+	AudioServer::get_singleton()->unlock();
 	return buf;
 }
 
