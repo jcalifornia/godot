@@ -5,3 +5,7 @@ enum class PacketType{
 	TEXTMESSAGE = 1,
 	UDPTUNNEL = 2
 };
+
+enum class AudioCodingType{
+	OPUS = 0
+};

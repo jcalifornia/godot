@@ -1,13 +1,13 @@
 /* talking_tree.cpp */
 
-#include "talking_tree.h"
 #include "talking_tree_enum.h"
+#include "varint.h"
+#include "talking_tree.h"
 
 #include "TalkingTree.pb.h"
 #include "io/marshalls.h"
 
 #include "sdl2_audiocapture.h"
-
 void TalkingTree::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_network_peer", "peer"), &TalkingTree::set_network_peer);
 	ClassDB::bind_method(D_METHOD("is_network_server"), &TalkingTree::is_network_server);
@@ -40,6 +40,38 @@ void TalkingTree::_bind_methods() {
 }
 
 TalkingTree::TalkingTree(){
+	int error;
+	opusDecoder = opus_decoder_create(TalkingTree::SAMPLE_RATE, 1, &error);
+	if(error != OPUS_OK){
+		ERR_PRINTS( "failed to initialize OPUS decoder: " + String( opus_strerror(error)));
+	}
+	opusEncoder = opus_encoder_create(TalkingTree::SAMPLE_RATE, 1, OPUS_APPLICATION_VOIP, &error);
+	if(error != OPUS_OK){
+		ERR_PRINTS( "failed to initialize OPUS encoder: " + String( opus_strerror(error)));
+	}
+	opus_encoder_ctl(opusEncoder, OPUS_SET_VBR(0));
+	error = opus_encoder_ctl(opusEncoder, OPUS_SET_BITRATE(TalkingTree::BIT_RATE));
+	if (error != OPUS_OK) {
+        ERR_PRINTS("failed to initialize bitrate to " + itos(TalkingTree::BIT_RATE) + "B/s: " + String(opus_strerror(error)));
+	}
+	reset_encoder();
+}
+TalkingTree::~TalkingTree(){
+    if (opusDecoder) {
+        opus_decoder_destroy(opusDecoder);
+    }
+
+    if (opusEncoder) {
+        opus_encoder_destroy(opusEncoder);
+	}
+}
+void TalkingTree::reset_encoder(){
+	int status = opus_encoder_ctl(opusEncoder, OPUS_RESET_STATE, nullptr);
+	
+	if (status != OPUS_OK) {
+		ERR_PRINTS("failed to reset encoder: " + String( opus_strerror(status)));
+	}
+	outgoing_sequence_number = 0;
 }
 void TalkingTree::send_text(String msg) {
 	TalkingTreeProto::TextMessage txtMsg;
@@ -66,6 +98,7 @@ void TalkingTree::_network_process_packet(int p_from, const uint8_t *p_packet, i
 		case PacketType::VERSION: {
 		} break;
 		case PacketType::UDPTUNNEL: {
+			_process_audio_packet(p_from, proto_packet, proto_packet_len);
 		} break;
 		case PacketType::TEXTMESSAGE: {
 			TalkingTreeProto::TextMessage txtMsg;
@@ -198,6 +231,49 @@ void TalkingTree::_create_audio_peer_stream(int p_id){
 	connected_audio_stream_peers[p_id]->set_format(AudioStreamTalkingTree::FORMAT_16_BITS);
 	
 }
-void TalkingTree::_encode_audio_frame(PoolVector<uint8_t> pcm){
+Pair<int, bool> TalkingTree::_decode_opus_frame(const uint8_t *in_buf, int in_len, int16_t *pcm_buf, int buf_len){
+	VarInt varint(in_buf);
+	int16_t opus_length = varint.getValue();
+	int pointer = varint.getEncoded().size();
+	bool endFrame = opus_length != 0x2000;
+	opus_length = opus_length & 0x1fff;
+	int decoded_bytes = opus_decode(opusDecoder, (const unsigned char *) &in_buf[pointer], opus_length, pcm_buf, buf_len, 0);
+	return Pair<int,bool>(decoded_bytes, endFrame);
+}
 
+void TalkingTree::_process_audio_packet(int p_from, const uint8_t *p_packet, int p_packet_len){
+	int pointer = 1;
+	VarInt seqNum(&p_packet[pointer]);
+	pointer += seqNum.getEncoded().size();
+	uint64_t sequenceNumber = seqNum.getValue();
+
+	if(pointer >= p_packet_len){
+		ERR_PRINTS("invalid incoming audio packet " + itos(p_packet_len) + "B : header : " + itos(pointer));
+	}
+	AudioCodingType codingType = static_cast<AudioCodingType>((p_packet[0] & 0xC0) >> 6);
+	bool facial_flag = (p_packet[0] & 0x20); //anything greater than 0 is true;
+	uint8_t target = p_packet[0] & 0x1F;
+
+	if(facial_flag){
+		ERR_PRINTS("Facial data not supported");
+	}
+	int payloadLength = p_packet_len - pointer;
+	const uint8_t *payload = &p_packet[pointer];
+	int16_t pcm_buf[50000];
+
+	Pair<int, bool> out_len;
+	switch( codingType ){
+		case AudioCodingType::OPUS:
+			out_len = _decode_opus_frame(payload, payloadLength, pcm_buf, 50000);
+			break;
+		default:
+			ERR_PRINTS("Unsupported Audio format: " + itos((uint32_t) codingType));
+			return;
+	}
+	connected_audio_stream_peers[p_from]->append_data((uint8_t *) pcm_buf, sizeof(int16_t) * out_len.first);
+	this->emit_signal("audio_message", p_from);
+}
+
+void TalkingTree::_encode_audio_frame(PoolVector<uint8_t> pcm){
+	
 }

@@ -3,7 +3,7 @@
 
 VarInt::VarInt(int64_t value) : value(value) { }
 
-VarInt::VarInt(uint8_t *encoded) : value(parseVariant(encoded)) { }
+VarInt::VarInt(const uint8_t *encoded) : value(parseVariant(encoded)) { }
 
 VarInt::VarInt(Vector<uint8_t> encoded) : value(parseVariant(encoded.ptr())) { }
 /*
@@ -11,7 +11,7 @@ VarInt::VarInt(Vector<uint8_t> encoded) : value(parseVariant(encoded.ptr())) { }
  * 
  */
 
-int64_t VarInt::parseVariant(uint8_t *buffer) {
+int64_t VarInt::parseVariant(const uint8_t *buffer) {
 	int64_t v = buffer[0];
 	if ((v & 0x80) == 0x00) {
 		return (v & 0x7F);

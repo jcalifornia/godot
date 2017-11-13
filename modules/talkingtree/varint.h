@@ -6,7 +6,7 @@ class VarInt : public Reference {
 	GDCLASS(VarInt,Reference);
 
 	public:
-	VarInt(uint8_t *encoded);
+	VarInt(const uint8_t *encoded);
 	
 	VarInt(Vector<uint8_t> encoded);
 	
@@ -21,5 +21,5 @@ class VarInt : public Reference {
 	private:
 	const int64_t value;
 	
-	int64_t parseVariant(uint8_t *buffer);
+	int64_t parseVariant(const uint8_t *buffer);
 };
