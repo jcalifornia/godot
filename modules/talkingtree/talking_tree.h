@@ -7,6 +7,8 @@
 #include "ustring.h"
 #include "talking_tree_enum.h"
 #include "scene/main/timer.h"
+#include "audio_stream_talking_tree.h"
+#include <opus.h>
 #include <google/protobuf/message.h>
 
 class TalkingTree : public Reference {
@@ -21,16 +23,40 @@ public:
 	Vector<int> get_network_connected_peers() const;
 	bool is_network_server() const;
 	bool has_network_peer() const;
-	void send_text(String msg);
+	int get_network_unique_id() const;
 	void poll();
+	//VOIP
+	void talk();
+	void mute();
+	Ref<AudioStreamTalkingTree> get_audio_stream_peer(int pid);
+	//Text
+	void send_text(String msg);
+
+
 private:
-	Set<int> connected_peers;
 	int last_send_cache_id;
 	Ref<NetworkedMultiplayerPeer> network_peer;
 	void _send_packet(int p_to, PacketType type, google::protobuf::Message &message, NetworkedMultiplayerPeer::TransferMode transfer);
 	void _network_process_packet(int p_from, const uint8_t *p_packet, int p_packet_len);
 	void _network_poll();
-	//Ref<Timer> _timer;
+	void _network_peer_connected(int p_id);
+	void _network_peer_disconnected(int p_id);
+	void _connected_to_server();
+	void _connection_failed();
+	void _server_disconnected();
+	void _create_audio_peer_stream(int p_id);
+	//voip
+	//encoders
+    enum{
+		SAMPLE_RATE = 48000, //44100 crashes in the constructor
+		BIT_RATE = 16000, //https://wiki.xiph.org/Opus_Recommended_Settings#Bandwidth_Transition_Thresholds
+		FRAME_SIZE = 960 //https://www.opus-codec.org/docs/html_api/group__opusencoder.html#ga88621a963b809ebfc27887f13518c966
+	};
+	OpusDecoder *opusDecoder;
+	OpusEncoder *opusEncoder;
+	//audiostream
+    HashMap<int, Ref<AudioStreamTalkingTree>> connected_audio_stream_peers;
+	void _encode_audio_frame(PoolVector<uint8_t> pcm);
 };
 
 #endif

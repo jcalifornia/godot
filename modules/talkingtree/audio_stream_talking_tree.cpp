@@ -49,10 +49,11 @@ float AudioStreamPlaybackTalkingTree::get_stream_sampling_rate(){
 }
 void AudioStreamPlaybackTalkingTree::_mix_internal(AudioFrame *p_buffer, int p_frames){
 	//print_line("buffer_size: " + itos(base->get_available_bytes()));
-	if(!active){
+	
+	ERR_FAIL_COND(!active);
+    if(!active){
 		return;
 	}
-	ERR_FAIL_COND(!active);
 	int len = base -> get_available_bytes();
 	switch(base->format){
 		case AudioStreamTalkingTree::FORMAT_8_BITS: len /= 1; break;
@@ -76,6 +77,8 @@ void AudioStreamPlaybackTalkingTree::_mix_internal(AudioFrame *p_buffer, int p_f
 	offset += i;
 	for(; i < p_frames; i++){
 		p_buffer[i] = AudioFrame(0, 0);
+        //trying to figure out false is needed
+        //active = false;
 	}
 	
 }
