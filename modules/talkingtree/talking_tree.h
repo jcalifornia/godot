@@ -48,6 +48,7 @@ private:
 	void _create_audio_peer_stream(int p_id);
 	//voip
 	int outgoing_sequence_number;
+	uint64_t last_sent_audio_timestamp;
 	//encoders
     enum{
 		SAMPLE_RATE = 48000, //44100 crashes in the constructor
@@ -59,7 +60,8 @@ private:
 	void reset_encoder();
 	//audiostream
     HashMap<int, Ref<AudioStreamTalkingTree>> connected_audio_stream_peers;
-	void _encode_audio_frame(PoolVector<uint8_t> pcm);
+	void _create_audio_frame(PoolVector<uint8_t> pcm);
+	int _encode_audio_frame(int target, PoolVector<uint8_t> &pcm);
 	void _process_audio_packet(int p_from, const uint8_t *p_packet, int p_packet_len);
 	Pair<int, bool> _decode_opus_frame(const uint8_t *in_buf, int in_len, int16_t *pcm_buf, int buf_len);
 };

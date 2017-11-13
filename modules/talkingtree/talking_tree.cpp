@@ -8,6 +8,9 @@
 #include "io/marshalls.h"
 
 #include "sdl2_audiocapture.h"
+
+#include "os/os.h"
+#include "pair.h"
 void TalkingTree::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_network_peer", "peer"), &TalkingTree::set_network_peer);
 	ClassDB::bind_method(D_METHOD("is_network_server"), &TalkingTree::is_network_server);
@@ -31,7 +34,7 @@ void TalkingTree::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("send_text", "message"), &TalkingTree::send_text);
 	ADD_SIGNAL(MethodInfo("text_message", PropertyInfo(Variant::STRING, "message"), PropertyInfo(Variant::INT, "sender_id")));
 	//VOIP
-	ClassDB::bind_method(D_METHOD("_encode_audio_frame", "audio_frame"), &TalkingTree::_encode_audio_frame);
+	ClassDB::bind_method(D_METHOD("_create_audio_frame", "audio_frame"), &TalkingTree::_create_audio_frame);
 
 	ClassDB::bind_method(D_METHOD("get_audio_stream_peer", "p_id"), &TalkingTree::get_audio_stream_peer);
 	ClassDB::bind_method(D_METHOD("create_audio_peer_stream", "p_id"), &TalkingTree::_create_audio_peer_stream);
@@ -39,7 +42,7 @@ void TalkingTree::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("mute"), &TalkingTree::mute);
 }
 
-TalkingTree::TalkingTree(){
+TalkingTree::TalkingTree() : last_sent_audio_timestamp(0){
 	int error;
 	opusDecoder = opus_decoder_create(TalkingTree::SAMPLE_RATE, 1, &error);
 	if(error != OPUS_OK){
@@ -87,7 +90,7 @@ void TalkingTree::_send_packet(int p_to, PacketType type, google::protobuf::Mess
 	encode_uint32(message.ByteSize(), &packet[1]);
 	message.SerializeToArray( &packet[1], message.ByteSize());
 	network_peer->set_transfer_mode(transferMode);
-	network_peer->set_target_peer(0);
+	network_peer->set_target_peer(p_to);
 	network_peer->put_packet(packet.ptr(), packet.size());
 }
 void TalkingTree::_network_process_packet(int p_from, const uint8_t *p_packet, int p_packet_len) {
@@ -131,7 +134,7 @@ void TalkingTree::set_network_peer(const Ref<NetworkedMultiplayerPeer> &p_networ
 		network_peer->disconnect("server_disconnected", this, "_server_disconnected");
 		connected_audio_stream_peers.clear();
 		last_send_cache_id = 1;
-		SDL2AudioCapture::get_singleton()->disconnect("audio_frame", this, "_encode_audio_frame");
+		SDL2AudioCapture::get_singleton()->disconnect("audio_frame", this, "_create_audio_frame");
 	}
 
 	ERR_EXPLAIN("Supplied NetworkedNetworkPeer must be connecting or connected.");
@@ -143,7 +146,7 @@ void TalkingTree::set_network_peer(const Ref<NetworkedMultiplayerPeer> &p_networ
 		network_peer->connect("connection_succeeded", this, "_connected_to_server");
 		network_peer->connect("connection_failed", this, "_connection_failed");
 		network_peer->connect("server_disconnected", this, "_server_disconnected");
-		SDL2AudioCapture::get_singleton()->connect("get_pcm", this, "_encode_audio_frame");
+		SDL2AudioCapture::get_singleton()->connect("get_pcm", this, "_create_audio_frame");
 	}
 }
 void TalkingTree::_connection_failed() {
@@ -263,9 +266,10 @@ void TalkingTree::_process_audio_packet(int p_from, const uint8_t *p_packet, int
 
 	Pair<int, bool> out_len;
 	switch( codingType ){
-		case AudioCodingType::OPUS:
-			out_len = _decode_opus_frame(payload, payloadLength, pcm_buf, 50000);
-			break;
+		case AudioCodingType::OPUS: {
+				out_len = _decode_opus_frame(payload, payloadLength, pcm_buf, 50000);
+				break;
+			}
 		default:
 			ERR_PRINTS("Unsupported Audio format: " + itos((uint32_t) codingType));
 			return;
@@ -274,6 +278,38 @@ void TalkingTree::_process_audio_packet(int p_from, const uint8_t *p_packet, int
 	this->emit_signal("audio_message", p_from);
 }
 
-void TalkingTree::_encode_audio_frame(PoolVector<uint8_t> pcm){
+void TalkingTree::_create_audio_frame(PoolVector<uint8_t> pcm){
+	_encode_audio_frame(0, pcm);
+}
+int TalkingTree::_encode_audio_frame(int target, PoolVector<uint8_t> &pcm){
+	int now = OS::get_singleton()->get_ticks_msec();
+	if( (now-last_sent_audio_timestamp) > 5000 ){
+		reset_encoder();
+	}
+	uint8_t opus_buf[1024];
+	//https://www.opus-codec.org/docs/html_api/group__opusencoder.html#ga88621a963b809ebfc27887f13518c966
+	//in_len most be multiples of 120
+	const int output_size = opus_encode(opusEncoder, (opus_int16 *) pcm.write().ptr(), pcm.size(), opus_buf, 1024);
+
+
+	Vector<uint8_t> encoded_size = VarInt(output_size).getEncoded();
+	Vector<uint8_t> encoded_seq = VarInt( outgoing_sequence_number ).getEncoded();
+
+	int seqNum = 100 * pcm.size() / TalkingTree::SAMPLE_RATE;	
+	outgoing_sequence_number += seqNum;
+
+	Vector<uint8_t> audiobuf;
+	audiobuf.resize(1 + 1 + encoded_seq.size() + encoded_size.size() + output_size);
+	audiobuf[1] = 0x00 | target;
+	copymem( &audiobuf[2],  encoded_seq.ptr(), encoded_seq.size() );
+	copymem( &audiobuf[2 + encoded_seq.size()],  encoded_size.ptr(), encoded_size.size() );
+	copymem( &audiobuf[2 + encoded_seq.size() + encoded_size.size()],  opus_buf, output_size );
+
 	
+	last_sent_audio_timestamp = OS::get_singleton()->get_ticks_msec();
+	audiobuf[0] = (uint8_t) PacketType::UDPTUNNEL;
+	network_peer->set_transfer_mode(NetworkedMultiplayerPeer::TRANSFER_MODE_RELIABLE);
+	network_peer->set_target_peer(0);
+	network_peer->put_packet(audiobuf.ptr(), audiobuf.size());
+	return audiobuf.size();
 }
