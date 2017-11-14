@@ -153,6 +153,7 @@ void TalkingTree::_connection_failed() {
 	emit_signal("connection_failed");
 }
 void TalkingTree::_connected_to_server() {
+	//_create_audio_peer_stream(1);
 	emit_signal("connected_to_server");
 }
 void TalkingTree::_network_peer_connected(int p_id) {
@@ -245,6 +246,7 @@ Pair<int, bool> TalkingTree::_decode_opus_frame(const uint8_t *in_buf, int in_le
 }
 
 void TalkingTree::_process_audio_packet(int p_from, const uint8_t *p_packet, int p_packet_len){
+	//print_line("from id: "+ itos(p_from));
 	int pointer = 1;
 	VarInt seqNum(&p_packet[pointer]);
 	pointer += seqNum.getEncoded().size();
@@ -308,7 +310,7 @@ int TalkingTree::_encode_audio_frame(int target, PoolVector<uint8_t> &pcm){
 	
 	last_sent_audio_timestamp = OS::get_singleton()->get_ticks_msec();
 	audiobuf[0] = (uint8_t) PacketType::UDPTUNNEL;
-	network_peer->set_transfer_mode(NetworkedMultiplayerPeer::TRANSFER_MODE_RELIABLE);
+	network_peer->set_transfer_mode(NetworkedMultiplayerPeer::TRANSFER_MODE_UNRELIABLE_ORDERED);
 	network_peer->set_target_peer(0);
 	network_peer->put_packet(audiobuf.ptr(), audiobuf.size());
 	return audiobuf.size();
