@@ -289,13 +289,13 @@ int TalkingTree::_encode_audio_frame(int target, PoolVector<uint8_t> &pcm){
 	uint8_t opus_buf[1024];
 	//https://www.opus-codec.org/docs/html_api/group__opusencoder.html#ga88621a963b809ebfc27887f13518c966
 	//in_len most be multiples of 120
-	const int output_size = opus_encode(opusEncoder, (opus_int16 *) pcm.write().ptr(), pcm.size(), opus_buf, 1024);
+	const int output_size = opus_encode(opusEncoder, (opus_int16 *) pcm.write().ptr(), pcm.size()/2, opus_buf, 1024);
 
 
 	Vector<uint8_t> encoded_size = VarInt(output_size).getEncoded();
 	Vector<uint8_t> encoded_seq = VarInt( outgoing_sequence_number ).getEncoded();
 
-	int seqNum = 100 * pcm.size() / TalkingTree::SAMPLE_RATE;	
+	int seqNum = 100 * pcm.size()/2 / TalkingTree::SAMPLE_RATE;	
 	outgoing_sequence_number += seqNum;
 
 	Vector<uint8_t> audiobuf;
