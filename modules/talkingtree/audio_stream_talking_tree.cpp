@@ -52,6 +52,9 @@ void AudioStreamPlaybackTalkingTree::_mix_internal(AudioFrame *p_buffer, int p_f
 	
 	ERR_FAIL_COND(!active);
     if(!active){
+		for(int i = 0; i < p_frames; i++){
+			p_buffer[i] = AudioFrame(0,0);
+		}
 		return;
 	}
 	int len = base -> get_available_bytes();
@@ -62,24 +65,28 @@ void AudioStreamPlaybackTalkingTree::_mix_internal(AudioFrame *p_buffer, int p_f
 	if (base->stereo) {
 		len /= 2;
 	}
-	//wait until there is enough frames to fill the buffer
-	int i = 0;
-	for( ;  i < MIN(len, p_frames); i++ ){
+	AudioServer::get_singleton()->lock();
+
+	int smaller_buf = MIN(len, p_frames );
+	for( int i = 0;  i < smaller_buf; i++ ){
 		if(base->stereo){
-			p_buffer[i] = AudioFrame( float(base->get_16())/32767.0, float(base->get_16())/32767.0);
+			p_buffer[i] = AudioFrame( float(base->get_16())/32768.0f, float(base->get_16())/32768.0f);
 		}else{
-			float sample = float(base->get_16())/32767.0;
+			float sample = float(base->get_16())/32768.0f;
 			p_buffer[i] = AudioFrame(sample,sample);
 			//print_line("0: " + rtos(sample) );
 		}
-		i++;
 	}
-	offset += i;
-	for(; i < p_frames; i++){
-		p_buffer[i] = AudioFrame(0, 0);
+	
+	offset += smaller_buf;
+	int todo = p_frames - smaller_buf;
+	while(todo){
+		p_buffer[p_frames-todo-1] = AudioFrame(0, 0);
+		todo--;
         //trying to figure out false is needed
         //active = false;
 	}
+	AudioServer::get_singleton()->unlock();
 	
 }
 void AudioStreamTalkingTree::_bind_methods(){
@@ -122,14 +129,12 @@ int AudioStreamTalkingTree::get_available_bytes() const {
 }
 
 int AudioStreamTalkingTree::get_16() {
-	AudioServer::get_singleton()->lock();
 	int16_t buf;
 	uint8_t *ptr = (uint8_t *)&buf;
 	ptr[0] = data[0];
 	ptr[1] = data[1];
 	data.pop_front();
 	data.pop_front();
-	AudioServer::get_singleton()->unlock();
 	return buf;
 }
 

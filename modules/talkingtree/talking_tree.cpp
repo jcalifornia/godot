@@ -241,8 +241,8 @@ Pair<int, bool> TalkingTree::_decode_opus_frame(const uint8_t *in_buf, int in_le
 	int pointer = varint.getEncoded().size();
 	bool endFrame = opus_length != 0x2000;
 	opus_length = opus_length & 0x1fff;
-	int decoded_bytes = opus_decode(opusDecoder, (const unsigned char *) &in_buf[pointer], opus_length, pcm_buf, buf_len, 0);
-	return Pair<int,bool>(decoded_bytes, endFrame);
+	int decoded_samples = opus_decode(opusDecoder, (const unsigned char *) &in_buf[pointer], opus_length, pcm_buf, buf_len, 0);
+	return Pair<int,bool>(decoded_samples, endFrame);
 }
 
 void TalkingTree::_process_audio_packet(int p_from, const uint8_t *p_packet, int p_packet_len){
@@ -291,7 +291,7 @@ int TalkingTree::_encode_audio_frame(int target, PoolVector<uint8_t> &pcm){
 	uint8_t opus_buf[1024];
 	//https://www.opus-codec.org/docs/html_api/group__opusencoder.html#ga88621a963b809ebfc27887f13518c966
 	//in_len most be multiples of 120
-	const int output_size = opus_encode(opusEncoder, (opus_int16 *) pcm.write().ptr(), pcm.size()/2, opus_buf, 1024);
+	const int output_size = opus_encode(opusEncoder, (opus_int16 *) pcm.write().ptr(), pcm.size()/sizeof(uint16_t), opus_buf, 1024);
 
 
 	Vector<uint8_t> encoded_size = VarInt(output_size).getEncoded();
