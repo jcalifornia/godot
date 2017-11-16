@@ -58,7 +58,8 @@ private:
 	bool stereo;
 	bool opened;
 	int id;
-	List<uint8_t> data;
+	List<uint8_t> *data;
+	Mutex *mutex;
 public:
 	AudioStreamTalkingTree();
 	~AudioStreamTalkingTree();
@@ -72,6 +73,8 @@ public:
 	virtual Ref<AudioStreamPlayback> instance_playback();
 	virtual String get_stream_name() const;
 	void set_pid(int id);
+	void lock();
+	void unlock();
 };
 VARIANT_ENUM_CAST(AudioStreamTalkingTree::Format)
 #endif AUDIOSTREAMTALKINGTREE_H

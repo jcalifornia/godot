@@ -265,7 +265,7 @@ void TalkingTree::_process_audio_packet(int p_from, const uint8_t *p_packet, int
 	int payloadLength = p_packet_len - pointer;
 	const uint8_t *payload = &p_packet[pointer];
 	int16_t pcm_buf[50000];
-
+	//print_line("talking: " + itos(p_from) + " size: " + itos(payloadLength));
 	Pair<int, bool> out_len;
 	switch( codingType ){
 		case AudioCodingType::OPUS: {
@@ -276,6 +276,7 @@ void TalkingTree::_process_audio_packet(int p_from, const uint8_t *p_packet, int
 			ERR_PRINTS("Unsupported Audio format: " + itos((uint32_t) codingType));
 			return;
 	}
+	
 	connected_audio_stream_peers[p_from]->append_data((uint8_t *) pcm_buf, sizeof(int16_t) * out_len.first);
 	this->emit_signal("audio_message", p_from);
 }
