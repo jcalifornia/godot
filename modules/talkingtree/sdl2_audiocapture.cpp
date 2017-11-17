@@ -18,7 +18,7 @@ void SDL2AudioCapture::thread_func(void *p_udata){
 			PoolVector<uint8_t> pcm;
 			pcm.resize(sizeof(buf));
 			for(int i = 0; i < frames; i++){
-				uint32_t bytes = SDL_DequeueAudio( ac->devid_in, buf, SDL2AudioCapture::FRAME_SIZE*2);
+				uint32_t bytes = SDL_DequeueAudio( ac->devid_in, buf, sizeof(buf));
 				PoolVector<uint8_t>::Write w = pcm.write();
 				copymem(w.ptr(), buf, sizeof(buf));
 				ac->emit_signal("get_pcm", pcm);
@@ -48,6 +48,7 @@ Error SDL2AudioCapture::init(){
 	if (!devid_in) {
 		ERR_PRINTS("Couldn't open an audio device for capture: " + String(SDL_GetError()));
 	}
+	//print_line("device num: " + itos(devid_in));
 
 	thread_exited = false;
 	mutex = Mutex::create();
@@ -95,7 +96,6 @@ void SDL2AudioCapture::finish() {
 	thread = NULL;
 }
 SDL2AudioCapture::SDL2AudioCapture() {
-
 	mutex = NULL;
 	thread = NULL;
 } 

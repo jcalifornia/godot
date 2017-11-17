@@ -134,7 +134,7 @@ void TalkingTree::set_network_peer(const Ref<NetworkedMultiplayerPeer> &p_networ
 		network_peer->disconnect("server_disconnected", this, "_server_disconnected");
 		connected_audio_stream_peers.clear();
 		last_send_cache_id = 1;
-		SDL2AudioCapture::get_singleton()->disconnect("audio_frame", this, "_create_audio_frame");
+		SDL2AudioCapture::get_singleton()->disconnect("get_pcm", this, "_create_audio_frame");
 	}
 
 	ERR_EXPLAIN("Supplied NetworkedNetworkPeer must be connecting or connected.");
@@ -282,17 +282,20 @@ void TalkingTree::_process_audio_packet(int p_from, const uint8_t *p_packet, int
 }
 
 void TalkingTree::_create_audio_frame(PoolVector<uint8_t> pcm){
-	_encode_audio_frame(0, pcm);
+	_encode_audio_frame(1, pcm);
 }
 int TalkingTree::_encode_audio_frame(int target, PoolVector<uint8_t> &pcm){
 	int now = OS::get_singleton()->get_ticks_msec();
 	if( (now-last_sent_audio_timestamp) > 5000 ){
 		reset_encoder();
 	}
-	uint8_t opus_buf[1024];
+	int16_t pcm_buf[TalkingTree::FRAME_SIZE];
+	PoolVector<uint8_t>::Read  tmp = pcm.read();
+	copymem( pcm_buf, tmp.ptr(), pcm.size());
 	//https://www.opus-codec.org/docs/html_api/group__opusencoder.html#ga88621a963b809ebfc27887f13518c966
 	//in_len most be multiples of 120
-	const int output_size = opus_encode(opusEncoder, (opus_int16 *) pcm.write().ptr(), pcm.size()/sizeof(uint16_t), opus_buf, 1024);
+	uint8_t opus_buf[1024];
+	const int output_size = opus_encode(opusEncoder, pcm_buf, TalkingTree::FRAME_SIZE, opus_buf, 1024);
 
 
 	Vector<uint8_t> encoded_size = VarInt(output_size).getEncoded();

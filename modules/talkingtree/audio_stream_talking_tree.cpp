@@ -52,12 +52,13 @@ void AudioStreamPlaybackTalkingTree::_mix_internal(AudioFrame *p_buffer, int p_f
 	//print_line("buffer_size: " + itos(base->get_available_bytes()));
 	
 	ERR_FAIL_COND(!active);
-    if(!active){
+	if(!active){
 		for(int i = 0; i < p_frames; i++){
 			p_buffer[i] = AudioFrame(0,0);
 		}
 		return;
 	}
+	base->lock();
 	int len = base -> get_available_bytes();
 	switch(base->format){
 		case AudioStreamTalkingTree::FORMAT_8_BITS: len /= 1; break;
@@ -66,7 +67,6 @@ void AudioStreamPlaybackTalkingTree::_mix_internal(AudioFrame *p_buffer, int p_f
 	if (base->stereo) {
 		len /= 2;
 	}
-	base->lock();
 	//print_line("checking to see if streamname: " + base->get_stream_name() + " : size " + itos(len));
 	int smaller_buf = MIN(len, p_frames );
 	for( int i = 0;  i < smaller_buf; i++ ){
