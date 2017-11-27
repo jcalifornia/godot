@@ -72,11 +72,6 @@ const char *OSUWP::get_video_driver_name(int p_driver) const {
 	return "GLES2";
 }
 
-OS::VideoMode OSUWP::get_default_video_mode() const {
-
-	return video_mode;
-}
-
 Size2 OSUWP::get_window_size() const {
 	Size2 size;
 	size.width = video_mode.width;
@@ -186,7 +181,9 @@ void OSUWP::initialize_core() {
 void OSUWP::initialize_logger() {
 	Vector<Logger *> loggers;
 	loggers.push_back(memnew(WindowsTerminalLogger));
-	loggers.push_back(memnew(RotatedFileLogger("user://logs/log.txt")));
+	// FIXME: Reenable once we figure out how to get this properly in user://
+	// instead of littering the user's working dirs (res:// + pwd) with log files (GH-12277)
+	//loggers.push_back(memnew(RotatedFileLogger("user://logs/log.txt")));
 	_set_logger(memnew(CompositeLogger(loggers)));
 }
 
@@ -261,13 +258,6 @@ void OSUWP::initialize(const VideoMode &p_desired, int p_video_driver, int p_aud
 		visual_server = memnew(VisualServerWrapMT(visual_server, get_render_thread_mode() == RENDER_SEPARATE_THREAD));
 	}
 	*/
-
-	//
-	physics_server = memnew(PhysicsServerSW);
-	physics_server->init();
-
-	physics_2d_server = memnew(Physics2DServerSW);
-	physics_2d_server->init();
 
 	visual_server->init();
 
@@ -366,12 +356,6 @@ void OSUWP::finalize() {
 #endif
 
 	memdelete(input);
-
-	physics_server->finish();
-	memdelete(physics_server);
-
-	physics_2d_server->finish();
-	memdelete(physics_2d_server);
 
 	joypad = nullptr;
 }
@@ -674,7 +658,7 @@ void OSUWP::set_cursor_shape(CursorShape p_shape) {
 	cursor_shape = p_shape;
 }
 
-Error OSUWP::execute(const String &p_path, const List<String> &p_arguments, bool p_blocking, ProcessID *r_child_id, String *r_pipe, int *r_exitcode) {
+Error OSUWP::execute(const String &p_path, const List<String> &p_arguments, bool p_blocking, ProcessID *r_child_id, String *r_pipe, int *r_exitcode, bool read_stderr) {
 
 	return FAILED;
 };

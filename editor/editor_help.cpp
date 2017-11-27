@@ -694,7 +694,7 @@ Error EditorHelp::_goto_desc(const String &p_class, int p_vscr) {
 			inherits = doc->class_list[inherits].inherits;
 
 			if (inherits != "") {
-				class_desc->add_text(" , ");
+				class_desc->add_text(" < ");
 			}
 		}
 
@@ -1045,11 +1045,16 @@ Error EditorHelp::_goto_desc(const String &p_class, int p_vscr) {
 			class_desc->pop(); // end monofont
 			if (cd.signals[i].description != "") {
 
+				class_desc->push_font(doc_font);
 				class_desc->push_color(comment_color);
-				class_desc->add_text(" ");
+				class_desc->push_indent(1);
+				// class_desc->add_text(" ");
 				_add_text(cd.signals[i].description);
+				class_desc->pop(); // indent
 				class_desc->pop();
+				class_desc->pop(); // font
 			}
+			class_desc->add_newline();
 			class_desc->add_newline();
 		}
 
@@ -1129,11 +1134,14 @@ Error EditorHelp::_goto_desc(const String &p_class, int p_vscr) {
 					class_desc->pop();
 					if (enum_list[i].description != "") {
 						class_desc->push_font(doc_font);
-						class_desc->add_text("  ");
+						//class_desc->add_text("  ");
+						class_desc->push_indent(1);
 						class_desc->push_color(comment_color);
 						_add_text(enum_list[i].description);
 						class_desc->pop();
 						class_desc->pop();
+						class_desc->pop(); // indent
+						class_desc->add_newline();
 					}
 
 					class_desc->add_newline();
@@ -1177,11 +1185,14 @@ Error EditorHelp::_goto_desc(const String &p_class, int p_vscr) {
 				class_desc->pop();
 				if (constants[i].description != "") {
 					class_desc->push_font(doc_font);
-					class_desc->add_text("  ");
+					class_desc->push_indent(1);
+					//class_desc->add_text("  ");
 					class_desc->push_color(comment_color);
 					_add_text(constants[i].description);
 					class_desc->pop();
 					class_desc->pop();
+					class_desc->pop(); // indent
+					class_desc->add_newline();
 				}
 
 				class_desc->add_newline();
@@ -1231,53 +1242,61 @@ Error EditorHelp::_goto_desc(const String &p_class, int p_vscr) {
 
 			method_line[cd.properties[i].name] = class_desc->get_line_count() - 2;
 
+			class_desc->push_table(2);
+			class_desc->set_table_column_expand(1, 1);
+
+			class_desc->push_cell();
 			class_desc->push_font(doc_code_font);
 			_add_type(cd.properties[i].type, cd.properties[i].enumeration);
-
 			class_desc->add_text(" ");
+			class_desc->pop(); // font
+			class_desc->pop(); // cell
+
+			class_desc->push_cell();
+			class_desc->push_font(doc_code_font);
 			class_desc->push_color(headline_color);
 			_add_text(cd.properties[i].name);
-			class_desc->pop(); //color
+			class_desc->pop(); // color
+			class_desc->pop(); // font
+			class_desc->pop(); // cell
 
-			class_desc->add_text(" ");
-
-			class_desc->pop(); //font
+			//class_desc->add_text(" ");
 
 			if (cd.properties[i].setter != "") {
 
-				class_desc->push_font(doc_font);
+				class_desc->push_cell();
+				class_desc->pop(); // cell
 
-				class_desc->push_indent(2);
-				class_desc->push_color(comment_color);
-				class_desc->add_text("Setter: ");
-				class_desc->pop();
-
+				class_desc->push_cell();
+				class_desc->push_font(doc_code_font);
 				class_desc->push_color(text_color);
 				class_desc->add_text(cd.properties[i].setter + "(value)");
-				class_desc->pop(); //color
-
-				class_desc->pop(); //indent
-
-				class_desc->pop(); //font
+				class_desc->pop(); // color
+				class_desc->push_color(comment_color);
+				class_desc->add_text(" setter");
+				class_desc->pop(); // color
+				class_desc->pop(); // font
+				class_desc->pop(); // cell
 			}
 
 			if (cd.properties[i].getter != "") {
 
-				class_desc->push_font(doc_font);
+				class_desc->push_cell();
+				class_desc->pop(); // cell
 
-				class_desc->push_indent(2);
-				class_desc->push_color(comment_color);
-				class_desc->add_text("Getter: ");
-				class_desc->pop();
-
+				class_desc->push_cell();
+				class_desc->push_font(doc_code_font);
 				class_desc->push_color(text_color);
 				class_desc->add_text(cd.properties[i].getter + "()");
 				class_desc->pop(); //color
-
-				class_desc->pop(); //indent
-
+				class_desc->push_color(comment_color);
+				class_desc->add_text(" getter");
+				class_desc->pop(); //color
 				class_desc->pop(); //font
+				class_desc->pop(); //cell
 			}
+
+			class_desc->pop(); // table
 
 			class_desc->add_newline();
 
@@ -1699,7 +1718,7 @@ void EditorHelp::_notification(int p_what) {
 
 		case EditorSettings::NOTIFICATION_EDITOR_SETTINGS_CHANGED: {
 
-			class_desc->add_color_override("selection_color", EDITOR_DEF("text_editor/highlighting/selection_color", Color(0.2, 0.2, 1)));
+			class_desc->add_color_override("selection_color", get_color("text_editor/theme/selection_color", "Editor"));
 
 		} break;
 
@@ -1788,7 +1807,7 @@ EditorHelp::EditorHelp() {
 		class_desc = memnew(RichTextLabel);
 		vbc->add_child(class_desc);
 		class_desc->set_v_size_flags(SIZE_EXPAND_FILL);
-		class_desc->add_color_override("selection_color", EDITOR_DEF("text_editor/highlighting/selection_color", Color(0.2, 0.2, 1)));
+		class_desc->add_color_override("selection_color", get_color("text_editor/theme/selection_color", "Editor"));
 		class_desc->connect("meta_clicked", this, "_class_desc_select");
 		class_desc->connect("gui_input", this, "_class_desc_input");
 	}
@@ -1879,7 +1898,7 @@ void EditorHelpBit::_notification(int p_what) {
 	switch (p_what) {
 		case EditorSettings::NOTIFICATION_EDITOR_SETTINGS_CHANGED: {
 
-			rich_text->add_color_override("selection_color", EDITOR_DEF("text_editor/highlighting/selection_color", Color(0.2, 0.2, 1)));
+			rich_text->add_color_override("selection_color", get_color("text_editor/theme/selection_color", "Editor"));
 		} break;
 
 		default: break;
@@ -1898,6 +1917,7 @@ EditorHelpBit::EditorHelpBit() {
 	add_child(rich_text);
 	rich_text->set_anchors_and_margins_preset(Control::PRESET_WIDE);
 	rich_text->connect("meta_clicked", this, "_meta_clicked");
-	rich_text->add_color_override("selection_color", EDITOR_DEF("text_editor/highlighting/selection_color", Color(0.2, 0.2, 1)));
+	rich_text->add_color_override("selection_color", get_color("text_editor/theme/selection_color", "Editor"));
+	rich_text->set_override_selected_font_color(false);
 	set_custom_minimum_size(Size2(0, 70 * EDSCALE));
 }

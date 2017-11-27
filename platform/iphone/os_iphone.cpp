@@ -62,11 +62,6 @@ OSIPhone *OSIPhone::get_singleton() {
 	return (OSIPhone *)OS::get_singleton();
 };
 
-OS::VideoMode OSIPhone::get_default_video_mode() const {
-
-	return video_mode;
-};
-
 uint8_t OSIPhone::get_orientations() const {
 
 	return supported_orientations;
@@ -97,12 +92,16 @@ void OSIPhone::initialize_core() {
 
 	OS_Unix::initialize_core();
 	SemaphoreIphone::make_default();
+
+	set_data_dir(data_dir);
 };
 
 void OSIPhone::initialize_logger() {
 	Vector<Logger *> loggers;
 	loggers.push_back(memnew(SyslogLogger));
-	loggers.push_back(memnew(RotatedFileLogger("user://logs/log.txt")));
+	// FIXME: Reenable once we figure out how to get this properly in user://
+	// instead of littering the user's working dirs (res:// + pwd) with log files (GH-12277)
+	//loggers.push_back(memnew(RotatedFileLogger("user://logs/log.txt")));
 	_set_logger(memnew(CompositeLogger(loggers)));
 }
 
@@ -133,13 +132,6 @@ void OSIPhone::initialize(const VideoMode &p_desired, int p_video_driver, int p_
 
 	AudioDriverManager::add_driver(&audio_driver);
 	AudioDriverManager::initialize(p_audio_driver);
-
-	// init physics servers
-	physics_server = memnew(PhysicsServerSW);
-	physics_server->init();
-	//physics_2d_server = memnew( Physics2DServerSW );
-	physics_2d_server = Physics2DServerWrapMT::init_server<Physics2DServerSW>();
-	physics_2d_server->init();
 
 	input = memnew(InputDefault);
 
@@ -380,12 +372,6 @@ void OSIPhone::finalize() {
 	memdelete(visual_server);
 	//	memdelete(rasterizer);
 
-	physics_server->finish();
-	memdelete(physics_server);
-
-	physics_2d_server->finish();
-	memdelete(physics_2d_server);
-
 	memdelete(input);
 };
 
@@ -572,7 +558,7 @@ bool OSIPhone::_check_internal_feature_support(const String &p_feature) {
 	return p_feature == "mobile" || p_feature == "etc" || p_feature == "pvrtc" || p_feature == "etc2";
 }
 
-OSIPhone::OSIPhone(int width, int height) {
+OSIPhone::OSIPhone(int width, int height, String p_data_dir) {
 
 	main_loop = NULL;
 	visual_server = NULL;
@@ -585,6 +571,10 @@ OSIPhone::OSIPhone(int width, int height) {
 	set_video_mode(vm);
 	event_count = 0;
 	virtual_keyboard_height = 0;
+
+	// can't call set_data_dir from here, since it requires DirAccess
+	// which is initialized in initialize_core
+	data_dir = p_data_dir;
 
 	_set_logger(memnew(SyslogLogger));
 };

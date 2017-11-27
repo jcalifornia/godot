@@ -38,9 +38,6 @@
 #include "os/main_loop.h"
 //#include "power_android.h"
 #include "servers/audio_server.h"
-#include "servers/physics/physics_server_sw.h"
-#include "servers/physics_2d/physics_2d_server_sw.h"
-#include "servers/physics_2d/physics_2d_server_wrap_mt.h"
 #include "servers/visual/rasterizer.h"
 
 #ifdef ANDROID_NATIVE_ACTIVITY
@@ -106,8 +103,6 @@ private:
 	bool use_16bits_fbo;
 
 	VisualServer *visual_server;
-	PhysicsServer *physics_server;
-	Physics2DServer *physics_2d_server;
 
 	mutable String data_dir_cache;
 
@@ -145,8 +140,6 @@ public:
 	// functions used by main to initialize/deintialize the OS
 	virtual int get_video_driver_count() const;
 	virtual const char *get_video_driver_name(int p_driver) const;
-
-	virtual VideoMode get_default_video_mode() const;
 
 	virtual int get_audio_driver_count() const;
 	virtual const char *get_audio_driver_name(int p_driver) const;

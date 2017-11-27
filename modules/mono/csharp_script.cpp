@@ -41,6 +41,7 @@
 #include "editor/csharp_project.h"
 #include "editor/editor_node.h"
 #include "editor/godotsharp_editor.h"
+#include "utils/string_utils.h"
 #endif
 
 #include "godotsharp_dirs.h"
@@ -48,8 +49,9 @@
 #include "mono_gd/gd_mono_marshal.h"
 #include "signal_awaiter_utils.h"
 
-#define CACHED_STRING_NAME(m_var) (CSharpLanguage::get_singleton()->string_names.m_var)
+#define CACHED_STRING_NAME(m_var) (CSharpLanguage::get_singleton()->get_string_names().m_var)
 
+#ifdef TOOLS_ENABLED
 static bool _create_project_solution_if_needed() {
 
 	String sln_path = GodotSharpDirs::get_project_sln_path();
@@ -64,6 +66,7 @@ static bool _create_project_solution_if_needed() {
 
 	return true;
 }
+#endif
 
 CSharpLanguage *CSharpLanguage::singleton = NULL;
 
@@ -118,6 +121,9 @@ void CSharpLanguage::init() {
 }
 
 void CSharpLanguage::finish() {
+
+	// Release gchandle bindings before finalizing mono runtime
+	gchandle_bindings.clear();
 
 	if (gdmono) {
 		memdelete(gdmono);
@@ -274,15 +280,38 @@ Ref<Script> CSharpLanguage::get_template(const String &p_class_name, const Strin
 							 "        // Initialization here\n"
 							 "        \n"
 							 "    }\n"
+							 "\n"
+							 "//    public override void _Process(float delta)\n"
+							 "//    {\n"
+							 "//        // Called every frame. Delta is time since last frame.\n"
+							 "//        // Update game logic here.\n"
+							 "//        \n"
+							 "//    }\n"
 							 "}\n";
 
-	script_template = script_template.replace("%BASE_CLASS_NAME%", p_base_class_name).replace("%CLASS_NAME%", p_class_name);
+	script_template = script_template.replace("%BASE_CLASS_NAME%", p_base_class_name)
+							  .replace("%CLASS_NAME%", p_class_name);
 
 	Ref<CSharpScript> script;
 	script.instance();
 	script->set_source_code(script_template);
+	script->set_name(p_class_name);
 
 	return script;
+}
+
+bool CSharpLanguage::is_using_templates() {
+
+	return true;
+}
+
+void CSharpLanguage::make_template(const String &p_class_name, const String &p_base_class_name, Ref<Script> &p_script) {
+
+	String src = p_script->get_source_code();
+	src = src.replace("%BASE%", p_base_class_name)
+				  .replace("%CLASS%", p_class_name)
+				  .replace("%TS%", _get_indentation());
+	p_script->set_source_code(src);
 }
 
 Script *CSharpLanguage::create_script() const {
@@ -292,23 +321,115 @@ Script *CSharpLanguage::create_script() const {
 
 bool CSharpLanguage::has_named_classes() const {
 
-	return true;
+	return false;
+}
+
+bool CSharpLanguage::supports_builtin_mode() const {
+
+	return false;
+}
+
+static String variant_type_to_managed_name(const String &p_var_type_name) {
+
+	if (p_var_type_name.empty())
+		return "object";
+
+	if (!ClassDB::class_exists(p_var_type_name)) {
+		Variant::Type var_types[] = {
+			Variant::BOOL,
+			Variant::INT,
+			Variant::REAL,
+			Variant::STRING,
+			Variant::VECTOR2,
+			Variant::RECT2,
+			Variant::VECTOR3,
+			Variant::TRANSFORM2D,
+			Variant::PLANE,
+			Variant::QUAT,
+			Variant::RECT3,
+			Variant::BASIS,
+			Variant::TRANSFORM,
+			Variant::COLOR,
+			Variant::NODE_PATH,
+			Variant::_RID
+		};
+
+		for (int i = 0; i < sizeof(var_types) / sizeof(Variant::Type); i++) {
+			if (p_var_type_name == Variant::get_type_name(var_types[i]))
+				return p_var_type_name;
+		}
+
+		if (p_var_type_name == "String")
+			return "string"; // I prefer this one >:[
+
+		// TODO these will be rewritten later into custom containers
+
+		if (p_var_type_name == "Array")
+			return "object[]";
+
+		if (p_var_type_name == "Dictionary")
+			return "Dictionary<object, object>";
+
+		if (p_var_type_name == "PoolByteArray")
+			return "byte[]";
+		if (p_var_type_name == "PoolIntArray")
+			return "int[]";
+		if (p_var_type_name == "PoolRealArray")
+			return "float[]";
+		if (p_var_type_name == "PoolStringArray")
+			return "string[]";
+		if (p_var_type_name == "PoolVector2Array")
+			return "Vector2[]";
+		if (p_var_type_name == "PoolVector3Array")
+			return "Vector3[]";
+		if (p_var_type_name == "PoolColorArray")
+			return "Color[]";
+
+		return "object";
+	}
+
+	return p_var_type_name;
 }
 
 String CSharpLanguage::make_function(const String &p_class, const String &p_name, const PoolStringArray &p_args) const {
-
+#ifdef TOOLS_ENABLED
 	// FIXME
-	// Due to Godot's API limitation this just appends the function to the end of the file
-	// Another limitation is that the parameter types are not specified, so we must use System.Object
+	// - Due to Godot's API limitation this just appends the function to the end of the file
+	// - Use fully qualified name if there is ambiguity
 	String s = "private void " + p_name + "(";
 	for (int i = 0; i < p_args.size(); i++) {
+		const String &arg = p_args[i];
+
 		if (i > 0)
 			s += ", ";
-		s += "object " + p_args[i];
+
+		s += variant_type_to_managed_name(arg.get_slice(":", 1)) + " " + escape_csharp_keyword(arg.get_slice(":", 0));
 	}
 	s += ")\n{\n    // Replace with function body\n}\n";
 
 	return s;
+#else
+	return String();
+#endif
+}
+
+String CSharpLanguage::_get_indentation() const {
+#ifdef TOOLS_ENABLED
+	if (Engine::get_singleton()->is_editor_hint()) {
+		bool use_space_indentation = EDITOR_DEF("text_editor/indent/type", 0);
+
+		if (use_space_indentation) {
+			int indent_size = EDITOR_DEF("text_editor/indent/size", 4);
+
+			String space_indent = "";
+			for (int i = 0; i < indent_size; i++) {
+				space_indent += " ";
+			}
+			return space_indent;
+		}
+	}
+#endif
+	return "\t";
 }
 
 void CSharpLanguage::frame() {
@@ -392,6 +513,7 @@ void CSharpLanguage::reload_tool_script(const Ref<Script> &p_script, bool p_soft
 	(void)p_script; // UNUSED
 
 #ifdef TOOLS_ENABLED
+	MonoReloadNode::get_singleton()->restart_reload_timer();
 	reload_assemblies_if_needed(p_soft_reload);
 #endif
 }
@@ -403,13 +525,17 @@ void CSharpLanguage::reload_assemblies_if_needed(bool p_soft_reload) {
 
 		GDMonoAssembly *proj_assembly = gdmono->get_project_assembly();
 
+		String name = ProjectSettings::get_singleton()->get("application/config/name");
+		if (name.empty()) {
+			name = "UnnamedProject";
+		}
+
 		if (proj_assembly) {
 			String proj_asm_path = proj_assembly->get_path();
 
 			if (!FileAccess::exists(proj_assembly->get_path())) {
 				// Maybe it wasn't loaded from the default path, so check this as well
-				String proj_asm_name = ProjectSettings::get_singleton()->get("application/config/name");
-				proj_asm_path = GodotSharpDirs::get_res_temp_assemblies_dir().plus_file(proj_asm_name);
+				proj_asm_path = GodotSharpDirs::get_res_temp_assemblies_dir().plus_file(name);
 				if (!FileAccess::exists(proj_asm_path))
 					return; // No assembly to load
 			}
@@ -417,8 +543,7 @@ void CSharpLanguage::reload_assemblies_if_needed(bool p_soft_reload) {
 			if (FileAccess::get_modified_time(proj_asm_path) <= proj_assembly->get_modified_time())
 				return; // Already up to date
 		} else {
-			String proj_asm_name = ProjectSettings::get_singleton()->get("application/config/name");
-			if (!FileAccess::exists(GodotSharpDirs::get_res_temp_assemblies_dir().plus_file(proj_asm_name)))
+			if (!FileAccess::exists(GodotSharpDirs::get_res_temp_assemblies_dir().plus_file(name)))
 				return; // No assembly to load
 		}
 	}
@@ -536,6 +661,9 @@ void CSharpLanguage::reload_assemblies_if_needed(bool p_soft_reload) {
 
 		//if instance states were saved, set them!
 	}
+
+	if (Engine::get_singleton()->is_editor_hint())
+		EditorNode::get_singleton()->get_property_editor()->update_tree();
 }
 #endif
 
@@ -654,6 +782,13 @@ void *CSharpLanguage::alloc_instance_binding_data(Object *p_object) {
 
 	StringName type_name = p_object->get_class_name();
 
+	// ¯\_(ツ)_/¯
+	const ClassDB::ClassInfo *classinfo = ClassDB::classes.getptr(type_name);
+	while (classinfo && !classinfo->exposed)
+		classinfo = classinfo->inherits_ptr;
+	ERR_FAIL_NULL_V(classinfo, NULL);
+	type_name = classinfo->name;
+
 	GDMonoClass *type_class = GDMonoUtils::type_get_proxy_class(type_name);
 
 	ERR_FAIL_NULL_V(type_class, NULL);
@@ -694,6 +829,14 @@ void *CSharpLanguage::alloc_instance_binding_data(Object *p_object) {
 }
 
 void CSharpLanguage::free_instance_binding_data(void *p_data) {
+
+	if (GDMono::get_singleton() == NULL) {
+#ifdef DEBUG_ENABLED
+		CRASH_COND(!gchandle_bindings.empty());
+#endif
+		// Mono runtime finalized, all the gchandle bindings were already released
+		return;
+	}
 
 #ifndef NO_THREADS
 	script_bind_lock->lock();
@@ -782,7 +925,7 @@ bool CSharpInstance::set(const StringName &p_name, const Variant &p_value) {
 		if (method) {
 			MonoObject *ret = method->invoke(mono_object, args);
 
-			if (ret && UNBOX_BOOLEAN(ret))
+			if (ret && GDMonoMarshal::unbox<MonoBoolean>(ret) == true)
 				return true;
 		}
 
@@ -896,46 +1039,6 @@ Variant CSharpInstance::call(const StringName &p_method, const Variant **p_args,
 			} else {
 				return Variant();
 			}
-		} else if (p_method == CACHED_STRING_NAME(_awaited_signal_callback)) {
-			// shitty hack..
-			// TODO move to its own function, thx
-
-			if (p_argcount < 1) {
-				r_error.error = Variant::CallError::CALL_ERROR_TOO_FEW_ARGUMENTS;
-				r_error.argument = 1;
-				return Variant();
-			}
-
-			Ref<SignalAwaiterHandle> awaiter = *p_args[p_argcount - 1];
-
-			if (awaiter.is_null()) {
-				r_error.error = Variant::CallError::CALL_ERROR_INVALID_ARGUMENT;
-				r_error.argument = p_argcount - 1;
-				r_error.expected = Variant::OBJECT;
-				return Variant();
-			}
-
-			awaiter->set_completed(true);
-
-			int extra_argc = p_argcount - 1;
-			MonoArray *extra_args = mono_array_new(SCRIPTS_DOMAIN, CACHED_CLASS_RAW(MonoObject), extra_argc);
-
-			for (int i = 0; i < extra_argc; i++) {
-				MonoObject *boxed = GDMonoMarshal::variant_to_mono_object(*p_args[i]);
-				mono_array_set(extra_args, MonoObject *, i, boxed);
-			}
-
-			GDMonoUtils::GodotObject__AwaitedSignalCallback thunk = CACHED_METHOD_THUNK(GodotObject, _AwaitedSignalCallback);
-
-			MonoObject *ex = NULL;
-			thunk(mono_object, &extra_args, awaiter->get_target(), &ex);
-
-			if (ex) {
-				mono_print_unhandled_exception(ex);
-				ERR_FAIL_V(Variant());
-			}
-
-			return Variant();
 		}
 
 		top = top->get_parent_class();
@@ -1232,8 +1335,11 @@ bool CSharpScript::_update_exports() {
 			for (int i = 0; i < fields.size(); i++) {
 				GDMonoField *field = fields[i];
 
-				if (field->is_static() || field->get_visibility() != GDMono::PUBLIC)
+				if (field->is_static()) {
+					if (field->has_attribute(CACHED_CLASS(ExportAttribute)))
+						ERR_PRINTS("Cannot export field because it is static: " + top->get_full_name() + "." + field->get_name());
 					continue;
+				}
 
 				String name = field->get_name();
 				StringName cname = name;
@@ -1241,17 +1347,39 @@ bool CSharpScript::_update_exports() {
 				if (member_info.has(cname))
 					continue;
 
-				Variant::Type type = GDMonoMarshal::managed_to_variant_type(field->get_type());
+				ManagedType field_type = field->get_type();
+				Variant::Type type = GDMonoMarshal::managed_to_variant_type(field_type);
 
 				if (field->has_attribute(CACHED_CLASS(ExportAttribute))) {
+					// Field has Export attribute
 					MonoObject *attr = field->get_attribute(CACHED_CLASS(ExportAttribute));
 
-					// Field has Export attribute
-					int hint = CACHED_FIELD(ExportAttribute, hint)->get_int_value(attr);
-					String hint_string = CACHED_FIELD(ExportAttribute, hint_string)->get_string_value(attr);
-					int usage = CACHED_FIELD(ExportAttribute, usage)->get_int_value(attr);
+					PropertyHint hint;
+					String hint_string;
 
-					PropertyInfo prop_info = PropertyInfo(type, name, PropertyHint(hint), hint_string, PropertyUsageFlags(usage));
+					if (type == Variant::NIL) {
+						ERR_PRINTS("Unknown type of exported field: " + top->get_full_name() + "." + field->get_name());
+						continue;
+					} else if (type == Variant::INT && field_type.type_encoding == MONO_TYPE_VALUETYPE && mono_class_is_enum(field_type.type_class->get_raw())) {
+						type = Variant::INT;
+						hint = PROPERTY_HINT_ENUM;
+
+						Vector<MonoClassField *> fields = field_type.type_class->get_enum_fields();
+
+						for (int i = 0; i < fields.size(); i++) {
+							if (i > 0)
+								hint_string += ",";
+							hint_string += mono_field_get_name(fields[i]);
+						}
+					} else if (type == Variant::OBJECT && CACHED_CLASS(GodotReference)->is_assignable_from(field_type.type_class)) {
+						hint = PROPERTY_HINT_RESOURCE_TYPE;
+						hint_string = NATIVE_GDMONOCLASS_NAME(field_type.type_class);
+					} else {
+						hint = PropertyHint(CACHED_FIELD(ExportAttribute, hint)->get_int_value(attr));
+						hint_string = CACHED_FIELD(ExportAttribute, hint_string)->get_string_value(attr);
+					}
+
+					PropertyInfo prop_info = PropertyInfo(type, name, hint, hint_string, PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_SCRIPT_VARIABLE);
 
 					member_info[cname] = prop_info;
 					exported_members_cache.push_back(prop_info);
@@ -1327,6 +1455,34 @@ void CSharpScript::_resource_path_changed() {
 	}
 }
 
+bool CSharpScript::_get(const StringName &p_name, Variant &r_ret) const {
+
+	if (p_name == CSharpLanguage::singleton->string_names._script_source) {
+
+		r_ret = get_source_code();
+		return true;
+	}
+
+	return false;
+}
+
+bool CSharpScript::_set(const StringName &p_name, const Variant &p_value) {
+
+	if (p_name == CSharpLanguage::singleton->string_names._script_source) {
+
+		set_source_code(p_value);
+		reload();
+		return true;
+	}
+
+	return false;
+}
+
+void CSharpScript::_get_property_list(List<PropertyInfo> *p_properties) const {
+
+	p_properties->push_back(PropertyInfo(Variant::STRING, CSharpLanguage::singleton->string_names._script_source, PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR));
+}
+
 void CSharpScript::_bind_methods() {
 
 	ClassDB::bind_vararg_method(METHOD_FLAGS_DEFAULT, "new", &CSharpScript::_new, MethodInfo(Variant::OBJECT, "new"));
@@ -1385,12 +1541,15 @@ bool CSharpScript::can_instance() const {
 
 #ifdef TOOLS_ENABLED
 	if (Engine::get_singleton()->is_editor_hint()) {
-		if (_create_project_solution_if_needed()) {
-			CSharpProject::add_item(GodotSharpDirs::get_project_csproj_path(),
-					"Compile",
-					ProjectSettings::get_singleton()->globalize_path(get_path()));
-		} else {
-			ERR_PRINTS("Cannot add " + get_path() + " to the C# project because it could not be created.");
+
+		if (get_path().find("::") == -1) { // Ignore if built-in script. Can happen if the file is deleted...
+			if (_create_project_solution_if_needed()) {
+				CSharpProject::add_item(GodotSharpDirs::get_project_csproj_path(),
+						"Compile",
+						ProjectSettings::get_singleton()->globalize_path(get_path()));
+			} else {
+				ERR_PRINTS("Cannot add " + get_path() + " to the C# project because it could not be created.");
+			}
 		}
 	}
 #endif
@@ -1640,11 +1799,6 @@ Error CSharpScript::reload(bool p_keep_state) {
 	return ERR_FILE_MISSING_DEPENDENCIES;
 }
 
-String CSharpScript::get_node_type() const {
-
-	return ""; // ?
-}
-
 ScriptLanguage *CSharpScript::get_language() const {
 
 	return CSharpLanguage::get_singleton();
@@ -1672,16 +1826,6 @@ void CSharpScript::update_exports() {
 
 #ifdef TOOLS_ENABLED
 	_update_exports();
-
-	if (placeholders.size()) {
-		Map<StringName, Variant> values;
-		List<PropertyInfo> propnames;
-		_update_exports_values(values, propnames);
-
-		for (Set<PlaceHolderScriptInstance *>::Element *E = placeholders.front(); E; E = E->next()) {
-			E->get()->update(propnames, values);
-		}
-	}
 #endif
 }
 
@@ -1908,9 +2052,10 @@ bool ResourceFormatSaverCSharpScript::recognize(const RES &p_resource) const {
 
 CSharpLanguage::StringNameCache::StringNameCache() {
 
-	_awaited_signal_callback = StaticCString::create("_AwaitedSignalCallback");
+	_signal_callback = StaticCString::create("_signal_callback");
 	_set = StaticCString::create("_set");
 	_get = StaticCString::create("_get");
 	_notification = StaticCString::create("_notification");
+	_script_source = StaticCString::create("script/source");
 	dotctor = StaticCString::create(".ctor");
 }

@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+PKGS="git"
+
+GODOT_PKGS="build-essential scons pkg-config libx11-dev libxcursor-dev libxinerama-dev \
+    libgl1-mesa-dev libglu-dev libasound2-dev libpulse-dev libfreetype6-dev libssl-dev libudev-dev \
+    libxrandr-dev"
+
+MUMBLE_PKGS="liblog4cpp5-dev libboost-dev libprotobuf-dev protobuf-compiler libboost-system-dev"
+
+FACIAL_PKGS='libopencv-dev'
+
+apt-get install -y $PKGS $GODOT_PKGS $MUMBLE_PKGS $FACIAL_PKGS
+

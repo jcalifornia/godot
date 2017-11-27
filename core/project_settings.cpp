@@ -261,7 +261,7 @@ bool ProjectSettings::_load_resource_pack(const String &p_pack) {
 	return true;
 }
 
-Error ProjectSettings::setup(const String &p_path, const String &p_main_pack) {
+Error ProjectSettings::setup(const String &p_path, const String &p_main_pack, bool p_upwards) {
 
 	//If looking for files in network, just use network!
 
@@ -270,11 +270,6 @@ Error ProjectSettings::setup(const String &p_path, const String &p_main_pack) {
 		if (_load_settings("res://project.godot") == OK || _load_settings_binary("res://project.binary") == OK) {
 
 			_load_settings("res://override.cfg");
-#ifdef DEBUG_ENABLED
-		} else {
-			// when debug version of godot is used, provide some feedback to the developer
-			print_line("Couldn't open project over network");
-#endif
 		}
 
 		return OK;
@@ -292,12 +287,6 @@ Error ProjectSettings::setup(const String &p_path, const String &p_main_pack) {
 		if (_load_settings("res://project.godot") == OK || _load_settings_binary("res://project.binary") == OK) {
 			//load override from location of the main pack
 			_load_settings(p_main_pack.get_base_dir().plus_file("override.cfg"));
-#ifdef DEBUG_ENABLED
-			// when debug version of godot is used, provide some feedback to the developer
-			print_line("Successfully loaded " + p_main_pack + "/project.godot or project.binary");
-		} else {
-			print_line("Couldn't load/find " + p_main_pack + "/project.godot or project.binary");
-#endif
 		}
 
 		return OK;
@@ -315,18 +304,9 @@ Error ProjectSettings::setup(const String &p_path, const String &p_main_pack) {
 		if (_load_resource_pack(datapack_name)) {
 			found = true;
 		} else {
-#ifdef DEBUG_ENABLED
-			// when debug version of godot is used, provide some feedback to the developer
-			print_line("Couldn't open " + datapack_name);
-#endif
 			datapack_name = filebase_name + ".pck";
 			if (_load_resource_pack(datapack_name)) {
 				found = true;
-#ifdef DEBUG_ENABLED
-			} else {
-				// when debug version of godot is used, provide some feedback to the developer
-				print_line("Couldn't open " + datapack_name);
-#endif
 			}
 		}
 
@@ -335,13 +315,6 @@ Error ProjectSettings::setup(const String &p_path, const String &p_main_pack) {
 			if (_load_settings("res://project.godot") == OK || _load_settings_binary("res://project.binary") == OK) {
 				// load override from location of executable
 				_load_settings(exec_path.get_base_dir().plus_file("override.cfg"));
-
-#ifdef DEBUG_ENABLED
-				// when debug version of godot is used, provide some feedback to the developer
-				print_line("Successfully loaded " + datapack_name + "/project.godot or project.binary");
-			} else {
-				print_line("Couldn't load/find " + datapack_name + "/project.godot or project.binary");
-#endif
 			}
 
 			return OK;
@@ -362,12 +335,6 @@ Error ProjectSettings::setup(const String &p_path, const String &p_main_pack) {
 
 		if (_load_settings("res://project.godot") == OK || _load_settings_binary("res://project.binary") == OK) {
 			_load_settings("res://override.cfg");
-#ifdef DEBUG_ENABLED
-			// when debug version of godot is used, provide some feedback to the developer
-			print_line("Successfully loaded " + resource_path + "/project.godot or project.binary");
-		} else {
-			print_line("Couldn't load/find " + resource_path + "/project.godot or project.binary");
-#endif
 		}
 
 		return OK;
@@ -393,18 +360,16 @@ Error ProjectSettings::setup(const String &p_path, const String &p_main_pack) {
 			candidate = current_dir;
 			found = true;
 			break;
-#ifdef DEBUG_ENABLED
-			// when debug version of godot is used, provide some feedback to the developer
-			print_line("Successfully loaded " + current_dir + "/project.godot or project.binary");
-		} else {
-			print_line("Couldn't load/find " + current_dir + "/project.godot or project.binary");
-#endif
 		}
 
-		d->change_dir("..");
-		if (d->get_current_dir() == current_dir)
-			break; //not doing anything useful
-		current_dir = d->get_current_dir();
+		if (p_upwards) {
+			d->change_dir("..");
+			if (d->get_current_dir() == current_dir)
+				break; //not doing anything useful
+			current_dir = d->get_current_dir();
+		} else {
+			break;
+		}
 	}
 
 	resource_path = candidate;
@@ -667,8 +632,8 @@ Error ProjectSettings::_save_settings_text(const String &p_file, const Map<Strin
 	file->store_line("; Engine configuration file.");
 	file->store_line("; It's best edited using the editor UI and not directly,");
 	file->store_line("; since the parameters that go here are not all obvious.");
-	file->store_line("; ");
-	file->store_line("; Format: ");
+	file->store_line(";");
+	file->store_line("; Format:");
 	file->store_line(";   [section] ; section goes between []");
 	file->store_line(";   param=value ; assign values to parameters");
 	file->store_line("");
@@ -1071,10 +1036,16 @@ ProjectSettings::ProjectSettings() {
 	GLOBAL_DEF("debug/settings/profiler/max_functions", 16384);
 
 	//assigning here, because using GLOBAL_GET on every block for compressing can be slow
+	Compression::zstd_long_distance_matching = GLOBAL_DEF("compression/formats/zstd/long_distance_matching", false);
+	custom_prop_info["compression/formats/zstd/long_distance_matching"] = PropertyInfo(Variant::BOOL, "compression/formats/zstd/long_distance_matching");
 	Compression::zstd_level = GLOBAL_DEF("compression/formats/zstd/compression_level", 3);
 	custom_prop_info["compression/formats/zstd/compression_level"] = PropertyInfo(Variant::INT, "compression/formats/zstd/compression_level", PROPERTY_HINT_RANGE, "1,22,1");
+	Compression::zstd_window_log_size = GLOBAL_DEF("compression/formats/zstd/window_log_size", 27);
+	custom_prop_info["compression/formats/zstd/window_log_size"] = PropertyInfo(Variant::INT, "compression/formats/zstd/window_log_size", PROPERTY_HINT_RANGE, "10,30,1");
+
 	Compression::zlib_level = GLOBAL_DEF("compression/formats/zlib/compression_level", Z_DEFAULT_COMPRESSION);
 	custom_prop_info["compression/formats/zlib/compression_level"] = PropertyInfo(Variant::INT, "compression/formats/zlib/compression_level", PROPERTY_HINT_RANGE, "-1,9,1");
+
 	Compression::gzip_level = GLOBAL_DEF("compression/formats/gzip/compression_level", Z_DEFAULT_COMPRESSION);
 	custom_prop_info["compression/formats/gzip/compression_level"] = PropertyInfo(Variant::INT, "compression/formats/gzip/compression_level", PROPERTY_HINT_RANGE, "-1,9,1");
 

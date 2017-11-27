@@ -65,12 +65,6 @@ const char *OS_Android::get_video_driver_name(int p_driver) const {
 
 	return "GLES2";
 }
-
-OS::VideoMode OS_Android::get_default_video_mode() const {
-
-	return OS::VideoMode();
-}
-
 int OS_Android::get_audio_driver_count() const {
 
 	return 1;
@@ -123,7 +117,9 @@ void OS_Android::initialize_core() {
 void OS_Android::initialize_logger() {
 	Vector<Logger *> loggers;
 	loggers.push_back(memnew(AndroidLogger));
-	loggers.push_back(memnew(RotatedFileLogger("user://logs/log.txt")));
+	// FIXME: Reenable once we figure out how to get this properly in user://
+	// instead of littering the user's working dirs (res:// + pwd) with log files (GH-12277)
+	//loggers.push_back(memnew(RotatedFileLogger("user://logs/log.txt")));
 	_set_logger(memnew(CompositeLogger(loggers)));
 }
 
@@ -154,11 +150,6 @@ void OS_Android::initialize(const VideoMode &p_desired, int p_video_driver, int 
 	//	visual_server->cursor_set_visible(false, 0);
 
 	AudioDriverManager::initialize(p_audio_driver);
-
-	physics_server = memnew(PhysicsServerSW);
-	physics_server->init();
-	physics_2d_server = Physics2DServerWrapMT::init_server<Physics2DServerSW>();
-	physics_2d_server->init();
 
 	input = memnew(InputDefault);
 	input->set_fallback_mapping("Default Android Gamepad");

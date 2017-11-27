@@ -41,9 +41,6 @@
 #include "in_app_store.h"
 #include "main/input_default.h"
 #include "servers/audio_server.h"
-#include "servers/physics/physics_server_sw.h"
-#include "servers/physics_2d/physics_2d_server_sw.h"
-#include "servers/physics_2d/physics_2d_server_wrap_mt.h"
 #include "servers/visual/rasterizer.h"
 #include "servers/visual_server.h"
 
@@ -66,8 +63,6 @@ private:
 	uint8_t supported_orientations;
 
 	VisualServer *visual_server;
-	PhysicsServer *physics_server;
-	Physics2DServer *physics_2d_server;
 
 	AudioDriverCoreAudio audio_driver;
 
@@ -87,8 +82,6 @@ private:
 
 	virtual int get_video_driver_count() const;
 	virtual const char *get_video_driver_name(int p_driver) const;
-
-	virtual VideoMode get_default_video_mode() const;
 
 	virtual void initialize_logger();
 	virtual void initialize_core();
@@ -201,7 +194,7 @@ public:
 	virtual void native_video_stop();
 
 	virtual bool _check_internal_feature_support(const String &p_feature);
-	OSIPhone(int width, int height);
+	OSIPhone(int width, int height, String p_data_dir);
 	~OSIPhone();
 };
 

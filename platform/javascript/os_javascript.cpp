@@ -64,11 +64,6 @@ const char *OS_JavaScript::get_video_driver_name(int p_driver) const {
 	return "GLES3";
 }
 
-OS::VideoMode OS_JavaScript::get_default_video_mode() const {
-
-	return OS::VideoMode();
-}
-
 int OS_JavaScript::get_audio_driver_count() const {
 
 	return 1;
@@ -479,11 +474,6 @@ void OS_JavaScript::initialize(const VideoMode &p_desired, int p_video_driver, i
 	//	visual_server->cursor_set_visible(false, 0);
 
 	print_line("Init Physicsserver");
-
-	physics_server = memnew(PhysicsServerSW);
-	physics_server->init();
-	physics_2d_server = memnew(Physics2DServerSW);
-	physics_2d_server->init();
 
 	input = memnew(InputDefault);
 	_input = input;

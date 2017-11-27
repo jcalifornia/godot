@@ -357,7 +357,7 @@ public:
 		BODY_MODE_STATIC,
 		BODY_MODE_KINEMATIC,
 		BODY_MODE_RIGID,
-		//BODY_MODE_SOFT
+		BODY_MODE_SOFT,
 		BODY_MODE_CHARACTER
 	};
 
@@ -410,6 +410,9 @@ public:
 
 	virtual void body_set_param(RID p_body, BodyParameter p_param, float p_value) = 0;
 	virtual float body_get_param(RID p_body, BodyParameter p_param) const = 0;
+
+	virtual void body_set_kinematic_safe_margin(RID p_body, real_t p_margin) = 0;
+	virtual real_t body_get_kinematic_safe_margin(RID p_body) const = 0;
 
 	//state
 	enum BodyState {
@@ -464,6 +467,9 @@ public:
 	virtual void body_set_ray_pickable(RID p_body, bool p_enable) = 0;
 	virtual bool body_is_ray_pickable(RID p_body) const = 0;
 
+	// this function only works on physics process, errors and returns null otherwise
+	virtual PhysicsDirectBodyState *body_get_direct_state(RID p_body) = 0;
+
 	struct MotionResult {
 
 		Vector3 motion;
@@ -479,7 +485,7 @@ public:
 		Variant collider_metadata;
 	};
 
-	virtual bool body_test_motion(RID p_body, const Transform &p_from, const Vector3 &p_motion, float p_margin = 0.001, MotionResult *r_result = NULL) = 0;
+	virtual bool body_test_motion(RID p_body, const Transform &p_from, const Vector3 &p_motion, MotionResult *r_result = NULL) = 0;
 
 	/* JOINT API */
 
@@ -653,6 +659,43 @@ public:
 
 	PhysicsServer();
 	~PhysicsServer();
+};
+
+typedef PhysicsServer *(*CreatePhysicsServerCallback)();
+
+class PhysicsServerManager {
+	struct ClassInfo {
+		String name;
+		CreatePhysicsServerCallback create_callback;
+
+		ClassInfo()
+			: name(""), create_callback(NULL) {}
+
+		ClassInfo(String p_name, CreatePhysicsServerCallback p_create_callback)
+			: name(p_name), create_callback(p_create_callback) {}
+
+		ClassInfo(const ClassInfo &p_ci)
+			: name(p_ci.name), create_callback(p_ci.create_callback) {}
+	};
+
+	static Vector<ClassInfo> physics_servers;
+	static int default_server_id;
+	static int default_server_priority;
+
+public:
+	static const String setting_property_name;
+
+private:
+	static void on_servers_changed();
+
+public:
+	static void register_server(const String &p_name, CreatePhysicsServerCallback p_creat_callback);
+	static void set_default_server(const String &p_name, int p_priority = 0);
+	static int find_server_id(const String &p_name);
+	static int get_servers_count();
+	static String get_server_name(int p_id);
+	static PhysicsServer *new_default_server();
+	static PhysicsServer *new_server(const String &p_name);
 };
 
 VARIANT_ENUM_CAST(PhysicsServer::ShapeType);

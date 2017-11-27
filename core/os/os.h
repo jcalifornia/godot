@@ -109,8 +109,6 @@ protected:
 	virtual int get_video_driver_count() const = 0;
 	virtual const char *get_video_driver_name(int p_driver) const = 0;
 
-	virtual VideoMode get_default_video_mode() const = 0;
-
 	virtual int get_audio_driver_count() const = 0;
 	virtual const char *get_audio_driver_name(int p_driver) const = 0;
 
@@ -204,7 +202,7 @@ public:
 
 	virtual String get_installed_templates_path() const { return ""; }
 	virtual String get_executable_path() const;
-	virtual Error execute(const String &p_path, const List<String> &p_arguments, bool p_blocking, ProcessID *r_child_id = NULL, String *r_pipe = NULL, int *r_exitcode = NULL) = 0;
+	virtual Error execute(const String &p_path, const List<String> &p_arguments, bool p_blocking, ProcessID *r_child_id = NULL, String *r_pipe = NULL, int *r_exitcode = NULL, bool read_stderr = false) = 0;
 	virtual Error kill(const ProcessID &p_pid) = 0;
 	virtual int get_process_id() const;
 
@@ -409,6 +407,7 @@ public:
 		LATIN_KEYBOARD_QZERTY,
 		LATIN_KEYBOARD_DVORAK,
 		LATIN_KEYBOARD_NEO,
+		LATIN_KEYBOARD_COLEMAK,
 	};
 
 	virtual LatinKeyboardVariant get_latin_keyboard_variant() const;

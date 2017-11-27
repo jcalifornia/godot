@@ -38,9 +38,6 @@
 #include "os/input.h"
 #include "power_osx.h"
 #include "servers/audio_server.h"
-#include "servers/physics_2d/physics_2d_server_sw.h"
-#include "servers/physics_2d/physics_2d_server_wrap_mt.h"
-#include "servers/physics_server.h"
 #include "servers/visual/rasterizer.h"
 #include "servers/visual/visual_server_wrap_mt.h"
 #include "servers/visual_server.h"
@@ -61,9 +58,6 @@ public:
 
 	List<String> args;
 	MainLoop *main_loop;
-
-	PhysicsServer *physics_server;
-	Physics2DServer *physics_2d_server;
 
 	IP_Unix *ip_unix;
 
@@ -112,20 +106,20 @@ public:
 	CrashHandler crash_handler;
 
 	float _mouse_scale(float p_scale) {
-		if (display_scale > 1.0)
+		if (_display_scale() > 1.0)
 			return p_scale;
 		else
 			return 1.0;
 	}
 
-	void _update_window();
+	float _display_scale() const;
+	float _display_scale(id screen) const;
 
-	float display_scale;
+	void _update_window();
 
 protected:
 	virtual int get_video_driver_count() const;
 	virtual const char *get_video_driver_name(int p_driver) const;
-	virtual VideoMode get_default_video_mode() const;
 
 	virtual void initialize_logger();
 	virtual void initialize_core();
@@ -217,6 +211,9 @@ public:
 	virtual int get_power_percent_left();
 
 	virtual bool _check_internal_feature_support(const String &p_feature);
+
+	virtual void set_use_vsync(bool p_enable);
+	virtual bool is_vsync_enabled() const;
 
 	void run();
 

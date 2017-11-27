@@ -136,7 +136,9 @@ void OS_Unix::initialize_core() {
 void OS_Unix::initialize_logger() {
 	Vector<Logger *> loggers;
 	loggers.push_back(memnew(UnixTerminalLogger));
-	loggers.push_back(memnew(RotatedFileLogger("user://logs/log.txt")));
+	// FIXME: Reenable once we figure out how to get this properly in user://
+	// instead of littering the user's working dirs (res:// + pwd) with log files (GH-12277)
+	//loggers.push_back(memnew(RotatedFileLogger("user://logs/log.txt")));
 	_set_logger(memnew(CompositeLogger(loggers)));
 }
 
@@ -285,7 +287,7 @@ uint64_t OS_Unix::get_ticks_usec() const {
 	return longtime;
 }
 
-Error OS_Unix::execute(const String &p_path, const List<String> &p_arguments, bool p_blocking, ProcessID *r_child_id, String *r_pipe, int *r_exitcode) {
+Error OS_Unix::execute(const String &p_path, const List<String> &p_arguments, bool p_blocking, ProcessID *r_child_id, String *r_pipe, int *r_exitcode, bool read_stderr) {
 
 	if (p_blocking && r_pipe) {
 
@@ -297,7 +299,11 @@ Error OS_Unix::execute(const String &p_path, const List<String> &p_arguments, bo
 			argss += String(" \"") + p_arguments[i] + "\"";
 		}
 
-		argss += " 2>/dev/null"; //silence stderr
+		if (read_stderr) {
+			argss += " 2>&1"; // Read stderr too
+		} else {
+			argss += " 2>/dev/null"; //silence stderr
+		}
 		FILE *f = popen(argss.utf8().get_data(), "r");
 
 		ERR_FAIL_COND_V(!f, ERR_CANT_OPEN);
@@ -339,7 +345,7 @@ Error OS_Unix::execute(const String &p_path, const List<String> &p_arguments, bo
 			execvp(getprogname(), &args[0]);
 		}
 #else
-		execv(p_path.utf8().get_data(), &args[0]);
+		execvp(p_path.utf8().get_data(), &args[0]);
 #endif
 		// still alive? something failed..
 		fprintf(stderr, "**ERROR** OS_Unix::execute - Could not create child process while executing: %s\n", p_path.utf8().get_data());

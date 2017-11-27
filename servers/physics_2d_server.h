@@ -468,6 +468,9 @@ public:
 
 	virtual void body_set_pickable(RID p_body, bool p_pickable) = 0;
 
+	// this function only works on physics process, errors and returns null otherwise
+	virtual Physics2DDirectBodyState *body_get_direct_state(RID p_body) = 0;
+
 	struct MotionResult {
 
 		Vector2 motion;
@@ -585,6 +588,43 @@ public:
 	int get_collider_shape() const;
 
 	Physics2DTestMotionResult();
+};
+
+typedef Physics2DServer *(*CreatePhysics2DServerCallback)();
+
+class Physics2DServerManager {
+	struct ClassInfo {
+		String name;
+		CreatePhysics2DServerCallback create_callback;
+
+		ClassInfo()
+			: name(""), create_callback(NULL) {}
+
+		ClassInfo(String p_name, CreatePhysics2DServerCallback p_create_callback)
+			: name(p_name), create_callback(p_create_callback) {}
+
+		ClassInfo(const ClassInfo &p_ci)
+			: name(p_ci.name), create_callback(p_ci.create_callback) {}
+	};
+
+	static Vector<ClassInfo> physics_2d_servers;
+	static int default_server_id;
+	static int default_server_priority;
+
+public:
+	static const String setting_property_name;
+
+private:
+	static void on_servers_changed();
+
+public:
+	static void register_server(const String &p_name, CreatePhysics2DServerCallback p_creat_callback);
+	static void set_default_server(const String &p_name, int p_priority = 0);
+	static int find_server_id(const String &p_name);
+	static int get_servers_count();
+	static String get_server_name(int p_id);
+	static Physics2DServer *new_default_server();
+	static Physics2DServer *new_server(const String &p_name);
 };
 
 VARIANT_ENUM_CAST(Physics2DServer::ShapeType);

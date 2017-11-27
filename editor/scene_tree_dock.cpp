@@ -319,6 +319,14 @@ void SceneTreeDock::_tool_selected(int p_tool, bool p_confirm_override) {
 				editor->push_item(existing.ptr());
 			else {
 				String path = selected->get_filename();
+				if (path == "") {
+					String root_path = editor_data->get_edited_scene_root()->get_filename();
+					if (root_path == "") {
+						path = "res://" + selected->get_name();
+					} else {
+						path = root_path.get_base_dir() + "/" + selected->get_name();
+					}
+				}
 				script_create_dialog->config(selected->get_class(), path);
 				script_create_dialog->popup_centered();
 			}
@@ -524,10 +532,6 @@ void SceneTreeDock::_tool_selected(int p_tool, bool p_confirm_override) {
 
 			if (p_confirm_override) {
 				_delete_confirm();
-
-				// hack, force 2d editor viewport to refresh after deletion
-				if (CanvasItemEditor *editor = CanvasItemEditor::get_singleton())
-					editor->get_viewport_control()->update();
 
 			} else {
 				delete_dialog->set_text(TTR("Delete Node(s)?"));
@@ -1337,6 +1341,12 @@ void SceneTreeDock::_delete_confirm() {
 		}
 	}
 	editor_data->get_undo_redo().commit_action();
+
+	// hack, force 2d editor viewport to refresh after deletion
+	if (CanvasItemEditor *editor = CanvasItemEditor::get_singleton())
+		editor->get_viewport_control()->update();
+
+	editor->push_item(NULL);
 }
 
 void SceneTreeDock::_selection_changed() {

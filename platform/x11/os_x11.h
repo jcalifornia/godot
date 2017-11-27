@@ -42,9 +42,6 @@
 #include "main/input_default.h"
 #include "power_x11.h"
 #include "servers/audio_server.h"
-#include "servers/physics_2d/physics_2d_server_sw.h"
-#include "servers/physics_2d/physics_2d_server_wrap_mt.h"
-#include "servers/physics_server.h"
 #include "servers/visual/rasterizer.h"
 
 #include <X11/Xcursor/Xcursor.h>
@@ -94,7 +91,7 @@ class OS_X11 : public OS_Unix {
 
 	int xdnd_version;
 
-#if defined(OPENGL_ENABLED) || defined(LEGACYGL_ENABLED)
+#if defined(OPENGL_ENABLED)
 	ContextGL_X11 *context_gl;
 #endif
 	//Rasterizer *rasterizer;
@@ -121,10 +118,8 @@ class OS_X11 : public OS_Unix {
 	uint64_t last_click_ms;
 	uint32_t last_button_state;
 
-	PhysicsServer *physics_server;
 	unsigned int get_mouse_button_state(unsigned int p_x11_state);
 	void get_key_modifier_state(unsigned int p_x11_state, Ref<InputEventWithModifiers> state);
-	Physics2DServer *physics_2d_server;
 
 	MouseMode mouse_mode;
 	Point2i center;
@@ -182,7 +177,6 @@ class OS_X11 : public OS_Unix {
 protected:
 	virtual int get_video_driver_count() const;
 	virtual const char *get_video_driver_name(int p_driver) const;
-	virtual VideoMode get_default_video_mode() const;
 
 	virtual int get_audio_driver_count() const;
 	virtual const char *get_audio_driver_name(int p_driver) const;
@@ -274,6 +268,8 @@ public:
 	bool is_disable_crash_handler() const;
 
 	virtual Error move_to_trash(const String &p_path);
+
+	virtual LatinKeyboardVariant get_latin_keyboard_variant() const;
 
 	OS_X11();
 };

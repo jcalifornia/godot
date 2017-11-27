@@ -38,8 +38,6 @@
 #include "main/input_default.h"
 #include "power_haiku.h"
 #include "servers/audio_server.h"
-#include "servers/physics_2d/physics_2d_server_sw.h"
-#include "servers/physics_server.h"
 #include "servers/visual/rasterizer.h"
 #include "servers/visual_server.h"
 
@@ -52,15 +50,13 @@ private:
 	Rasterizer *rasterizer;
 	VisualServer *visual_server;
 	VideoMode current_video_mode;
-	PhysicsServer *physics_server;
-	Physics2DServer *physics_2d_server;
 	PowerHaiku *power_manager;
 
 #ifdef MEDIA_KIT_ENABLED
 	AudioDriverMediaKit driver_media_kit;
 #endif
 
-#if defined(OPENGL_ENABLED) || defined(LEGACYGL_ENABLED)
+#if defined(OPENGL_ENABLED)
 	ContextGL_Haiku *context_gl;
 #endif
 
@@ -69,7 +65,6 @@ private:
 protected:
 	virtual int get_video_driver_count() const;
 	virtual const char *get_video_driver_name(int p_driver) const;
-	virtual VideoMode get_default_video_mode() const;
 
 	virtual void initialize(const VideoMode &p_desired, int p_video_driver, int p_audio_driver);
 	virtual void finalize();
