@@ -115,7 +115,7 @@ void String::copy_from(const char *p_cstr) {
 
 	resize(len + 1); // include 0
 
-	CharType *dst = this->ptr();
+	CharType *dst = this->ptrw();
 
 	for (int i = 0; i < len + 1; i++) {
 
@@ -564,7 +564,7 @@ void String::erase(int p_pos, int p_chars) {
 
 String String::capitalize() const {
 
-	String aux = this->replace("_", " ").to_lower();
+	String aux = this->camelcase_to_underscore(true).replace("_", " ").strip_edges();
 	String cap;
 	for (int i = 0; i < aux.get_slice_count(" "); i++) {
 
@@ -862,6 +862,17 @@ Vector<int> String::split_ints_mk(const Vector<String> &p_splitters, bool p_allo
 	return ret;
 }
 
+String String::join(Vector<String> parts) {
+	String ret;
+	for (int i = 0; i < parts.size(); ++i) {
+		if (i > 0) {
+			ret += *this;
+		}
+		ret += parts[i];
+	}
+	return ret;
+}
+
 CharType String::char_uppercase(CharType p_char) {
 
 	return _find_upper(p_char);
@@ -1108,7 +1119,7 @@ String String::num_int64(int64_t p_num, int base, bool capitalize_hex) {
 		chars++;
 	String s;
 	s.resize(chars + 1);
-	CharType *c = s.ptr();
+	CharType *c = s.ptrw();
 	c[chars] = 0;
 	n = num;
 	do {

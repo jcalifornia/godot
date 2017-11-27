@@ -69,13 +69,13 @@ private:
 public:
 	BulletPhysicsDirectSpaceState(SpaceBullet *p_space);
 
-	virtual int intersect_point(const Vector3 &p_point, ShapeResult *r_results, int p_result_max, const Set<RID> &p_exclude = Set<RID>(), uint32_t p_collision_layer = 0xFFFFFFFF, uint32_t p_object_type_mask = TYPE_MASK_COLLISION);
-	virtual bool intersect_ray(const Vector3 &p_from, const Vector3 &p_to, RayResult &r_result, const Set<RID> &p_exclude = Set<RID>(), uint32_t p_collision_layer = 0xFFFFFFFF, uint32_t p_object_type_mask = TYPE_MASK_COLLISION, bool p_pick_ray = false);
-	virtual int intersect_shape(const RID &p_shape, const Transform &p_xform, float p_margin, ShapeResult *r_results, int p_result_max, const Set<RID> &p_exclude = Set<RID>(), uint32_t p_collision_layer = 0xFFFFFFFF, uint32_t p_object_type_mask = TYPE_MASK_COLLISION);
-	virtual bool cast_motion(const RID &p_shape, const Transform &p_xform, const Vector3 &p_motion, float p_margin, float &p_closest_safe, float &p_closest_unsafe, const Set<RID> &p_exclude = Set<RID>(), uint32_t p_collision_layer = 0xFFFFFFFF, uint32_t p_object_type_mask = TYPE_MASK_COLLISION, ShapeRestInfo *r_info = NULL);
+	virtual int intersect_point(const Vector3 &p_point, ShapeResult *r_results, int p_result_max, const Set<RID> &p_exclude = Set<RID>(), uint32_t p_collision_mask = 0xFFFFFFFF);
+	virtual bool intersect_ray(const Vector3 &p_from, const Vector3 &p_to, RayResult &r_result, const Set<RID> &p_exclude = Set<RID>(), uint32_t p_collision_mask = 0xFFFFFFFF, bool p_pick_ray = false);
+	virtual int intersect_shape(const RID &p_shape, const Transform &p_xform, float p_margin, ShapeResult *r_results, int p_result_max, const Set<RID> &p_exclude = Set<RID>(), uint32_t p_collision_mask = 0xFFFFFFFF);
+	virtual bool cast_motion(const RID &p_shape, const Transform &p_xform, const Vector3 &p_motion, float p_margin, float &p_closest_safe, float &p_closest_unsafe, const Set<RID> &p_exclude = Set<RID>(), uint32_t p_collision_mask = 0xFFFFFFFF, ShapeRestInfo *r_info = NULL);
 	/// Returns the list of contacts pairs in this order: Local contact, other body contact
-	virtual bool collide_shape(RID p_shape, const Transform &p_shape_xform, float p_margin, Vector3 *r_results, int p_result_max, int &r_result_count, const Set<RID> &p_exclude = Set<RID>(), uint32_t p_collision_layer = 0xFFFFFFFF, uint32_t p_object_type_mask = TYPE_MASK_COLLISION);
-	virtual bool rest_info(RID p_shape, const Transform &p_shape_xform, float p_margin, ShapeRestInfo *r_info, const Set<RID> &p_exclude = Set<RID>(), uint32_t p_collision_layer = 0xFFFFFFFF, uint32_t p_object_type_mask = TYPE_MASK_COLLISION);
+	virtual bool collide_shape(RID p_shape, const Transform &p_shape_xform, float p_margin, Vector3 *r_results, int p_result_max, int &r_result_count, const Set<RID> &p_exclude = Set<RID>(), uint32_t p_collision_mask = 0xFFFFFFFF);
+	virtual bool rest_info(RID p_shape, const Transform &p_shape_xform, float p_margin, ShapeRestInfo *r_info, const Set<RID> &p_exclude = Set<RID>(), uint32_t p_collision_mask = 0xFFFFFFFF);
 	virtual Vector3 get_closest_point_to_object_volume(RID p_object, const Vector3 p_point) const;
 };
 
@@ -189,6 +189,12 @@ private:
 			: hasPenetration(false) {}
 	};
 
-	bool recover_from_penetration(RigidBodyBullet *p_body, const btTransform &p_from, btVector3 &out_recover_position, RecoverResult *recover_result = NULL);
+	bool recover_from_penetration(RigidBodyBullet *p_body, const btTransform &p_from, btVector3 &r_recover_position, RecoverResult *r_recover_result = NULL);
+	/// This is an API that recover a kinematic object from penetration
+	/// This allow only Convex Convex test and it always use GJK algorithm, With this API we don't benefit of Bullet special accelerated functions
+	bool RFP_convex_convex_test(const btConvexShape *p_shapeA, const btConvexShape *p_shapeB, btCollisionObject *p_objectB, int p_shapeId_B, const btTransform &p_transformA, const btTransform &p_transformB, btVector3 &r_recover_position, RecoverResult *r_recover_result);
+	/// This is an API that recover a kinematic object from penetration
+	/// Using this we leave Bullet to select the best algorithm, For example GJK in case we have Convex Convex, or a Bullet accelerated algorithm
+	bool RFP_convex_world_test(const btConvexShape *p_shapeA, const btCollisionShape *p_shapeB, btCollisionObject *p_objectA, btCollisionObject *p_objectB, int p_shapeId_A, int p_shapeId_B, const btTransform &p_transformA, const btTransform &p_transformB, btVector3 &r_recover_position, RecoverResult *r_recover_result);
 };
 #endif
