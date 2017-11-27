@@ -147,6 +147,7 @@ private:
 	bool updating_tree;
 	Tree *tree; //directories
 	ItemList *files;
+	bool import_dock_needs_update;
 
 	bool _create_tree(TreeItem *p_parent, EditorFileSystemDirectory *p_dir, Vector<String> &uncollapsed_paths);
 	void _update_tree(bool keep_collapse_state);
@@ -161,6 +162,7 @@ private:
 
 	void _select_file(int p_idx);
 	void _file_multi_selected(int p_index, bool p_selected);
+	void _update_import_dock();
 
 	void _file_selected();
 	void _dir_selected();
@@ -190,6 +192,7 @@ private:
 
 	void _dir_rmb_pressed(const Vector2 &p_pos);
 	void _files_list_rmb_select(int p_item, const Vector2 &p_pos);
+	void _rmb_pressed(const Vector2 &p_pos);
 
 	struct FileInfo {
 		String name;
@@ -209,6 +212,7 @@ private:
 	Variant get_drag_data_fw(const Point2 &p_point, Control *p_from);
 	bool can_drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from) const;
 	void drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from);
+	String _get_drag_target_folder(const Point2 &p_point, Control *p_from) const;
 
 	void _preview_invalidated(const String &p_path);
 	void _thumbnail_done(const String &p_path, const Ref<Texture> &p_preview, const Variant &p_udata);

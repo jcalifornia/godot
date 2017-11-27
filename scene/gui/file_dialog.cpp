@@ -85,6 +85,10 @@ void FileDialog::_unhandled_input(const Ref<InputEvent> &p_event) {
 
 					invalidate();
 				} break;
+				case KEY_BACKSPACE: {
+
+					_dir_entered("..");
+				} break;
 				default: { handled = false; }
 			}
 
@@ -189,7 +193,7 @@ void FileDialog::_action_pressed() {
 		TreeItem *item = tree->get_selected();
 		if (item) {
 			Dictionary d = item->get_metadata(0);
-			if (d["dir"]) {
+			if (d["dir"] && d["name"] != "..") {
 				path = path.plus_file(d["name"]);
 			}
 		}
@@ -272,6 +276,26 @@ void FileDialog::_cancel_pressed() {
 	hide();
 }
 
+bool FileDialog::_is_open_should_be_disabled() {
+
+	if (mode == MODE_OPEN_ANY || mode == MODE_SAVE_FILE)
+		return false;
+
+	TreeItem *ti = tree->get_selected();
+	// We have something that we can't select?
+	if (!ti)
+		return true;
+
+	Dictionary d = ti->get_metadata(0);
+
+	// Opening a file, but selected a folder? Forbidden.
+	if (((mode == MODE_OPEN_FILE || mode == MODE_OPEN_FILES) && d["dir"]) || // Flipped case, also forbidden.
+			(mode == MODE_OPEN_DIR && !d["dir"]))
+		return true;
+
+	return false;
+}
+
 void FileDialog::_tree_selected() {
 
 	TreeItem *ti = tree->get_selected();
@@ -283,6 +307,8 @@ void FileDialog::_tree_selected() {
 
 		file->set_text(d["name"]);
 	}
+
+	get_ok()->set_disabled(_is_open_should_be_disabled());
 }
 
 void FileDialog::_tree_dc_selected() {
@@ -323,6 +349,9 @@ void FileDialog::update_file_list() {
 
 	while ((item = dir_access->get_next(&isdir)) != "") {
 
+		if (item == ".")
+			continue;
+
 		ishidden = dir_access->current_is_hidden();
 
 		if (show_hidden || !ishidden) {
@@ -344,7 +373,7 @@ void FileDialog::update_file_list() {
 	while (!dirs.empty()) {
 		String &dir_name = dirs.front()->get();
 		TreeItem *ti = tree->create_item(root);
-		ti->set_text(0, dir_name + "/");
+		ti->set_text(0, dir_name);
 		ti->set_icon(0, folder);
 
 		Dictionary d;
@@ -560,7 +589,7 @@ void FileDialog::set_mode(Mode p_mode) {
 			makedir->hide();
 			break;
 		case MODE_OPEN_DIR:
-			get_ok()->set_text(RTR("Open"));
+			get_ok()->set_text(RTR("Select Current Folder"));
 			set_title(RTR("Open a Directory"));
 			makedir->show();
 			break;
