@@ -490,15 +490,14 @@ bool AbstractPolygon2DEditor::forward_gui_input(const Ref<InputEvent> &p_event) 
 	return false;
 }
 
-void AbstractPolygon2DEditor::forward_draw_over_canvas(Control *p_canvas) {
+void AbstractPolygon2DEditor::forward_draw_over_viewport(Control *p_overlay) {
 	if (!_get_node())
 		return;
 
 	Control *vpc = canvas_item_editor->get_viewport_control();
 
 	Transform2D xform = canvas_item_editor->get_canvas_transform() * _get_node()->get_global_transform();
-	Ref<Texture> default_handle = get_icon("EditorHandle", "EditorIcons");
-	Ref<Texture> selected_handle = get_icon("EditorHandleSelected", "EditorIcons");
+	const Ref<Texture> handle = get_icon("EditorHandle", "EditorIcons");
 
 	const Vertex active_point = get_active_point();
 	const int n_polygons = _get_polygon_count();
@@ -563,9 +562,17 @@ void AbstractPolygon2DEditor::forward_draw_over_canvas(Control *p_canvas) {
 				const Vector2 next_point = xform.xform(p2);
 				vpc->draw_line(point, next_point, col, 2);
 			}
+		}
 
-			Ref<Texture> handle = vertex == active_point ? selected_handle : default_handle;
-			vpc->draw_texture(handle, point - handle->get_size() * 0.5);
+		for (int i = 0; i < n_points; i++) {
+
+			const Vertex vertex(j, i);
+
+			const Vector2 p = (vertex == edited_point) ? edited_point.pos : (points[i] + offset);
+			const Vector2 point = xform.xform(p);
+
+			const Color modulate = vertex == active_point ? Color(0.5, 1, 2) : Color(1, 1, 1);
+			vpc->draw_texture(handle, point - handle->get_size() * 0.5, modulate);
 		}
 	}
 

@@ -254,7 +254,7 @@ bool RasterizerSceneGLES3::_shadow_atlas_find_shadow(ShadowAtlas *shadow_atlas, 
 
 		//look for an empty space
 		int sc = shadow_atlas->quadrants[qidx].shadows.size();
-		ShadowAtlas::Quadrant::Shadow *sarr = shadow_atlas->quadrants[qidx].shadows.ptr();
+		ShadowAtlas::Quadrant::Shadow *sarr = shadow_atlas->quadrants[qidx].shadows.ptrw();
 
 		int found_free_idx = -1; //found a free one
 		int found_used_idx = -1; //found existing one, must steal it
@@ -1198,8 +1198,8 @@ bool RasterizerSceneGLES3::_setup_material(RasterizerStorageGLES3::Material *p_m
 	}
 
 	int tc = p_material->textures.size();
-	RID *textures = p_material->textures.ptr();
-	ShaderLanguage::ShaderNode::Uniform::Hint *texture_hints = p_material->shader->texture_hints.ptr();
+	RID *textures = p_material->textures.ptrw();
+	ShaderLanguage::ShaderNode::Uniform::Hint *texture_hints = p_material->shader->texture_hints.ptrw();
 
 	state.current_main_tex = 0;
 
@@ -4282,7 +4282,7 @@ void RasterizerSceneGLES3::render_scene(const Transform &p_cam_transform, const 
 			if (i > 0) {
 				glEnable(GL_BLEND);
 			}
-			_setup_directional_light(i, p_cam_transform.affine_inverse(), shadow_atlas != NULL);
+			_setup_directional_light(i, p_cam_transform.affine_inverse(), shadow_atlas != NULL && shadow_atlas->size > 0);
 			_render_list(render_list.elements, render_list.element_count, p_cam_transform, p_cam_projection, env_radiance_tex, false, false, false, i > 0, shadow_atlas != NULL);
 		}
 	}
@@ -4345,7 +4345,7 @@ void RasterizerSceneGLES3::render_scene(const Transform &p_cam_transform, const 
 	} else {
 		for (int i = 0; i < state.directional_light_count; i++) {
 			directional_light = directional_lights[i];
-			_setup_directional_light(i, p_cam_transform.affine_inverse(), shadow_atlas != NULL);
+			_setup_directional_light(i, p_cam_transform.affine_inverse(), shadow_atlas != NULL && shadow_atlas->size > 0);
 			_render_list(&render_list.elements[render_list.max_elements - render_list.alpha_element_count], render_list.alpha_element_count, p_cam_transform, p_cam_projection, env_radiance_tex, false, true, false, i > 0, shadow_atlas != NULL);
 		}
 	}

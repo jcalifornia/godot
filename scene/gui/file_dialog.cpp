@@ -47,6 +47,7 @@ void FileDialog::_notification(int p_what) {
 	if (p_what == NOTIFICATION_ENTER_TREE) {
 
 		refresh->set_icon(get_icon("reload"));
+		dir_up->set_icon(get_icon("ArrowUp", "EditorIcons"));
 	}
 
 	if (p_what == NOTIFICATION_DRAW) {
@@ -85,6 +86,10 @@ void FileDialog::_unhandled_input(const Ref<InputEvent> &p_event) {
 
 					invalidate();
 				} break;
+				case KEY_BACKSPACE: {
+
+					_dir_entered("..");
+				} break;
 				default: { handled = false; }
 			}
 
@@ -118,6 +123,9 @@ void FileDialog::update_dir() {
 	if (drives->is_visible()) {
 		drives->select(dir_access->get_current_drive());
 	}
+
+	// Deselect any item, to make "Select Current Folder" button text by default.
+	deselect_items();
 }
 
 void FileDialog::_dir_entered(String p_dir) {
@@ -152,6 +160,10 @@ void FileDialog::_post_popup() {
 		tree->grab_focus();
 
 	set_process_unhandled_input(true);
+
+	// For open dir mode, deselect all items on file dialog open.
+	if (mode == MODE_OPEN_DIR)
+		deselect_items();
 }
 
 void FileDialog::_action_pressed() {
@@ -189,7 +201,7 @@ void FileDialog::_action_pressed() {
 		TreeItem *item = tree->get_selected();
 		if (item) {
 			Dictionary d = item->get_metadata(0);
-			if (d["dir"]) {
+			if (d["dir"] && d["name"] != "..") {
 				path = path.plus_file(d["name"]);
 			}
 		}
@@ -272,6 +284,57 @@ void FileDialog::_cancel_pressed() {
 	hide();
 }
 
+bool FileDialog::_is_open_should_be_disabled() {
+
+	if (mode == MODE_OPEN_ANY || mode == MODE_SAVE_FILE)
+		return false;
+
+	TreeItem *ti = tree->get_selected();
+	// We have something that we can't select?
+	if (!ti)
+		return true;
+
+	Dictionary d = ti->get_metadata(0);
+
+	// Opening a file, but selected a folder? Forbidden.
+	if (((mode == MODE_OPEN_FILE || mode == MODE_OPEN_FILES) && d["dir"]) || // Flipped case, also forbidden.
+			(mode == MODE_OPEN_DIR && !d["dir"]))
+		return true;
+
+	return false;
+}
+
+void FileDialog::_go_up() {
+
+	dir_access->change_dir("..");
+	update_file_list();
+	update_dir();
+}
+
+void FileDialog::deselect_items() {
+
+	// Clear currently selected items in file manager.
+	tree->deselect_all();
+
+	// And change get_ok title.
+	if (!tree->is_anything_selected()) {
+		get_ok()->set_disabled(_is_open_should_be_disabled());
+
+		switch (mode) {
+
+			case MODE_OPEN_FILE:
+			case MODE_OPEN_FILES:
+				get_ok()->set_text(TTR("Open"));
+				get_ok()->set_disabled(false);
+				break;
+
+			case MODE_OPEN_DIR:
+				get_ok()->set_text(TTR("Select Current Folder"));
+				get_ok()->set_disabled(false);
+				break;
+		}
+	}
+}
 void FileDialog::_tree_selected() {
 
 	TreeItem *ti = tree->get_selected();
@@ -282,7 +345,11 @@ void FileDialog::_tree_selected() {
 	if (!d["dir"]) {
 
 		file->set_text(d["name"]);
+	} else if (mode == MODE_OPEN_DIR) {
+		get_ok()->set_text(TTR("Select this Folder"));
 	}
+
+	get_ok()->set_disabled(_is_open_should_be_disabled());
 }
 
 void FileDialog::_tree_dc_selected() {
@@ -323,6 +390,9 @@ void FileDialog::update_file_list() {
 
 	while ((item = dir_access->get_next(&isdir)) != "") {
 
+		if (item == "." || item == "..")
+			continue;
+
 		ishidden = dir_access->current_is_hidden();
 
 		if (show_hidden || !ishidden) {
@@ -333,18 +403,13 @@ void FileDialog::update_file_list() {
 		}
 	}
 
-	if (dirs.find("..") == NULL) {
-		//may happen if lacking permissions
-		dirs.push_back("..");
-	}
-
 	dirs.sort_custom<NaturalNoCaseComparator>();
 	files.sort_custom<NaturalNoCaseComparator>();
 
 	while (!dirs.empty()) {
 		String &dir_name = dirs.front()->get();
 		TreeItem *ti = tree->create_item(root);
-		ti->set_text(0, dir_name + "/");
+		ti->set_text(0, dir_name);
 		ti->set_icon(0, folder);
 
 		Dictionary d;
@@ -560,7 +625,7 @@ void FileDialog::set_mode(Mode p_mode) {
 			makedir->hide();
 			break;
 		case MODE_OPEN_DIR:
-			get_ok()->set_text(RTR("Open"));
+			get_ok()->set_text(RTR("Select Current Folder"));
 			set_title(RTR("Open a Directory"));
 			makedir->show();
 			break;
@@ -713,6 +778,8 @@ void FileDialog::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("_make_dir_confirm"), &FileDialog::_make_dir_confirm);
 	ClassDB::bind_method(D_METHOD("_update_file_list"), &FileDialog::update_file_list);
 	ClassDB::bind_method(D_METHOD("_update_dir"), &FileDialog::update_dir);
+	ClassDB::bind_method(D_METHOD("_go_up"), &FileDialog::_go_up);
+	ClassDB::bind_method(D_METHOD("deselect_items"), &FileDialog::deselect_items);
 
 	ClassDB::bind_method(D_METHOD("invalidate"), &FileDialog::invalidate);
 
@@ -760,6 +827,12 @@ FileDialog::FileDialog() {
 	set_title(RTR("Save a File"));
 
 	HBoxContainer *hbc = memnew(HBoxContainer);
+
+	dir_up = memnew(ToolButton);
+	dir_up->set_tooltip(TTR("Go to parent folder"));
+	hbc->add_child(dir_up);
+	dir_up->connect("pressed", this, "_go_up");
+
 	hbc->add_child(memnew(Label(RTR("Path:"))));
 	dir = memnew(LineEdit);
 	hbc->add_child(dir);
@@ -804,6 +877,7 @@ FileDialog::FileDialog() {
 	//cancel->connect("pressed", this,"_cancel_pressed");
 	tree->connect("cell_selected", this, "_tree_selected", varray(), CONNECT_DEFERRED);
 	tree->connect("item_activated", this, "_tree_db_selected", varray());
+	tree->connect("nothing_selected", this, "deselect_items");
 	dir->connect("text_entered", this, "_dir_entered");
 	file->connect("text_entered", this, "_file_entered");
 	filter->connect("item_selected", this, "_filter_selected");

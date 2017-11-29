@@ -40,6 +40,7 @@
 #include "core/project_settings.h"
 #include "editor/array_property_edit.h"
 #include "editor/create_dialog.h"
+#include "editor/dictionary_property_edit.h"
 #include "editor/editor_export.h"
 #include "editor/editor_file_system.h"
 #include "editor/editor_help.h"
@@ -415,7 +416,11 @@ bool CustomPropertyEditor::edit(Object *p_owner, const String &p_name, Variant::
 				menu->clear();
 				Vector<String> options = hint_text.split(",");
 				for (int i = 0; i < options.size(); i++) {
-					menu->add_item(options[i], i);
+					if (options[i].find(":") != -1) {
+						menu->add_item(options[i].get_slicec(':', 0), options[i].get_slicec(':', 1).to_int());
+					} else {
+						menu->add_item(options[i], i);
+					}
 				}
 				menu->set_position(get_position());
 				menu->popup();
@@ -755,7 +760,7 @@ bool CustomPropertyEditor::edit(Object *p_owner, const String &p_name, Variant::
 			value_editor[3]->set_text(String::num(q.w));
 
 		} break;
-		case Variant::RECT3: {
+		case Variant::AABB: {
 
 			field_names.push_back("px");
 			field_names.push_back("py");
@@ -765,7 +770,7 @@ bool CustomPropertyEditor::edit(Object *p_owner, const String &p_name, Variant::
 			field_names.push_back("sz");
 			config_value_editors(6, 3, 16, field_names);
 
-			Rect3 aabb = v;
+			AABB aabb = v;
 			value_editor[0]->set_text(String::num(aabb.position.x));
 			value_editor[1]->set_text(String::num(aabb.position.y));
 			value_editor[2]->set_text(String::num(aabb.position.z));
@@ -1153,7 +1158,8 @@ void CustomPropertyEditor::_node_path_selected(NodePath p_path) {
 			node = Object::cast_to<Node>(owner);
 		else if (owner->is_class("ArrayPropertyEdit"))
 			node = Object::cast_to<ArrayPropertyEdit>(owner)->get_node();
-
+		else if (owner->is_class("DictionaryPropertyEdit"))
+			node = Object::cast_to<DictionaryPropertyEdit>(owner)->get_node();
 		if (!node) {
 			v = p_path;
 			emit_signal("variant_changed");
@@ -1585,7 +1591,7 @@ void CustomPropertyEditor::_modified(String p_string) {
 			_emit_changed_whole_or_field();
 
 		} break;
-		case Variant::RECT3: {
+		case Variant::AABB: {
 
 			Vector3 pos;
 			Vector3 size;
@@ -1605,7 +1611,7 @@ void CustomPropertyEditor::_modified(String p_string) {
 				size.y = value_editor[4]->get_text().to_double();
 				size.z = value_editor[5]->get_text().to_double();
 			}
-			v = Rect3(pos, size);
+			v = AABB(pos, size);
 			_emit_changed_whole_or_field();
 
 		} break;
@@ -1727,7 +1733,7 @@ void CustomPropertyEditor::_focus_enter() {
 		case Variant::VECTOR3:
 		case Variant::PLANE:
 		case Variant::QUAT:
-		case Variant::RECT3:
+		case Variant::AABB:
 		case Variant::TRANSFORM2D:
 		case Variant::BASIS:
 		case Variant::TRANSFORM: {
@@ -1752,7 +1758,7 @@ void CustomPropertyEditor::_focus_exit() {
 		case Variant::VECTOR3:
 		case Variant::PLANE:
 		case Variant::QUAT:
-		case Variant::RECT3:
+		case Variant::AABB:
 		case Variant::TRANSFORM2D:
 		case Variant::BASIS:
 		case Variant::TRANSFORM: {
@@ -2238,7 +2244,7 @@ void PropertyEditor::set_item_text(TreeItem *p_item, int p_type, const String &p
 		case Variant::VECTOR3:
 		case Variant::QUAT:
 		case Variant::VECTOR2:
-		case Variant::RECT3:
+		case Variant::AABB:
 		case Variant::RECT2:
 		case Variant::TRANSFORM2D:
 		case Variant::BASIS:
@@ -2659,10 +2665,15 @@ TreeItem *PropertyEditor::get_parent_node(String p_path, HashMap<String, TreeIte
 		item->set_editable(1, false);
 		item->set_selectable(1, subsection_selectable);
 
-		if (use_folding) {
+		if (use_folding || folding_behaviour != FB_UNDEFINED) { // Even if you disabled folding (expand all by default), you still can collapse all manually.
 			if (!obj->editor_is_section_unfolded(p_path)) {
 				updating_folding = true;
-				item->set_collapsed(true);
+				if (folding_behaviour == FB_COLLAPSEALL)
+					item->set_collapsed(true);
+				else if (folding_behaviour == FB_EXPANDALL || is_expandall_enabled)
+					item->set_collapsed(false);
+				else
+					item->set_collapsed(true);
 				updating_folding = false;
 			}
 			item->set_metadata(0, p_path);
@@ -3211,9 +3222,14 @@ void PropertyEditor::update_tree() {
 			} break;
 			case Variant::DICTIONARY: {
 
+				Variant v = obj->get(p.name);
+
 				item->set_cell_mode(1, TreeItem::CELL_MODE_STRING);
-				item->set_editable(1, false);
-				item->set_text(1, obj->get(p.name).operator String());
+				item->set_text(1, String("Dictionary{") + itos(v.call("size")) + "}");
+				item->add_button(1, get_icon("EditResource", "EditorIcons"));
+
+				if (show_type_icons)
+					item->set_icon(0, get_icon("DictionaryData", "EditorIcons"));
 
 			} break;
 
@@ -3367,13 +3383,13 @@ void PropertyEditor::update_tree() {
 					item->set_icon(0, get_icon("Plane", "EditorIcons"));
 
 			} break;
-			case Variant::RECT3: {
+			case Variant::AABB: {
 
 				item->set_cell_mode(1, TreeItem::CELL_MODE_CUSTOM);
 				item->set_editable(1, true);
-				item->set_text(1, "Rect3");
+				item->set_text(1, "AABB");
 				if (show_type_icons)
-					item->set_icon(0, get_icon("Rect3", "EditorIcons"));
+					item->set_icon(0, get_icon("AABB", "EditorIcons"));
 			} break;
 
 			case Variant::QUAT: {
@@ -3412,7 +3428,9 @@ void PropertyEditor::update_tree() {
 					type = p.hint_string;
 
 				RES res = obj->get(p.name).operator RefPtr();
-
+				if (type.begins_with("RES:") && type != "RES:") { // Remote resources
+					res = ResourceLoader::load(type.substr(4, type.length()));
+				}
 				Ref<EncodedObjectAsID> encoded = obj->get(p.name); //for debugger and remote tools
 
 				if (encoded.is_valid()) {
@@ -3423,6 +3441,7 @@ void PropertyEditor::update_tree() {
 					item->set_editable(1, true);
 
 				} else if (obj->get(p.name).get_type() == Variant::NIL || res.is_null()) {
+
 					item->set_text(1, "<null>");
 					item->set_icon(1, Ref<Texture>());
 					item->set_custom_as_button(1, false);
@@ -3581,7 +3600,7 @@ void PropertyEditor::_edit_set(const String &p_name, const Variant &p_value, boo
 		}
 	}
 
-	if (!undo_redo || Object::cast_to<ArrayPropertyEdit>(obj)) { //kind of hacky
+	if (!undo_redo || Object::cast_to<ArrayPropertyEdit>(obj) || Object::cast_to<DictionaryPropertyEdit>(obj)) { //kind of hacky
 
 		obj->set(p_name, p_value);
 		if (p_refresh_all)
@@ -3714,7 +3733,7 @@ void PropertyEditor::_item_edited() {
 				_edit_set(name, item->get_text(1), refresh_all);
 			}
 		} break;
-		// math types
+			// math types
 
 		case Variant::VECTOR3: {
 
@@ -3725,7 +3744,7 @@ void PropertyEditor::_item_edited() {
 		case Variant::QUAT: {
 
 		} break;
-		case Variant::RECT3: {
+		case Variant::AABB: {
 
 		} break;
 		case Variant::BASIS: {
@@ -3979,8 +3998,20 @@ void PropertyEditor::_edit_button(Object *p_item, int p_column, int p_button) {
 
 			Ref<ArrayPropertyEdit> ape = memnew(ArrayPropertyEdit);
 			ape->edit(obj, n, ht, Variant::Type(t));
-
 			EditorNode::get_singleton()->push_item(ape.ptr());
+
+		} else if (t == Variant::DICTIONARY) {
+
+			Variant v = obj->get(n);
+
+			if (v.get_type() != t) {
+				Variant::CallError ce;
+				v = Variant::construct(Variant::Type(t), NULL, 0, ce);
+			}
+
+			Ref<DictionaryPropertyEdit> dpe = memnew(DictionaryPropertyEdit);
+			dpe->edit(obj, n);
+			EditorNode::get_singleton()->push_item(dpe.ptr());
 		}
 	}
 }
@@ -4181,10 +4212,29 @@ void PropertyEditor::set_subsection_selectable(bool p_selectable) {
 	update_tree();
 }
 
+bool PropertyEditor::is_expand_all_properties_enabled() const {
+
+	return (use_folding == false);
+}
+
 void PropertyEditor::set_use_folding(bool p_enable) {
 
 	use_folding = p_enable;
 	tree->set_hide_folding(false);
+}
+
+void PropertyEditor::collapse_all_parent_nodes() {
+
+	folding_behaviour = FB_COLLAPSEALL;
+	update_tree();
+	folding_behaviour = FB_UNDEFINED;
+}
+
+void PropertyEditor::expand_all_parent_nodes() {
+
+	folding_behaviour = FB_EXPANDALL;
+	update_tree();
+	folding_behaviour = FB_UNDEFINED;
 }
 
 PropertyEditor::PropertyEditor() {
@@ -4258,7 +4308,9 @@ PropertyEditor::PropertyEditor() {
 	use_filter = false;
 	subsection_selectable = false;
 	property_selectable = false;
-	show_type_icons = EDITOR_DEF("interface/editor/show_type_icons", false);
+	show_type_icons = false; // maybe one day will return.
+	folding_behaviour = FB_UNDEFINED;
+	is_expandall_enabled = bool(EDITOR_DEF("interface/editor/expand_all_properties", true));
 }
 
 PropertyEditor::~PropertyEditor() {
@@ -4570,21 +4622,24 @@ SectionedPropertyEditor::~SectionedPropertyEditor() {
 
 double PropertyValueEvaluator::eval(const String &p_text) {
 
+	// If range value contains a comma replace it with dot (issue #6028)
+	const String &p_new_text = p_text.replace(",", ".");
+
 	if (!obj || !script_language)
-		return _default_eval(p_text);
+		return _default_eval(p_new_text);
 
 	Ref<Script> script = Ref<Script>(script_language->create_script());
-	script->set_source_code(_build_script(p_text));
+	script->set_source_code(_build_script(p_new_text));
 	Error err = script->reload();
 	if (err) {
-		print_line("[PropertyValueEvaluator] Error loading script for expression: " + p_text);
-		return _default_eval(p_text);
+		print_line("[PropertyValueEvaluator] Error loading script for expression: " + p_new_text);
+		return _default_eval(p_new_text);
 	}
 
 	Object dummy;
 	ScriptInstance *script_instance = script->instance_create(&dummy);
 	if (!script_instance)
-		return _default_eval(p_text);
+		return _default_eval(p_new_text);
 
 	Variant::CallError call_err;
 	Variant arg = obj;
@@ -4595,7 +4650,7 @@ double PropertyValueEvaluator::eval(const String &p_text) {
 	}
 	print_line("[PropertyValueEvaluator]: Error eval! Error code: " + itos(call_err.error));
 
-	return _default_eval(p_text);
+	return _default_eval(p_new_text);
 }
 
 void PropertyValueEvaluator::edit(Object *p_obj) {

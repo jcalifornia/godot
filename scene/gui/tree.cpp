@@ -28,6 +28,7 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 #include "tree.h"
+#include <limits.h>
 
 #include "os/input.h"
 #include "os/keyboard.h"
@@ -154,8 +155,17 @@ void TreeItem::set_text(int p_column, String p_text) {
 
 	if (cells[p_column].mode == TreeItem::CELL_MODE_RANGE || cells[p_column].mode == TreeItem::CELL_MODE_RANGE_EXPRESSION) {
 
-		cells[p_column].min = 0;
-		cells[p_column].max = p_text.get_slice_count(",");
+		Vector<String> strings = p_text.split(",");
+		cells[p_column].min = INT_MAX;
+		cells[p_column].max = INT_MIN;
+		for (int i = 0; i < strings.size(); i++) {
+			int value = i;
+			if (!strings[i].get_slicec(':', 1).empty()) {
+				value = strings[i].get_slicec(':', 1).to_int();
+			}
+			cells[p_column].min = MIN(cells[p_column].min, value);
+			cells[p_column].max = MAX(cells[p_column].max, value);
+		}
 		cells[p_column].step = 0;
 	}
 	_changed_notify(p_column);
@@ -1231,8 +1241,18 @@ int Tree::draw_item(const Point2i &p_pos, const Point2 &p_draw_ofs, const Size2 
 
 						int option = (int)p_item->cells[i].val;
 
-						String s = p_item->cells[i].text;
-						s = s.get_slicec(',', option);
+						String s = RTR("(Other)");
+						Vector<String> strings = p_item->cells[i].text.split(",");
+						for (int i = 0; i < strings.size(); i++) {
+							int value = i;
+							if (!strings[i].get_slicec(':', 1).empty()) {
+								value = strings[i].get_slicec(':', 1).to_int();
+							}
+							if (option == value) {
+								s = strings[i].get_slicec(':', 0);
+								break;
+							}
+						}
 
 						if (p_item->cells[i].suffix != String())
 							s += " " + p_item->cells[i].suffix;
@@ -1776,7 +1796,7 @@ int Tree::propagate_mouse_event(const Point2i &p_pos, int x_ofs, int y_ofs, bool
 					for (int i = 0; i < c.text.get_slice_count(","); i++) {
 
 						String s = c.text.get_slicec(',', i);
-						popup_menu->add_item(s, i);
+						popup_menu->add_item(s.get_slicec(':', 0), s.get_slicec(':', 1).empty() ? i : s.get_slicec(':', 1).to_int());
 					}
 
 					popup_menu->set_size(Size2(col_width, 0));
@@ -2579,6 +2599,11 @@ void Tree::_gui_input(Ref<InputEvent> p_event) {
 					if (drag_touching) {
 						set_physics_process(true);
 					}
+
+					if (b->get_button_index() == BUTTON_LEFT) {
+						if (get_item_at_position(b->get_position()) == NULL && !b->get_shift() && !b->get_control() && !b->get_command())
+							emit_signal("nothing_selected");
+					}
 				}
 
 			} break;
@@ -2591,6 +2616,12 @@ void Tree::_gui_input(Ref<InputEvent> p_event) {
 				v_scroll->set_value(v_scroll->get_value() + v_scroll->get_page() * b->get_factor() / 8);
 			} break;
 		}
+	}
+
+	Ref<InputEventPanGesture> pan_gesture = p_event;
+	if (pan_gesture.is_valid()) {
+
+		v_scroll->set_value(v_scroll->get_value() + v_scroll->get_page() * pan_gesture->get_delta().y / 8);
 	}
 }
 
@@ -2634,7 +2665,7 @@ bool Tree::edit_selected() {
 		for (int i = 0; i < c.text.get_slice_count(","); i++) {
 
 			String s = c.text.get_slicec(',', i);
-			popup_menu->add_item(s, i);
+			popup_menu->add_item(s.get_slicec(':', 0), s.get_slicec(':', 1).empty() ? i : s.get_slicec(':', 1).to_int());
 		}
 
 		popup_menu->set_size(Size2(rect.size.width, 0));
@@ -3015,6 +3046,25 @@ void Tree::item_deselected(int p_column, TreeItem *p_item) {
 void Tree::set_select_mode(SelectMode p_mode) {
 
 	select_mode = p_mode;
+}
+
+void Tree::deselect_all() {
+
+	TreeItem *item = get_next_selected(get_root());
+	while (item) {
+		item->deselect(selected_col);
+		item = get_next_selected(get_root());
+	}
+
+	selected_item = NULL;
+	selected_col = -1;
+
+	update();
+}
+
+bool Tree::is_anything_selected() {
+
+	return (selected_item != NULL);
 }
 
 void Tree::clear() {
@@ -3724,6 +3774,7 @@ void Tree::_bind_methods() {
 	ADD_SIGNAL(MethodInfo("custom_popup_edited", PropertyInfo(Variant::BOOL, "arrow_clicked")));
 	ADD_SIGNAL(MethodInfo("item_activated"));
 	ADD_SIGNAL(MethodInfo("column_title_pressed", PropertyInfo(Variant::INT, "column")));
+	ADD_SIGNAL(MethodInfo("nothing_selected"));
 
 	BIND_ENUM_CONSTANT(SELECT_SINGLE);
 	BIND_ENUM_CONSTANT(SELECT_ROW);
