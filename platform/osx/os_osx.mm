@@ -1028,7 +1028,7 @@ void OS_OSX::initialize(const VideoMode &p_desired, int p_video_driver, int p_au
 	// OS X needs non-zero color size, so set resonable values
 	int colorBits = 32;
 
-// Fail if a robustness strategy was requested
+	// Fail if a robustness strategy was requested
 
 #define ADD_ATTR(x) \
 	{ attributes[attributeCount++] = x; }
@@ -1088,6 +1088,8 @@ void OS_OSX::initialize(const VideoMode &p_desired, int p_video_driver, int p_au
 	[context setView:window_view];
 
 	[context makeCurrentContext];
+
+	set_use_vsync(p_desired.use_vsync);
 
 	[NSApp activateIgnoringOtherApps:YES];
 
@@ -1483,7 +1485,7 @@ void OS_OSX::make_rendering_thread() {
 
 Error OS_OSX::shell_open(String p_uri) {
 
-	[[NSWorkspace sharedWorkspace] openURL:[[NSURL alloc] initWithString:[NSString stringWithUTF8String:p_uri.utf8().get_data()]]];
+	[[NSWorkspace sharedWorkspace] openURL:[[NSURL alloc] initWithString:[[NSString stringWithUTF8String:p_uri.utf8().get_data()] stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLFragmentAllowedCharacterSet]]]];
 	return OK;
 }
 

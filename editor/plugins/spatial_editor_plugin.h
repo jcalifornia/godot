@@ -92,7 +92,7 @@ class SpatialEditorViewport : public Control {
 		VIEW_DISPLAY_NORMAL,
 		VIEW_DISPLAY_WIREFRAME,
 		VIEW_DISPLAY_OVERDRAW,
-		VIEW_DISPLAY_SHADELESS,
+		VIEW_DISPLAY_SHADELESS
 	};
 
 public:
@@ -413,7 +413,6 @@ private:
 	SpatialEditorViewport *viewports[VIEWPORTS_COUNT];
 	VSplitContainer *shader_split;
 	HSplitContainer *palette_split;
-	HBoxContainer *palette_split_container;
 
 	/////
 
@@ -489,7 +488,8 @@ private:
 		MENU_VIEW_GRID,
 		MENU_VIEW_CAMERA_SETTINGS,
 		MENU_LOCK_SELECTED,
-		MENU_UNLOCK_SELECTED
+		MENU_UNLOCK_SELECTED,
+		MENU_VISIBILITY_SKELETON
 	};
 
 	Button *tool_button[TOOL_MAX];
@@ -592,7 +592,10 @@ public:
 	Ref<ArrayMesh> get_scale_gizmo(int idx) const { return scale_gizmo[idx]; }
 	Ref<ArrayMesh> get_scale_plane_gizmo(int idx) const { return scale_plane_gizmo[idx]; }
 
+	int get_skeleton_visibility_state() const;
+
 	void update_transform_gizmo();
+	void update_all_gizmos();
 
 	void select_gizmo_highlight_axis(int p_axis);
 	void set_custom_camera(Node *p_camera) { custom_camera = p_camera; }
@@ -608,7 +611,7 @@ public:
 	void add_control_to_menu_panel(Control *p_control);
 
 	VSplitContainer *get_shader_split();
-	HBoxContainer *get_palette_split();
+	HSplitContainer *get_palette_split();
 
 	Spatial *get_selected() { return selected; }
 

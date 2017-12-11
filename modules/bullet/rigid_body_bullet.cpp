@@ -176,9 +176,9 @@ PhysicsDirectSpaceState *BulletPhysicsDirectBodyState::get_space_state() {
 	return body->get_space()->get_direct_state();
 }
 
-RigidBodyBullet::KinematicUtilities::KinematicUtilities(RigidBodyBullet *p_owner)
-	: owner(p_owner),
-	  safe_margin(0.001) {
+RigidBodyBullet::KinematicUtilities::KinematicUtilities(RigidBodyBullet *p_owner) :
+		owner(p_owner),
+		safe_margin(0.001) {
 }
 
 RigidBodyBullet::KinematicUtilities::~KinematicUtilities() {
@@ -198,6 +198,8 @@ void RigidBodyBullet::KinematicUtilities::copyAllOwnerShapes() {
 
 	const CollisionObjectBullet::ShapeWrapper *shape_wrapper;
 
+	btVector3 owner_body_scale(owner->get_bt_body_scale());
+
 	for (int i = shapes_count - 1; 0 <= i; --i) {
 		shape_wrapper = &shapes_wrappers[i];
 		if (!shape_wrapper->active) {
@@ -210,28 +212,29 @@ void RigidBodyBullet::KinematicUtilities::copyAllOwnerShapes() {
 		switch (shape_wrapper->shape->get_type()) {
 			case PhysicsServer::SHAPE_SPHERE: {
 				SphereShapeBullet *sphere = static_cast<SphereShapeBullet *>(shape_wrapper->shape);
-				kin_shape_ref = ShapeBullet::create_shape_sphere(sphere->get_radius() * owner->body_scale[0] + safe_margin);
+				kin_shape_ref = ShapeBullet::create_shape_sphere(sphere->get_radius() * owner_body_scale[0] + safe_margin);
 				break;
 			}
 			case PhysicsServer::SHAPE_BOX: {
 				BoxShapeBullet *box = static_cast<BoxShapeBullet *>(shape_wrapper->shape);
-				kin_shape_ref = ShapeBullet::create_shape_box((box->get_half_extents() * owner->body_scale) + btVector3(safe_margin, safe_margin, safe_margin));
+				kin_shape_ref = ShapeBullet::create_shape_box((box->get_half_extents() * owner_body_scale) + btVector3(safe_margin, safe_margin, safe_margin));
 				break;
 			}
 			case PhysicsServer::SHAPE_CAPSULE: {
 				CapsuleShapeBullet *capsule = static_cast<CapsuleShapeBullet *>(shape_wrapper->shape);
-				kin_shape_ref = ShapeBullet::create_shape_capsule(capsule->get_radius() * owner->body_scale[0] + safe_margin, capsule->get_height() * owner->body_scale[1] + safe_margin);
+
+				kin_shape_ref = ShapeBullet::create_shape_capsule(capsule->get_radius() * owner_body_scale[0] + safe_margin, capsule->get_height() * owner_body_scale[1] + safe_margin);
 				break;
 			}
 			case PhysicsServer::SHAPE_CONVEX_POLYGON: {
 				ConvexPolygonShapeBullet *godot_convex = static_cast<ConvexPolygonShapeBullet *>(shape_wrapper->shape);
 				kin_shape_ref = ShapeBullet::create_shape_convex(godot_convex->vertices);
-				kin_shape_ref->setLocalScaling(owner->body_scale + btVector3(safe_margin, safe_margin, safe_margin));
+				kin_shape_ref->setLocalScaling(owner_body_scale + btVector3(safe_margin, safe_margin, safe_margin));
 				break;
 			}
 			case PhysicsServer::SHAPE_RAY: {
 				RayShapeBullet *godot_ray = static_cast<RayShapeBullet *>(shape_wrapper->shape);
-				kin_shape_ref = ShapeBullet::create_shape_ray(godot_ray->length * owner->body_scale[1] + safe_margin);
+				kin_shape_ref = ShapeBullet::create_shape_ray(godot_ray->length * owner_body_scale[1] + safe_margin);
 				break;
 			}
 			default:
@@ -250,22 +253,23 @@ void RigidBodyBullet::KinematicUtilities::just_delete_shapes(int new_size) {
 	shapes.resize(new_size);
 }
 
-RigidBodyBullet::RigidBodyBullet()
-	: RigidCollisionObjectBullet(CollisionObjectBullet::TYPE_RIGID_BODY),
-	  kinematic_utilities(NULL),
-	  gravity_scale(1),
-	  mass(1),
-	  linearDamp(0),
-	  angularDamp(0),
-	  can_sleep(true),
-	  force_integration_callback(NULL),
-	  isTransformChanged(false),
-	  maxCollisionsDetection(0),
-	  collisionsCount(0),
-	  maxAreasWhereIam(10),
-	  areaWhereIamCount(0),
-	  countGravityPointSpaces(0),
-	  isScratchedSpaceOverrideModificator(false) {
+RigidBodyBullet::RigidBodyBullet() :
+		RigidCollisionObjectBullet(CollisionObjectBullet::TYPE_RIGID_BODY),
+		kinematic_utilities(NULL),
+		locked_axis(0),
+		gravity_scale(1),
+		mass(1),
+		linearDamp(0),
+		angularDamp(0),
+		can_sleep(true),
+		force_integration_callback(NULL),
+		isTransformChanged(false),
+		maxCollisionsDetection(0),
+		collisionsCount(0),
+		maxAreasWhereIam(10),
+		areaWhereIamCount(0),
+		countGravityPointSpaces(0),
+		isScratchedSpaceOverrideModificator(false) {
 
 	godotMotionState = bulletnew(GodotMotionState(this));
 
@@ -277,7 +281,7 @@ RigidBodyBullet::RigidBodyBullet()
 	setupBulletCollisionObject(btBody);
 
 	set_mode(PhysicsServer::BODY_MODE_RIGID);
-	set_axis_lock(PhysicsServer::BODY_AXIS_LOCK_DISABLED);
+	reload_axis_lock();
 
 	areasWhereIam.resize(maxAreasWhereIam);
 	for (int i = areasWhereIam.size() - 1; 0 <= i; --i) {
@@ -498,25 +502,25 @@ void RigidBodyBullet::set_mode(PhysicsServer::BodyMode p_mode) {
 	switch (p_mode) {
 		case PhysicsServer::BODY_MODE_KINEMATIC:
 			mode = PhysicsServer::BODY_MODE_KINEMATIC;
-			set_axis_lock(axis_lock); // Reload axis lock
+			reload_axis_lock();
 			_internal_set_mass(0);
 			init_kinematic_utilities();
 			break;
 		case PhysicsServer::BODY_MODE_STATIC:
 			mode = PhysicsServer::BODY_MODE_STATIC;
-			set_axis_lock(axis_lock); // Reload axis lock
+			reload_axis_lock();
 			_internal_set_mass(0);
 			break;
 		case PhysicsServer::BODY_MODE_RIGID: {
 			mode = PhysicsServer::BODY_MODE_RIGID;
-			set_axis_lock(axis_lock); // Reload axis lock
+			reload_axis_lock();
 			_internal_set_mass(0 == mass ? 1 : mass);
 			scratch_space_override_modificator();
 			break;
 		}
 		case PhysicsServer::BODY_MODE_CHARACTER: {
 			mode = PhysicsServer::BODY_MODE_CHARACTER;
-			set_axis_lock(axis_lock); // Reload axis lock
+			reload_axis_lock();
 			_internal_set_mass(0 == mass ? 1 : mass);
 			scratch_space_override_modificator();
 			break;
@@ -655,39 +659,28 @@ Vector3 RigidBodyBullet::get_applied_torque() const {
 	return gTotTorq;
 }
 
-void RigidBodyBullet::set_axis_lock(PhysicsServer::BodyAxisLock p_lock) {
-	axis_lock = p_lock;
-
-	if (PhysicsServer::BODY_AXIS_LOCK_DISABLED == axis_lock) {
-		btBody->setLinearFactor(btVector3(1., 1., 1.));
-		btBody->setAngularFactor(btVector3(1., 1., 1.));
-	} else if (PhysicsServer::BODY_AXIS_LOCK_X == axis_lock) {
-		btBody->setLinearFactor(btVector3(0., 1., 1.));
-		btBody->setAngularFactor(btVector3(1., 0., 0.));
-	} else if (PhysicsServer::BODY_AXIS_LOCK_Y == axis_lock) {
-		btBody->setLinearFactor(btVector3(1., 0., 1.));
-		btBody->setAngularFactor(btVector3(0., 1., 0.));
-	} else if (PhysicsServer::BODY_AXIS_LOCK_Z == axis_lock) {
-		btBody->setLinearFactor(btVector3(1., 1., 0.));
-		btBody->setAngularFactor(btVector3(0., 0., 1.));
+void RigidBodyBullet::set_axis_lock(PhysicsServer::BodyAxis p_axis, bool lock) {
+	if (lock) {
+		locked_axis |= p_axis;
+	} else {
+		locked_axis &= ~p_axis;
 	}
 
-	if (PhysicsServer::BODY_MODE_CHARACTER == mode) {
-		/// When character lock angular
-		btBody->setAngularFactor(btVector3(0., 0., 0.));
-	}
+	reload_axis_lock();
 }
 
-PhysicsServer::BodyAxisLock RigidBodyBullet::get_axis_lock() const {
-	btVector3 vec = btBody->getLinearFactor();
-	if (0. == vec.x()) {
-		return PhysicsServer::BODY_AXIS_LOCK_X;
-	} else if (0. == vec.y()) {
-		return PhysicsServer::BODY_AXIS_LOCK_Y;
-	} else if (0. == vec.z()) {
-		return PhysicsServer::BODY_AXIS_LOCK_Z;
+bool RigidBodyBullet::is_axis_locked(PhysicsServer::BodyAxis p_axis) const {
+	return locked_axis & p_axis;
+}
+
+void RigidBodyBullet::reload_axis_lock() {
+
+	btBody->setLinearFactor(btVector3(!is_axis_locked(PhysicsServer::BODY_AXIS_LINEAR_X), !is_axis_locked(PhysicsServer::BODY_AXIS_LINEAR_Y), !is_axis_locked(PhysicsServer::BODY_AXIS_LINEAR_Z)));
+	if (PhysicsServer::BODY_MODE_CHARACTER == mode) {
+		/// When character angular is always locked
+		btBody->setAngularFactor(btVector3(0., 0., 0.));
 	} else {
-		return PhysicsServer::BODY_AXIS_LOCK_DISABLED;
+		btBody->setAngularFactor(btVector3(!is_axis_locked(PhysicsServer::BODY_AXIS_ANGULAR_X), !is_axis_locked(PhysicsServer::BODY_AXIS_ANGULAR_Y), !is_axis_locked(PhysicsServer::BODY_AXIS_ANGULAR_Z)));
 	}
 }
 

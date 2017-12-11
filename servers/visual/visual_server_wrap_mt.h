@@ -62,7 +62,7 @@ class VisualServerWrapMT : public VisualServer {
 
 	int pool_max_size;
 
-//#define DEBUG_SYNC
+	//#define DEBUG_SYNC
 
 #ifdef DEBUG_SYNC
 #define SYNC_DEBUG print_line("sync on: " + String(__FUNCTION__));
@@ -99,6 +99,8 @@ public:
 	FUNC1(texture_debug_usage, List<TextureInfo> *)
 
 	FUNC1(textures_keep_original, bool)
+
+	FUNC2(texture_set_proxy, RID, RID)
 
 	/* SKY API */
 
@@ -465,6 +467,7 @@ public:
 
 	FUNC6(canvas_item_add_line, RID, const Point2 &, const Point2 &, const Color &, float, bool)
 	FUNC5(canvas_item_add_polyline, RID, const Vector<Point2> &, const Vector<Color> &, float, bool)
+	FUNC5(canvas_item_add_multiline, RID, const Vector<Point2> &, const Vector<Color> &, float, bool)
 	FUNC3(canvas_item_add_rect, RID, const Rect2 &, const Color &)
 	FUNC4(canvas_item_add_circle, RID, const Point2 &, float, const Color &)
 	FUNC7(canvas_item_add_texture_rect, RID, const Rect2 &, RID, bool, const Color &, bool, RID)

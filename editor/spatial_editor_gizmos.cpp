@@ -1316,6 +1316,34 @@ void SkeletonSpatialGizmo::redraw() {
 
 	Color gizmo_color = EDITOR_GET("editors/3d_gizmos/gizmo_colors/skeleton");
 	Ref<Material> material = create_material("skeleton_material", gizmo_color);
+	SpatialMaterial *sm = Object::cast_to<SpatialMaterial>(material.ptr());
+
+	{ // Reset
+		Color c(sm->get_albedo());
+		c.a = 1;
+		sm->set_albedo(c);
+	}
+	if (sm) {
+		switch (SpatialEditor::get_singleton()->get_skeleton_visibility_state()) {
+			case 0: {
+				// Hidden
+				Color c(sm->get_albedo());
+				c.a = 0;
+				sm->set_albedo(c);
+				sm->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
+			} break;
+			case 1:
+				// Visible
+				sm->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, false);
+				sm->set_render_priority(SpatialMaterial::RENDER_PRIORITY_MIN);
+				sm->set_flag(SpatialMaterial::FLAG_DISABLE_DEPTH_TEST, false);
+				break;
+			case 2:
+				// x-ray
+				sm->set_on_top_of_alpha();
+				break;
+		}
+	}
 
 	Ref<SurfaceTool> surface_tool(memnew(SurfaceTool));
 
@@ -2943,10 +2971,10 @@ void SliderJointSpatialGizmo::redraw() {
 
 	float ll = p3d->get_param(SliderJoint::PARAM_ANGULAR_LIMIT_LOWER);
 	float ul = p3d->get_param(SliderJoint::PARAM_ANGULAR_LIMIT_UPPER);
-	float lll = -p3d->get_param(SliderJoint::PARAM_LINEAR_LIMIT_LOWER);
-	float lul = -p3d->get_param(SliderJoint::PARAM_LINEAR_LIMIT_UPPER);
+	float lll = p3d->get_param(SliderJoint::PARAM_LINEAR_LIMIT_LOWER);
+	float lul = p3d->get_param(SliderJoint::PARAM_LINEAR_LIMIT_UPPER);
 
-	if (lll > lul) {
+	if (lll <= lul) {
 
 		cursor_points.push_back(Vector3(lul, 0, 0));
 		cursor_points.push_back(Vector3(lll, 0, 0));
@@ -3139,8 +3167,8 @@ void Generic6DOFJointSpatialGizmo::redraw() {
 			case 0:
 				ll = p3d->get_param_x(Generic6DOFJoint::PARAM_ANGULAR_LOWER_LIMIT);
 				ul = p3d->get_param_x(Generic6DOFJoint::PARAM_ANGULAR_UPPER_LIMIT);
-				lll = -p3d->get_param_x(Generic6DOFJoint::PARAM_LINEAR_LOWER_LIMIT);
-				lul = -p3d->get_param_x(Generic6DOFJoint::PARAM_LINEAR_UPPER_LIMIT);
+				lll = p3d->get_param_x(Generic6DOFJoint::PARAM_LINEAR_LOWER_LIMIT);
+				lul = p3d->get_param_x(Generic6DOFJoint::PARAM_LINEAR_UPPER_LIMIT);
 				enable_ang = p3d->get_flag_x(Generic6DOFJoint::FLAG_ENABLE_ANGULAR_LIMIT);
 				enable_lin = p3d->get_flag_x(Generic6DOFJoint::FLAG_ENABLE_LINEAR_LIMIT);
 				a1 = 0;
@@ -3150,25 +3178,26 @@ void Generic6DOFJointSpatialGizmo::redraw() {
 			case 1:
 				ll = p3d->get_param_y(Generic6DOFJoint::PARAM_ANGULAR_LOWER_LIMIT);
 				ul = p3d->get_param_y(Generic6DOFJoint::PARAM_ANGULAR_UPPER_LIMIT);
-				lll = -p3d->get_param_y(Generic6DOFJoint::PARAM_LINEAR_LOWER_LIMIT);
-				lul = -p3d->get_param_y(Generic6DOFJoint::PARAM_LINEAR_UPPER_LIMIT);
+				lll = p3d->get_param_y(Generic6DOFJoint::PARAM_LINEAR_LOWER_LIMIT);
+				lul = p3d->get_param_y(Generic6DOFJoint::PARAM_LINEAR_UPPER_LIMIT);
 				enable_ang = p3d->get_flag_y(Generic6DOFJoint::FLAG_ENABLE_ANGULAR_LIMIT);
 				enable_lin = p3d->get_flag_y(Generic6DOFJoint::FLAG_ENABLE_LINEAR_LIMIT);
-				a1 = 2;
-				a2 = 0;
-				a3 = 1;
-				break;
-			case 2:
-				ll = p3d->get_param_z(Generic6DOFJoint::PARAM_ANGULAR_LOWER_LIMIT);
-				ul = p3d->get_param_z(Generic6DOFJoint::PARAM_ANGULAR_UPPER_LIMIT);
-				lll = -p3d->get_param_z(Generic6DOFJoint::PARAM_LINEAR_LOWER_LIMIT);
-				lul = -p3d->get_param_z(Generic6DOFJoint::PARAM_LINEAR_UPPER_LIMIT);
-				enable_ang = p3d->get_flag_z(Generic6DOFJoint::FLAG_ENABLE_ANGULAR_LIMIT);
-				enable_lin = p3d->get_flag_z(Generic6DOFJoint::FLAG_ENABLE_LINEAR_LIMIT);
 
 				a1 = 1;
 				a2 = 2;
 				a3 = 0;
+				break;
+			case 2:
+				ll = p3d->get_param_z(Generic6DOFJoint::PARAM_ANGULAR_LOWER_LIMIT);
+				ul = p3d->get_param_z(Generic6DOFJoint::PARAM_ANGULAR_UPPER_LIMIT);
+				lll = p3d->get_param_z(Generic6DOFJoint::PARAM_LINEAR_LOWER_LIMIT);
+				lul = p3d->get_param_z(Generic6DOFJoint::PARAM_LINEAR_UPPER_LIMIT);
+				enable_ang = p3d->get_flag_z(Generic6DOFJoint::FLAG_ENABLE_ANGULAR_LIMIT);
+				enable_lin = p3d->get_flag_z(Generic6DOFJoint::FLAG_ENABLE_LINEAR_LIMIT);
+
+				a1 = 2;
+				a2 = 0;
+				a3 = 1;
 				break;
 		}
 
@@ -3190,7 +3219,7 @@ void Generic6DOFJointSpatialGizmo::redraw() {
 		what = v;              \
 	}
 
-		if (enable_lin && lll >= lul) {
+		if (enable_lin && lll <= lul) {
 
 			ADD_VTX(lul, 0, 0);
 			ADD_VTX(lll, 0, 0);

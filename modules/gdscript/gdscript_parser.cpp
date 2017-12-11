@@ -2976,10 +2976,9 @@ void GDScriptParser::_parse_extends(ClassNode *p_class) {
 
 			case GDScriptTokenizer::TK_IDENTIFIER: {
 
-					StringName identifier = tokenizer->get_token_identifier();
-					p_class->extends_class.push_back(identifier);
-				}
-				break;
+				StringName identifier = tokenizer->get_token_identifier();
+				p_class->extends_class.push_back(identifier);
+			} break;
 
 			case GDScriptTokenizer::TK_PERIOD:
 				break;
@@ -3388,6 +3387,10 @@ void GDScriptParser::_parse_class(ClassNode *p_class) {
 						Variant::Type type = tokenizer->get_token_type();
 						if (type == Variant::NIL) {
 							_set_error("Can't export null type.");
+							return;
+						}
+						if (type == Variant::OBJECT) {
+							_set_error("Can't export raw object type.");
 							return;
 						}
 						current_export.type = type;

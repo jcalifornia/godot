@@ -78,10 +78,10 @@ void BulletPhysicsServer::_bind_methods() {
 	//ClassDB::bind_method(D_METHOD("DoTest"), &BulletPhysicsServer::DoTest);
 }
 
-BulletPhysicsServer::BulletPhysicsServer()
-	: PhysicsServer(),
-	  active(true),
-	  active_spaces_count(0) {}
+BulletPhysicsServer::BulletPhysicsServer() :
+		PhysicsServer(),
+		active(true),
+		active_spaces_count(0) {}
 
 BulletPhysicsServer::~BulletPhysicsServer() {}
 
@@ -723,16 +723,16 @@ void BulletPhysicsServer::body_set_axis_velocity(RID p_body, const Vector3 &p_ax
 	body->set_linear_velocity(v);
 }
 
-void BulletPhysicsServer::body_set_axis_lock(RID p_body, PhysicsServer::BodyAxisLock p_lock) {
+void BulletPhysicsServer::body_set_axis_lock(RID p_body, BodyAxis p_axis, bool p_lock) {
 	RigidBodyBullet *body = rigid_body_owner.get(p_body);
 	ERR_FAIL_COND(!body);
-	body->set_axis_lock(p_lock);
+	body->set_axis_lock(p_axis, p_lock);
 }
 
-PhysicsServer::BodyAxisLock BulletPhysicsServer::body_get_axis_lock(RID p_body) const {
+bool BulletPhysicsServer::body_is_axis_locked(RID p_body, BodyAxis p_axis) const {
 	const RigidBodyBullet *body = rigid_body_owner.get(p_body);
-	ERR_FAIL_COND_V(!body, BODY_AXIS_LOCK_DISABLED);
-	return body->get_axis_lock();
+	ERR_FAIL_COND_V(!body, 0);
+	return body->is_axis_locked(p_axis);
 }
 
 void BulletPhysicsServer::body_add_collision_exception(RID p_body, RID p_body_b) {
@@ -798,7 +798,7 @@ bool BulletPhysicsServer::body_is_omitting_force_integration(RID p_body) const {
 void BulletPhysicsServer::body_set_force_integration_callback(RID p_body, Object *p_receiver, const StringName &p_method, const Variant &p_udata) {
 	RigidBodyBullet *body = rigid_body_owner.get(p_body);
 	ERR_FAIL_COND(!body);
-	body->set_force_integration_callback(p_receiver->get_instance_id(), p_method, p_udata);
+	body->set_force_integration_callback(p_receiver ? p_receiver->get_instance_id() : ObjectID(0), p_method, p_udata);
 }
 
 void BulletPhysicsServer::body_set_ray_pickable(RID p_body, bool p_enable) {

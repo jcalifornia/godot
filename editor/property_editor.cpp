@@ -70,7 +70,7 @@ void EditorResourceConversionPlugin::_bind_methods() {
 	mi.name = "_handles";
 	mi.return_val = PropertyInfo(Variant::BOOL, "");
 
-	BIND_VMETHOD(MethodInfo(Variant::BOOL, "_converts_to"));
+	BIND_VMETHOD(MethodInfo(Variant::STRING, "_converts_to"));
 }
 
 String EditorResourceConversionPlugin::converts_to() const {
@@ -430,24 +430,19 @@ bool CustomPropertyEditor::edit(Object *p_owner, const String &p_name, Variant::
 
 			} else if (hint == PROPERTY_HINT_LAYERS_2D_PHYSICS || hint == PROPERTY_HINT_LAYERS_2D_RENDER || hint == PROPERTY_HINT_LAYERS_3D_PHYSICS || hint == PROPERTY_HINT_LAYERS_3D_RENDER) {
 
-				String title;
 				String basename;
 				switch (hint) {
 					case PROPERTY_HINT_LAYERS_2D_RENDER:
 						basename = "layer_names/2d_render";
-						title = "2D Render Layers";
 						break;
 					case PROPERTY_HINT_LAYERS_2D_PHYSICS:
 						basename = "layer_names/2d_physics";
-						title = "2D Physics Layers";
 						break;
 					case PROPERTY_HINT_LAYERS_3D_RENDER:
 						basename = "layer_names/3d_render";
-						title = "3D Render Layers";
 						break;
 					case PROPERTY_HINT_LAYERS_3D_PHYSICS:
 						basename = "layer_names/3d_physics";
-						title = "3D Physics Layers";
 						break;
 				}
 
@@ -469,11 +464,7 @@ bool CustomPropertyEditor::edit(Object *p_owner, const String &p_name, Variant::
 
 				show();
 
-				value_label[0]->set_text(title);
-				value_label[0]->show();
-				value_label[0]->set_position(Vector2(4, 4) * EDSCALE);
-
-				checks20gc->set_position(Vector2(4, 4) * EDSCALE + Vector2(0, value_label[0]->get_size().height + 4 * EDSCALE));
+				checks20gc->set_position(Vector2(4, 4) * EDSCALE);
 				checks20gc->set_size(checks20gc->get_minimum_size());
 
 				set_size(Vector2(4, 4) * EDSCALE + checks20gc->get_position() + checks20gc->get_size());
@@ -656,7 +647,7 @@ bool CustomPropertyEditor::edit(Object *p_owner, const String &p_name, Variant::
 					}
 				}
 
-				if (type)
+				if (type != Variant::NIL)
 					property_select->select_property_from_basic_type(type, v);
 
 				updating = false;
@@ -1948,6 +1939,7 @@ CustomPropertyEditor::CustomPropertyEditor() {
 	type_button->get_popup()->connect("id_pressed", this, "_type_create_selected");
 
 	menu = memnew(PopupMenu);
+	menu->set_pass_on_modal_close_click(false);
 	add_child(menu);
 	menu->connect("id_pressed", this, "_menu_option");
 
@@ -2099,6 +2091,23 @@ bool PropertyEditor::_is_property_different(const Variant &p_current, const Vari
 	}
 
 	return bool(Variant::evaluate(Variant::OP_NOT_EQUAL, p_current, p_orig));
+}
+
+bool PropertyEditor::_is_instanced_node_with_original_property_different(const String &p_name, TreeItem *item) {
+	bool mbi = _might_be_in_instance();
+	if (mbi) {
+		Variant vorig;
+		Dictionary d = item->get_metadata(0);
+		int usage = d.has("usage") ? int(int(d["usage"]) & (PROPERTY_USAGE_STORE_IF_NONONE | PROPERTY_USAGE_STORE_IF_NONZERO)) : 0;
+		if (_get_instanced_node_original_property(p_name, vorig) || usage) {
+			Variant v = obj->get(p_name);
+
+			if (_is_property_different(v, vorig, usage)) {
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 TreeItem *PropertyEditor::find_item(TreeItem *p_item, const String &p_name) {
@@ -2358,6 +2367,10 @@ void PropertyEditor::_check_reload_status(const String &p_name, TreeItem *item) 
 			is_disabled = item->is_button_disabled(1, i);
 			break;
 		}
+	}
+
+	if (_is_instanced_node_with_original_property_different(p_name, item)) {
+		has_reload = true;
 	}
 
 	if (obj->call("property_can_revert", p_name).operator bool()) {
@@ -2665,18 +2678,14 @@ TreeItem *PropertyEditor::get_parent_node(String p_path, HashMap<String, TreeIte
 		item->set_editable(1, false);
 		item->set_selectable(1, subsection_selectable);
 
-		if (use_folding || folding_behaviour != FB_UNDEFINED) { // Even if you disabled folding (expand all by default), you still can collapse all manually.
+		if (use_folding) { //
 			if (!obj->editor_is_section_unfolded(p_path)) {
 				updating_folding = true;
-				if (folding_behaviour == FB_COLLAPSEALL)
-					item->set_collapsed(true);
-				else if (folding_behaviour == FB_EXPANDALL || is_expandall_enabled)
-					item->set_collapsed(false);
-				else
-					item->set_collapsed(true);
+				item->set_collapsed(true);
 				updating_folding = false;
 			}
 			item->set_metadata(0, p_path);
+			foldable_property_cache.push_back(p_path);
 		}
 
 		if (item->get_parent() == root) {
@@ -2725,6 +2734,7 @@ void PropertyEditor::refresh() {
 void PropertyEditor::update_tree() {
 
 	tree->clear();
+	foldable_property_cache.clear();
 
 	if (!obj)
 		return;
@@ -2793,13 +2803,12 @@ void PropertyEditor::update_tree() {
 			TreeItem *sep = tree->create_item(root);
 			current_category = sep;
 			String type = p.name;
-			//*
+
 			if (has_icon(type, "EditorIcons"))
 				sep->set_icon(0, get_icon(type, "EditorIcons"));
 			else
 				sep->set_icon(0, get_icon("Object", "EditorIcons"));
 
-			//*/
 			sep->set_text(0, type);
 			sep->set_expand_right(0, true);
 			sep->set_selectable(0, false);
@@ -2925,38 +2934,36 @@ void PropertyEditor::update_tree() {
 		}
 
 		if (use_doc_hints) {
-			StringName setter;
-			StringName type;
-			if (ClassDB::get_setter_and_type_for_property(obj->get_class_name(), p.name, type, setter)) {
 
-				String descr;
-				bool found = false;
-				Map<StringName, Map<StringName, String> >::Element *E = descr_cache.find(type);
-				if (E) {
+			StringName classname = obj->get_class_name();
+			StringName propname = p.name;
+			String descr;
+			bool found = false;
 
-					Map<StringName, String>::Element *F = E->get().find(setter);
-					if (F) {
-						found = true;
-						descr = F->get();
-					}
+			Map<StringName, Map<StringName, String> >::Element *E = descr_cache.find(classname);
+			if (E) {
+				Map<StringName, String>::Element *F = E->get().find(propname);
+				if (F) {
+					found = true;
+					descr = F->get();
 				}
-				if (!found) {
+			}
 
-					DocData *dd = EditorHelp::get_doc_data();
-					Map<String, DocData::ClassDoc>::Element *E = dd->class_list.find(type);
-					if (E) {
-						for (int i = 0; i < E->get().methods.size(); i++) {
-							if (E->get().methods[i].name == setter.operator String()) {
-								descr = E->get().methods[i].description.strip_edges().word_wrap(80);
-							}
+			if (!found) {
+				DocData *dd = EditorHelp::get_doc_data();
+				Map<String, DocData::ClassDoc>::Element *E = dd->class_list.find(classname);
+				if (E) {
+					for (int i = 0; i < E->get().properties.size(); i++) {
+						if (E->get().properties[i].name == propname.operator String()) {
+							descr = E->get().properties[i].description.strip_edges().word_wrap(80);
 						}
 					}
-
-					descr_cache[type][setter] = descr;
 				}
 
-				item->set_tooltip(0, TTR("Property:") + " " + p.name + "\n\n" + descr);
+				descr_cache[classname][propname] = descr;
 			}
+
+			item->set_tooltip(0, TTR("Property:") + " " + p.name + "\n\n" + descr);
 		}
 
 		Dictionary d;
@@ -3081,7 +3088,7 @@ void PropertyEditor::update_tree() {
 						item->set_text(1, type + " ID: " + itos(id));
 						item->add_button(1, get_icon("EditResource", "EditorIcons"));
 					} else {
-						item->set_text(1, "[Empty]");
+						item->set_text(1, TTR("[Empty]"));
 					}
 
 					if (has_icon(p.hint_string, "EditorIcons")) {
@@ -3512,20 +3519,9 @@ void PropertyEditor::update_tree() {
 
 		bool has_reload = false;
 
-		bool mbi = _might_be_in_instance();
-		if (mbi) {
-
-			Variant vorig;
-			Dictionary d = item->get_metadata(0);
-			int usage = d.has("usage") ? int(int(d["usage"]) & (PROPERTY_USAGE_STORE_IF_NONONE | PROPERTY_USAGE_STORE_IF_NONZERO)) : 0;
-			if (_get_instanced_node_original_property(p.name, vorig) || usage) {
-				Variant v = obj->get(p.name);
-
-				if (_is_property_different(v, vorig, usage)) {
-					item->add_button(1, get_icon("ReloadSmall", "EditorIcons"), 3);
-					has_reload = true;
-				}
-			}
+		if (_is_instanced_node_with_original_property_different(p.name, item)) {
+			item->add_button(1, get_icon("ReloadSmall", "EditorIcons"), 3);
+			has_reload = true;
 		}
 
 		if (obj->call("property_can_revert", p.name).operator bool()) {
@@ -3545,7 +3541,7 @@ void PropertyEditor::update_tree() {
 			}
 		}
 
-		if (mbi && !has_reload && item->get_cell_mode(1) == TreeItem::CELL_MODE_RANGE && item->get_text(1) == String()) {
+		if (_might_be_in_instance() && !has_reload && item->get_cell_mode(1) == TreeItem::CELL_MODE_RANGE && item->get_text(1) == String()) {
 			item->add_button(1, get_icon("ReloadEmpty", "EditorIcons"), 3, true);
 		}
 	}
@@ -3733,8 +3729,8 @@ void PropertyEditor::_item_edited() {
 				_edit_set(name, item->get_text(1), refresh_all);
 			}
 		} break;
-			// math types
 
+		// math types
 		case Variant::VECTOR3: {
 
 		} break;
@@ -4212,29 +4208,29 @@ void PropertyEditor::set_subsection_selectable(bool p_selectable) {
 	update_tree();
 }
 
-bool PropertyEditor::is_expand_all_properties_enabled() const {
-
-	return (use_folding == false);
-}
-
 void PropertyEditor::set_use_folding(bool p_enable) {
 
 	use_folding = p_enable;
 	tree->set_hide_folding(false);
 }
 
-void PropertyEditor::collapse_all_parent_nodes() {
-
-	folding_behaviour = FB_COLLAPSEALL;
+void PropertyEditor::collapse_all_folding() {
+	if (!obj)
+		return;
+	for (List<String>::Element *E = foldable_property_cache.front(); E; E = E->next()) {
+		obj->editor_set_section_unfold(E->get(), false);
+	}
 	update_tree();
-	folding_behaviour = FB_UNDEFINED;
 }
 
-void PropertyEditor::expand_all_parent_nodes() {
+void PropertyEditor::expand_all_folding() {
 
-	folding_behaviour = FB_EXPANDALL;
+	if (!obj)
+		return;
+	for (List<String>::Element *E = foldable_property_cache.front(); E; E = E->next()) {
+		obj->editor_set_section_unfold(E->get(), true);
+	}
 	update_tree();
-	folding_behaviour = FB_UNDEFINED;
 }
 
 PropertyEditor::PropertyEditor() {
@@ -4281,6 +4277,7 @@ PropertyEditor::PropertyEditor() {
 	set_physics_process(true);
 
 	custom_editor = memnew(CustomPropertyEditor);
+	custom_editor->set_pass_on_modal_close_click(false);
 	add_child(custom_editor);
 
 	tree->connect("custom_popup_edited", this, "_custom_editor_request");
@@ -4309,8 +4306,6 @@ PropertyEditor::PropertyEditor() {
 	subsection_selectable = false;
 	property_selectable = false;
 	show_type_icons = false; // maybe one day will return.
-	folding_behaviour = FB_UNDEFINED;
-	is_expandall_enabled = bool(EDITOR_DEF("interface/editor/expand_all_properties", true));
 }
 
 PropertyEditor::~PropertyEditor() {
@@ -4369,7 +4364,7 @@ class SectionedPropertyEditorFilter : public Object {
 			PropertyInfo pi = E->get();
 			int sp = pi.name.find("/");
 
-			if (pi.name == "resource_path" || pi.name == "resource_name" || pi.name.begins_with("script/")) //skip resource stuff
+			if (pi.name == "resource_path" || pi.name == "resource_name" || pi.name == "resource_local_to_scene" || pi.name.begins_with("script/")) //skip resource stuff
 				continue;
 
 			if (sp == -1) {
@@ -4519,7 +4514,7 @@ void SectionedPropertyEditor::update_category_list() {
 		else if (!(pi.usage & PROPERTY_USAGE_EDITOR))
 			continue;
 
-		if (pi.name.find(":") != -1 || pi.name == "script" || pi.name == "resource_name" || pi.name == "resource_path")
+		if (pi.name.find(":") != -1 || pi.name == "script" || pi.name == "resource_name" || pi.name == "resource_path" || pi.name == "resource_local_to_scene")
 			continue;
 
 		if (search_box && search_box->get_text() != String() && pi.name.findn(search_box->get_text()) == -1)

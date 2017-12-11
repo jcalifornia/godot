@@ -215,6 +215,13 @@ bool ShaderMaterial::_can_do_next_pass() const {
 	return shader.is_valid() && shader->get_mode() == Shader::MODE_SPATIAL;
 }
 
+Shader::Mode ShaderMaterial::get_shader_mode() const {
+	if (shader.is_valid())
+		return shader->get_mode();
+	else
+		return Shader::MODE_SPATIAL;
+}
+
 ShaderMaterial::ShaderMaterial() {
 }
 
@@ -687,6 +694,10 @@ void SpatialMaterial::_update_shader() {
 		} else {
 			code += "\tvec4 albedo_tex = texture(texture_albedo,base_uv);\n";
 		}
+	}
+
+	if (flags[FLAG_ALBEDO_TEXTURE_FORCE_SRGB]) {
+		code += "\talbedo_tex.rgb = mix(pow((albedo_tex.rgb + vec3(0.055)) * (1.0 / (1.0 + 0.055)),vec3(2.4)),albedo_tex.rgb.rgb * (1.0 / 12.92),lessThan(albedo_tex.rgb,vec3(0.04045)));\n";
 	}
 
 	if (flags[FLAG_ALBEDO_FROM_VERTEX_COLOR]) {
@@ -1658,6 +1669,11 @@ RID SpatialMaterial::get_shader_rid() const {
 	return shader_map[current_key].shader;
 }
 
+Shader::Mode SpatialMaterial::get_shader_mode() const {
+
+	return Shader::MODE_SPATIAL;
+}
+
 void SpatialMaterial::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("set_albedo", "albedo"), &SpatialMaterial::set_albedo);
@@ -1833,6 +1849,7 @@ void SpatialMaterial::_bind_methods() {
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "flags_use_point_size"), "set_flag", "get_flag", FLAG_USE_POINT_SIZE);
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "flags_world_triplanar"), "set_flag", "get_flag", FLAG_TRIPLANAR_USE_WORLD);
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "flags_fixed_size"), "set_flag", "get_flag", FLAG_FIXED_SIZE);
+	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "flags_albedo_tex_force_srgb"), "set_flag", "get_flag", FLAG_ALBEDO_TEXTURE_FORCE_SRGB);
 	ADD_GROUP("Vertex Color", "vertex_color");
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "vertex_color_use_as_albedo"), "set_flag", "get_flag", FLAG_ALBEDO_FROM_VERTEX_COLOR);
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "vertex_color_is_srgb"), "set_flag", "get_flag", FLAG_SRGB_VERTEX_COLOR);
@@ -2019,6 +2036,7 @@ void SpatialMaterial::_bind_methods() {
 	BIND_ENUM_CONSTANT(FLAG_AO_ON_UV2);
 	BIND_ENUM_CONSTANT(FLAG_USE_ALPHA_SCISSOR);
 	BIND_ENUM_CONSTANT(FLAG_TRIPLANAR_USE_WORLD);
+	BIND_ENUM_CONSTANT(FLAG_ALBEDO_TEXTURE_FORCE_SRGB);
 	BIND_ENUM_CONSTANT(FLAG_MAX);
 
 	BIND_ENUM_CONSTANT(DIFFUSE_BURLEY);
@@ -2048,8 +2066,8 @@ void SpatialMaterial::_bind_methods() {
 	BIND_ENUM_CONSTANT(EMISSION_OP_MULTIPLY);
 }
 
-SpatialMaterial::SpatialMaterial()
-	: element(this) {
+SpatialMaterial::SpatialMaterial() :
+		element(this) {
 
 	//initialize to right values
 	set_albedo(Color(1.0, 1.0, 1.0, 1.0));

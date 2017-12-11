@@ -86,7 +86,7 @@ Files extracted from upstream source:
 ## glad
 
 - Upstream: https://github.com/Dav1dde/glad
-- Version: 0.1.14a0
+- Version: 0.1.16a0
 - License: MIT
 
 The files we package are automatically generated.
@@ -266,6 +266,19 @@ Collection of single-file libraries used in Godot components.
   * Version: ?
   * License: BSD
 
+### poshlib
+
+- Upstream: http://poshlib.hookatooka.com/poshlib/trac.cgi (username guest, password guest123)
+- Version: 1.3.002 
+- License: MIT
+
+Files extracted from the upstream source:
+
+- posh.c
+- posh.h
+
+(no license file was included with the upstream distribution)
+
 ### scene
 
 - `mikktspace.{c,h}`
@@ -281,6 +294,16 @@ Collection of single-file libraries used in Godot components.
   * Version: 1.11
   * License: Public Domain (Unlicense) or MIT
 
+## thekla_atlas
+
+- Upstream: https://github.com/Thekla/thekla_atlas
+- Version: 80a1430 (git)
+- License: zlib
+
+Files extracted from the upstream source:
+
+- Relevant sources from src/
+- License.txt
 
 ## nanosvg
 
@@ -390,16 +413,12 @@ Files extracted from upstream source:
 ## tinyexr
 
 - Upstream: https://github.com/syoyo/tinyexr
-- Version: 0.9.5+ (git a145d69)
+- Version: 0.9.5+ (git 9f784ca - 24 October 2017)
 - License: BSD-3-Clause
 
 Files extracted from upstream source:
 
 - `tinyexr.{cc,h}`
-
-Important: Some changes were made to get TinyEXR to build on the ancient
-MinGW-w64 toolchain of Travis CI.
-https://github.com/godotengine/godot/commit/37f5e1dcd94611dd5b670f013abf0323e8b47def
 
 
 ## zlib

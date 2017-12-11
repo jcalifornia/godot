@@ -45,15 +45,15 @@ struct _GlobalConstant {
 	_GlobalConstant() {}
 
 #ifdef DEBUG_METHODS_ENABLED
-	_GlobalConstant(const StringName &p_enum_name, const char *p_name, int p_value)
-		: enum_name(p_enum_name),
-		  name(p_name),
-		  value(p_value) {
+	_GlobalConstant(const StringName &p_enum_name, const char *p_name, int p_value) :
+			enum_name(p_enum_name),
+			name(p_name),
+			value(p_value) {
 	}
 #else
-	_GlobalConstant(const char *p_name, int p_value)
-		: name(p_name),
-		  value(p_value) {
+	_GlobalConstant(const char *p_name, int p_value) :
+			name(p_name),
+			value(p_value) {
 	}
 #endif
 };
@@ -491,7 +491,6 @@ void register_global_constants() {
 	BIND_GLOBAL_ENUM_CONSTANT(ERR_BUSY);
 	BIND_GLOBAL_ENUM_CONSTANT(ERR_HELP); ///< user requested help!!
 	BIND_GLOBAL_ENUM_CONSTANT(ERR_BUG); ///< a bug in the software certainly happened ), due to a double check failing or unexpected behavior.
-	BIND_GLOBAL_ENUM_CONSTANT(ERR_WTF);
 
 	BIND_GLOBAL_ENUM_CONSTANT(PROPERTY_HINT_NONE);
 	BIND_GLOBAL_ENUM_CONSTANT(PROPERTY_HINT_RANGE);

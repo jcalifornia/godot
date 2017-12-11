@@ -116,8 +116,8 @@ public:
 		virtual void base_changed() = 0;
 		virtual void base_material_changed() = 0;
 
-		InstanceBase()
-			: dependency_item(this) {
+		InstanceBase() :
+				dependency_item(this) {
 
 			base_type = VS::INSTANCE_NONE;
 			cast_shadows = VS::SHADOW_CASTING_SETTING_ON;
@@ -192,6 +192,8 @@ public:
 	virtual void texture_set_detect_normal_callback(RID p_texture, VisualServer::TextureDetectCallback p_callback, void *p_userdata) = 0;
 
 	virtual void textures_keep_original(bool p_enable) = 0;
+
+	virtual void texture_set_proxy(RID p_proxy, RID p_base) = 0;
 
 	/* SKY API */
 
@@ -634,6 +636,7 @@ public:
 		struct CommandPolyLine : public Command {
 
 			bool antialiased;
+			bool multiline;
 			Vector<Point2> triangles;
 			Vector<Color> triangle_colors;
 			Vector<Point2> lines;
@@ -641,6 +644,7 @@ public:
 			CommandPolyLine() {
 				type = TYPE_POLYLINE;
 				antialiased = false;
+				multiline = false;
 			}
 		};
 

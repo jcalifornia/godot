@@ -242,6 +242,9 @@ public:
 
 	struct Texture : public RID_Data {
 
+		Texture *proxy;
+		Set<Texture *> proxy_owners;
+
 		String path;
 		uint32_t flags;
 		int width, height;
@@ -301,6 +304,15 @@ public:
 			detect_srgb_ud = NULL;
 			detect_normal = NULL;
 			detect_normal_ud = NULL;
+			proxy = NULL;
+		}
+
+		_ALWAYS_INLINE_ Texture *get_ptr() {
+			if (proxy) {
+				return proxy; //->get_ptr(); only one level of indirection, else not inlining possible.
+			} else {
+				return this;
+			}
 		}
 
 		~Texture() {
@@ -308,6 +320,14 @@ public:
 			if (tex_id != 0) {
 
 				glDeleteTextures(1, &tex_id);
+			}
+
+			for (Set<Texture *>::Element *E = proxy_owners.front(); E; E = E->next()) {
+				E->get()->proxy = NULL;
+			}
+
+			if (proxy) {
+				proxy->proxy_owners.erase(this);
 			}
 		}
 	};
@@ -342,6 +362,8 @@ public:
 	virtual void texture_set_detect_3d_callback(RID p_texture, VisualServer::TextureDetectCallback p_callback, void *p_userdata);
 	virtual void texture_set_detect_srgb_callback(RID p_texture, VisualServer::TextureDetectCallback p_callback, void *p_userdata);
 	virtual void texture_set_detect_normal_callback(RID p_texture, VisualServer::TextureDetectCallback p_callback, void *p_userdata);
+
+	virtual void texture_set_proxy(RID p_texture, RID p_proxy);
 
 	/* SKY API */
 
@@ -453,6 +475,7 @@ public:
 			bool uses_time;
 			bool writes_modelview_or_projection;
 			bool uses_vertex_lighting;
+			bool uses_world_coordinates;
 
 		} spatial;
 
@@ -463,8 +486,8 @@ public:
 		bool uses_vertex_time;
 		bool uses_fragment_time;
 
-		Shader()
-			: dirty_list(this) {
+		Shader() :
+				dirty_list(this) {
 
 			shader = NULL;
 			ubo_size = 0;
@@ -517,8 +540,9 @@ public:
 		bool can_cast_shadow_cache;
 		bool is_animated_cache;
 
-		Material()
-			: list(this), dirty_list(this) {
+		Material() :
+				list(this),
+				dirty_list(this) {
 			can_cast_shadow_cache = false;
 			is_animated_cache = false;
 			shader = NULL;
@@ -741,8 +765,9 @@ public:
 		bool dirty_aabb;
 		bool dirty_data;
 
-		MultiMesh()
-			: update_list(this), mesh_list(this) {
+		MultiMesh() :
+				update_list(this),
+				mesh_list(this) {
 			dirty_aabb = true;
 			dirty_data = true;
 			xform_floats = 0;
@@ -842,8 +867,8 @@ public:
 		SelfList<Skeleton> update_list;
 		Set<RasterizerScene::InstanceBase *> instances; //instances using skeleton
 
-		Skeleton()
-			: update_list(this) {
+		Skeleton() :
+				update_list(this) {
 			size = 0;
 
 			use_2d = false;
@@ -1093,8 +1118,8 @@ public:
 
 		Transform emission_transform;
 
-		Particles()
-			: particle_element(this) {
+		Particles() :
+				particle_element(this) {
 			cycle_number = 0;
 			emitting = false;
 			one_shot = false;

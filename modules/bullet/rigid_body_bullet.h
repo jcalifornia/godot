@@ -156,8 +156,8 @@ public:
 		class btConvexShape *shape;
 		btTransform transform;
 
-		KinematicShape()
-			: shape(NULL) {}
+		KinematicShape() :
+				shape(NULL) {}
 		const bool is_active() const { return shape; }
 	};
 
@@ -184,9 +184,9 @@ private:
 	KinematicUtilities *kinematic_utilities;
 
 	PhysicsServer::BodyMode mode;
-	PhysicsServer::BodyAxisLock axis_lock;
 	GodotMotionState *godotMotionState;
 	btRigidBody *btBody;
+	uint16_t locked_axis;
 	real_t mass;
 	real_t gravity_scale;
 	real_t linearDamp;
@@ -269,8 +269,9 @@ public:
 	void set_applied_torque(const Vector3 &p_torque);
 	Vector3 get_applied_torque() const;
 
-	void set_axis_lock(PhysicsServer::BodyAxisLock p_lock);
-	PhysicsServer::BodyAxisLock get_axis_lock() const;
+	void set_axis_lock(PhysicsServer::BodyAxis p_axis, bool lock);
+	bool is_axis_locked(PhysicsServer::BodyAxis p_axis) const;
+	void reload_axis_lock();
 
 	/// Doc:
 	/// http://www.bulletphysics.org/mediawiki-1.5.8/index.php?title=Anti_tunneling_by_Motion_Clamping

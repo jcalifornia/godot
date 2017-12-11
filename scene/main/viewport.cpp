@@ -69,6 +69,8 @@ void ViewportTexture::setup_local_to_scene() {
 	ERR_FAIL_COND(!vp);
 
 	vp->viewport_textures.insert(this);
+
+	VS::get_singleton()->texture_set_proxy(proxy, vp->texture_rid);
 }
 
 void ViewportTexture::set_viewport_path_in_scene(const NodePath &p_path) {
@@ -105,8 +107,8 @@ Size2 ViewportTexture::get_size() const {
 }
 RID ViewportTexture::get_rid() const {
 
-	ERR_FAIL_COND_V(!vp, RID());
-	return vp->texture_rid;
+	//ERR_FAIL_COND_V(!vp, RID());
+	return proxy;
 }
 
 bool ViewportTexture::has_alpha() const {
@@ -147,6 +149,7 @@ ViewportTexture::ViewportTexture() {
 
 	vp = NULL;
 	set_local_to_scene(true);
+	proxy = VS::get_singleton()->texture_create();
 }
 
 ViewportTexture::~ViewportTexture() {
@@ -154,6 +157,8 @@ ViewportTexture::~ViewportTexture() {
 	if (vp) {
 		vp->viewport_textures.erase(this);
 	}
+
+	VS::get_singleton()->free(proxy);
 }
 
 /////////////////////////////////////
@@ -931,6 +936,9 @@ void Viewport::_camera_remove(Camera *p_camera) {
 
 	cameras.erase(p_camera);
 	if (camera == p_camera) {
+		if (camera && find_world().is_valid()) {
+			camera->notification(Camera::NOTIFICATION_LOST_CURRENT);
+		}
 		camera = NULL;
 	}
 }
@@ -1261,12 +1269,9 @@ Transform2D Viewport::_get_input_pre_xform() const {
 
 Vector2 Viewport::_get_window_offset() const {
 
-	/*
-	if (parent_control) {
-		return (parent_control->get_viewport()->get_final_transform() * parent_control->get_global_transform_with_canvas()).get_origin();
+	if (get_parent() && get_parent()->has_method("get_global_position")) {
+		return get_parent()->call("get_global_position");
 	}
-	*/
-
 	return Vector2();
 }
 
@@ -1641,6 +1646,8 @@ void Viewport::_gui_input_event(Ref<InputEvent> p_event) {
 
 			} else {
 
+				bool is_handled = false;
+
 				_gui_sort_modal_stack();
 				while (!gui.modal_stack.empty()) {
 
@@ -1658,9 +1665,18 @@ void Viewport::_gui_input_event(Ref<InputEvent> p_event) {
 						top->notification(Control::NOTIFICATION_MODAL_CLOSE);
 						top->_modal_stack_remove();
 						top->hide();
+
+						if (!top->pass_on_modal_close_click()) {
+							is_handled = true;
+						}
 					} else {
 						break;
 					}
+				}
+
+				if (is_handled) {
+					get_tree()->set_input_as_handled();
+					return;
 				}
 
 				//Matrix32 parent_xform;
@@ -2813,6 +2829,7 @@ Viewport::Viewport() {
 	default_texture.instance();
 	default_texture->vp = const_cast<Viewport *>(this);
 	viewport_textures.insert(default_texture.ptr());
+	VS::get_singleton()->texture_set_proxy(default_texture->proxy, texture_rid);
 
 	//internal_listener = SpatialSoundServer::get_singleton()->listener_create();
 	audio_listener = false;
