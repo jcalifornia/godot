@@ -900,10 +900,10 @@ bool CustomPropertyEditor::edit(Object *p_owner, const String &p_name, Variant::
 						int id = TYPE_BASE_ID + idx;
 						if (has_icon(t, "EditorIcons")) {
 
-							menu->add_icon_item(get_icon(t, "EditorIcons"), TTR("New") + " " + t, id);
+							menu->add_icon_item(get_icon(t, "EditorIcons"), vformat(TTR("New %s"), t), id);
 						} else {
 
-							menu->add_item(TTR("New") + " " + t, id);
+							menu->add_item(vformat(TTR("New %s"), t), id);
 						}
 
 						idx++;
@@ -2831,7 +2831,7 @@ void PropertyEditor::update_tree() {
 					class_descr_cache[type] = descr.word_wrap(80);
 				}
 
-				sep->set_tooltip(0, TTR("Class:") + " " + p.name + ":\n\n" + class_descr_cache[type]);
+				sep->set_tooltip(0, TTR("Class:") + " " + p.name + (class_descr_cache[type] == "" ? "" : "\n\n" + class_descr_cache[type]));
 			}
 			continue;
 
@@ -2963,7 +2963,7 @@ void PropertyEditor::update_tree() {
 				descr_cache[classname][propname] = descr;
 			}
 
-			item->set_tooltip(0, TTR("Property:") + " " + p.name + "\n\n" + descr);
+			item->set_tooltip(0, TTR("Property:") + " " + p.name + (descr == "" ? "" : "\n\n" + descr));
 		}
 
 		Dictionary d;
@@ -4532,6 +4532,7 @@ void SectionedPropertyEditor::update_category_list() {
 		for (int i = 0; i < sc; i++) {
 
 			TreeItem *parent = section_map[metasection];
+			parent->set_custom_bg_color(0, get_color("prop_subsection", "Editor"));
 
 			if (i > 0) {
 				metasection += "/" + sectionarr[i];
@@ -4585,7 +4586,7 @@ SectionedPropertyEditor::SectionedPropertyEditor() {
 	search_box = NULL;
 
 	VBoxContainer *left_vb = memnew(VBoxContainer);
-	left_vb->set_custom_minimum_size(Size2(160, 0) * EDSCALE);
+	left_vb->set_custom_minimum_size(Size2(170, 0) * EDSCALE);
 	add_child(left_vb);
 
 	sections = memnew(Tree);
