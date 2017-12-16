@@ -34,19 +34,19 @@
 #include "drivers/windows/dir_access_windows.h"
 #include "drivers/windows/file_access_windows.h"
 #include "drivers/windows/mutex_windows.h"
+#include "drivers/windows/packet_peer_udp_winsock.h"
 #include "drivers/windows/rw_lock_windows.h"
 #include "drivers/windows/semaphore_windows.h"
+#include "drivers/windows/stream_peer_tcp_winsock.h"
+#include "drivers/windows/tcp_server_winsock.h"
 #include "drivers/windows/thread_windows.h"
 #include "io/marshalls.h"
 #include "joypad.h"
 #include "lang_table.h"
 #include "main/main.h"
-#include "packet_peer_udp_winsock.h"
 #include "servers/audio_server.h"
 #include "servers/visual/visual_server_raster.h"
 #include "servers/visual/visual_server_wrap_mt.h"
-#include "stream_peer_winsock.h"
-#include "tcp_server_winsock.h"
 #include "version_generated.gen.h"
 #include "windows_terminal_logger.h"
 
@@ -196,7 +196,7 @@ void OS_Windows::initialize_core() {
 	DirAccess::make_default<DirAccessWindows>(DirAccess::ACCESS_FILESYSTEM);
 
 	TCPServerWinsock::make_default();
-	StreamPeerWinsock::make_default();
+	StreamPeerTCPWinsock::make_default();
 	PacketPeerUDPWinsock::make_default();
 
 	// We need to know how often the clock is updated
@@ -1253,7 +1253,7 @@ void OS_Windows::finalize_core() {
 	memdelete(process_map);
 
 	TCPServerWinsock::cleanup();
-	StreamPeerWinsock::cleanup();
+	StreamPeerTCPWinsock::cleanup();
 }
 
 void OS_Windows::alert(const String &p_alert, const String &p_title) {
@@ -1598,7 +1598,7 @@ bool OS_Windows::is_window_maximized() const {
 	return maximized;
 }
 
-void OS_Windows::set_borderless_window(int p_borderless) {
+void OS_Windows::set_borderless_window(bool p_borderless) {
 	if (video_mode.borderless_window == p_borderless)
 		return;
 
@@ -2156,6 +2156,10 @@ void OS_Windows::swap_buffers() {
 	gl_context->swap_buffers();
 }
 
+void OS_Windows::force_process_input() {
+	process_events(); // get rid of pending events
+}
+
 void OS_Windows::run() {
 
 	if (!main_loop)
@@ -2284,19 +2288,19 @@ String OS_Windows::get_joy_guid(int p_device) const {
 	return input->get_joy_guid_remapped(p_device);
 }
 
-void OS_Windows::set_use_vsync(bool p_enable) {
+void OS_Windows::_set_use_vsync(bool p_enable) {
 
 	if (gl_context)
 		gl_context->set_use_vsync(p_enable);
 }
-
+/*
 bool OS_Windows::is_vsync_enabled() const {
 
 	if (gl_context)
 		return gl_context->is_using_vsync();
 
 	return true;
-}
+}*/
 
 OS::PowerState OS_Windows::get_power_state() {
 	return power_manager->get_power_state();

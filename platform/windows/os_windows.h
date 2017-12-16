@@ -210,7 +210,7 @@ public:
 	virtual bool is_window_maximized() const;
 	virtual void request_attention();
 
-	virtual void set_borderless_window(int p_borderless);
+	virtual void set_borderless_window(bool p_borderless);
 	virtual bool get_borderless_window();
 
 	virtual Error open_dynamic_library(const String p_path, void *&p_library_handle, bool p_also_set_library_path = false);
@@ -275,8 +275,8 @@ public:
 	virtual bool is_joy_known(int p_device);
 	virtual String get_joy_guid(int p_device) const;
 
-	virtual void set_use_vsync(bool p_enable);
-	virtual bool is_vsync_enabled() const;
+	virtual void _set_use_vsync(bool p_enable);
+	//virtual bool is_vsync_enabled() const;
 
 	virtual OS::PowerState get_power_state();
 	virtual int get_power_seconds_left();
@@ -286,6 +286,8 @@ public:
 
 	void disable_crash_handler();
 	bool is_disable_crash_handler() const;
+
+	void force_process_input();
 
 	virtual Error move_to_trash(const String &p_path);
 

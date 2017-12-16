@@ -129,6 +129,7 @@ void FileSystemDock::_update_tree(bool keep_collapse_state) {
 	}
 
 	_create_tree(root, EditorFileSystem::get_singleton()->get_filesystem(), uncollapsed_paths);
+	tree->ensure_cursor_is_visible();
 	updating_tree = false;
 }
 
@@ -590,10 +591,7 @@ void FileSystemDock::_select_file(int p_idx) {
 		if (fpath != "res://") {
 			fpath = fpath.substr(0, fpath.length() - 1);
 		}
-		path = fpath;
-		_update_files(false);
-		current_path->set_text(path);
-		_push_to_history();
+		navigate_to_path(fpath);
 	} else {
 		if (ResourceLoader::get_resource_type(fpath) == "PackedScene") {
 			editor->open_request(fpath);
@@ -1219,6 +1217,9 @@ void FileSystemDock::_go_to_file_list() {
 		tree->hide();
 		file_list_vb->show();
 		button_favorite->hide();
+	} else {
+		bool collapsed = tree->get_selected()->is_collapsed();
+		tree->get_selected()->set_collapsed(!collapsed);
 	}
 
 	//file_options->show();

@@ -168,6 +168,8 @@ opts.Add(BoolVariable('vsproj', "Generate Visual Studio Project.", False))
 opts.Add(EnumVariable('warnings', "Set the level of warnings emitted during compilation", 'no', ('extra', 'all', 'moderate', 'no')))
 opts.Add(BoolVariable('progress', "Show a progress indicator during build", True))
 opts.Add(BoolVariable('dev', "If yes, alias for verbose=yes warnings=all", False))
+opts.Add(BoolVariable('openmp', "If yes, enable OpenMP", True))
+opts.Add(EnumVariable('macports_clang', "Build using clang from MacPorts", 'no', ('no', '5.0', 'devel')))
 
 # Thirdparty libraries
 opts.Add(BoolVariable('builtin_enet', "Use the builtin enet library", True))
@@ -186,6 +188,7 @@ opts.Add(BoolVariable('builtin_squish', "Use the builtin squish library", True))
 opts.Add(BoolVariable('builtin_thekla_atlas', "Use the builtin thekla_altas library", True))
 opts.Add(BoolVariable('builtin_zlib', "Use the builtin zlib library", True))
 opts.Add(BoolVariable('builtin_zstd', "Use the builtin zstd library", True))
+opts.Add(BoolVariable('no_editor_splash', "Don't use the custom splash screen for the editor", False))
 
 # Environment setup
 opts.Add("CXX", "C++ compiler")
@@ -236,6 +239,9 @@ sys.modules.pop('detect')
 if (env_base['target'] == 'debug'):
     env_base.Append(CPPFLAGS=['-DDEBUG_MEMORY_ALLOC'])
     env_base.Append(CPPFLAGS=['-DSCI_NAMESPACE'])
+
+if (env_base['no_editor_splash']):
+    env_base.Append(CPPFLAGS=['-DNO_EDITOR_SPLASH'])
 
 if not env_base['deprecated']:
     env_base.Append(CPPFLAGS=['-DDISABLE_DEPRECATED'])

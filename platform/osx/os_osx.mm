@@ -1818,7 +1818,7 @@ void OS_OSX::request_attention() {
 	[NSApp requestUserAttention:NSCriticalRequest];
 }
 
-void OS_OSX::set_borderless_window(int p_borderless) {
+void OS_OSX::set_borderless_window(bool p_borderless) {
 
 	// OrderOut prevents a lose focus bug with the window
 	[window_object orderOut:nil];
@@ -1971,6 +1971,12 @@ void OS_OSX::push_input(const Ref<InputEvent> &p_event) {
 	input->parse_input_event(ev);
 }
 
+void OS_OSX::force_process_input() {
+
+	process_events(); // get rid of pending events
+	joypad_osx->process_joypads();
+}
+
 void OS_OSX::run() {
 
 	force_quit = false;
@@ -2057,14 +2063,14 @@ Error OS_OSX::move_to_trash(const String &p_path) {
 	return OK;
 }
 
-void OS_OSX::set_use_vsync(bool p_enable) {
+void OS_OSX::_set_use_vsync(bool p_enable) {
 	CGLContextObj ctx = CGLGetCurrentContext();
 	if (ctx) {
 		GLint swapInterval = p_enable ? 1 : 0;
 		CGLSetParameter(ctx, kCGLCPSwapInterval, &swapInterval);
 	}
 }
-
+/*
 bool OS_OSX::is_vsync_enabled() const {
 	GLint swapInterval = 0;
 	CGLContextObj ctx = CGLGetCurrentContext();
@@ -2073,7 +2079,7 @@ bool OS_OSX::is_vsync_enabled() const {
 	}
 	return swapInterval ? true : false;
 }
-
+*/
 OS_OSX *OS_OSX::singleton = NULL;
 
 OS_OSX::OS_OSX() {

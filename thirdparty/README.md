@@ -62,8 +62,8 @@ Use UI font if exists, because it has tight vertical metrics and good for UI.
 ### Hack Regular
 
 - Upstream: https://github.com/source-foundry/Hack
-- Version: 2.020
-- License: Hack Open Font License v2.0
+- Version: 3.000
+- License: MIT + Bitstream Vera License
 
 ### DroidSans*.ttf
 
@@ -179,6 +179,9 @@ Files extracted from upstream source:
 
 TODO.
 
+Important: File `libvpx/vpx_dsp/x86/vpx_subpixel_8t_intrin_avx2.c` has
+Godot-made change marked with `// -- GODOT --` comments.
+
 
 ## libwebp
 
@@ -269,7 +272,7 @@ Collection of single-file libraries used in Godot components.
 ### poshlib
 
 - Upstream: http://poshlib.hookatooka.com/poshlib/trac.cgi (username guest, password guest123)
-- Version: 1.3.002 
+- Version: 1.3.002
 - License: MIT
 
 Files extracted from the upstream source:
@@ -304,6 +307,10 @@ Files extracted from the upstream source:
 
 - Relevant sources from src/
 - License.txt
+
+Important: Some files have Godot-made changes, those
+changes are marked with `// -- GODOT --` comments.
+
 
 ## nanosvg
 
@@ -358,6 +365,7 @@ Files extracted from upstream source:
 - celt/ and silk/ subfolders
 - COPYING
 
+
 ## pcre2
 
 - Upstream: http://www.pcre.org/
@@ -371,6 +379,7 @@ Files extracted from upstream source:
 - src/pcre2_jit_*.c and src/sljit/*
 - AUTHORS and COPYING
 
+
 ## pvrtccompressor
 
 - Upstream: https://bitbucket.org/jthlim/pvrtccompressor
@@ -382,11 +391,13 @@ Files extracted from upstream source:
 - all .cpp and .h files apart from `main.cpp`
 - LICENSE.TXT
 
+
 ## recastnavigation
 
 - Upstream: https://github.com/recastnavigation/recastnavigation
 - version: git commit ef3ea40f - 2016-02-06
 - License: zlib
+
 
 ## rtaudio
 
@@ -408,6 +419,10 @@ Files extracted from upstream source:
 Files extracted from upstream source:
 
 - all .cpp, .h and .inl files
+
+Important: Some files have Godot-made changes.
+They are marked with `// -- GODOT start --` and `// -- GODOT end --`
+comments and a patch is provided in the squish/ folder.
 
 
 ## tinyexr

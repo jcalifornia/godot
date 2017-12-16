@@ -1098,7 +1098,7 @@ bool OS_X11::is_window_maximized() const {
 	return false;
 }
 
-void OS_X11::set_borderless_window(int p_borderless) {
+void OS_X11::set_borderless_window(bool p_borderless) {
 
 	if (current_videomode.borderless_window == p_borderless)
 		return;
@@ -2264,6 +2264,13 @@ void OS_X11::set_icon(const Ref<Image> &p_icon) {
 	XFlush(x11_display);
 }
 
+void OS_X11::force_process_input() {
+	process_xevents(); // get rid of pending events
+#ifdef JOYDEV_ENABLED
+	joypad->process_joypads();
+#endif
+}
+
 void OS_X11::run() {
 
 	force_quit = false;
@@ -2299,11 +2306,11 @@ String OS_X11::get_joy_guid(int p_device) const {
 	return input->get_joy_guid_remapped(p_device);
 }
 
-void OS_X11::set_use_vsync(bool p_enable) {
+void OS_X11::_set_use_vsync(bool p_enable) {
 	if (context_gl)
 		return context_gl->set_use_vsync(p_enable);
 }
-
+/*
 bool OS_X11::is_vsync_enabled() const {
 
 	if (context_gl)
@@ -2311,7 +2318,7 @@ bool OS_X11::is_vsync_enabled() const {
 
 	return true;
 }
-
+*/
 void OS_X11::set_context(int p_context) {
 
 	XClassHint *classHint = XAllocClassHint();

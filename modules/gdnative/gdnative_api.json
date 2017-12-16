@@ -5569,6 +5569,12 @@
         ]
       },
       {
+        "name": "godot_get_global_constants",
+        "return_type": "godot_dictionary",
+        "arguments": [
+        ]
+      },
+      {
         "name": "godot_register_native_call_type",
         "return_type": "void",
         "arguments": [
