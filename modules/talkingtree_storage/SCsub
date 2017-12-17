@@ -1,0 +1,11 @@
+# SCsub
+Import('env')
+
+env_talking_tree_storage = env.Clone()
+
+# also requires libogg
+if env['builtin_libogg']:
+	env_talking_tree_storage.Append(CPPPATH=["#thirdparty/libogg"])
+
+env_talking_tree_storage.add_source_files(env.modules_sources,"*.cpp")
+env_talking_tree_storage.Append(CXXFLAGS=['-O2', '-std=c++11'])
