@@ -587,9 +587,7 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 
 	// Checkbox
 	Ref<StyleBoxFlat> sb_checkbox = style_menu->duplicate();
-	// HACK, in reality, the checkbox draws the text over the icon by default, so the margin compensates that.
-	const int cb_w = theme->get_icon("GuiChecked", "EditorIcons")->get_width() + default_margin_size;
-	sb_checkbox->set_default_margin(MARGIN_LEFT, cb_w * EDSCALE);
+	sb_checkbox->set_default_margin(MARGIN_LEFT, default_margin_size * EDSCALE);
 	sb_checkbox->set_default_margin(MARGIN_RIGHT, default_margin_size * EDSCALE);
 	sb_checkbox->set_default_margin(MARGIN_TOP, default_margin_size * EDSCALE);
 	sb_checkbox->set_default_margin(MARGIN_BOTTOM, default_margin_size * EDSCALE);
@@ -625,6 +623,9 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	theme->set_icon("radio_checked", "PopupMenu", theme->get_icon("GuiChecked", "EditorIcons"));
 	theme->set_icon("radio_unchecked", "PopupMenu", theme->get_icon("GuiUnchecked", "EditorIcons"));
 	theme->set_icon("submenu", "PopupMenu", theme->get_icon("ArrowRight", "EditorIcons"));
+	theme->set_icon("visibility_hidden", "PopupMenu", theme->get_icon("GuiVisibilityHidden", "EditorIcons"));
+	theme->set_icon("visibility_visible", "PopupMenu", theme->get_icon("GuiVisibilityVisible", "EditorIcons"));
+	theme->set_icon("visibility_xray", "PopupMenu", theme->get_icon("GuiVisibilityXray", "EditorIcons"));
 	theme->set_constant("vseparation", "PopupMenu", (extra_spacing + default_margin_size) * EDSCALE);
 
 	// Tree & ItemList background
@@ -793,6 +794,7 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	// TextEdit
 	theme->set_stylebox("normal", "TextEdit", style_widget);
 	theme->set_stylebox("focus", "TextEdit", style_widget_hover);
+	theme->set_stylebox("read_only", "TextEdit", style_widget_disabled);
 	theme->set_constant("side_margin", "TabContainer", 0);
 	theme->set_icon("tab", "TextEdit", theme->get_icon("GuiTab", "EditorIcons"));
 	theme->set_color("font_color", "TextEdit", font_color);
@@ -1038,6 +1040,7 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	const Color member_variable_color = mono_color;
 	const Color mark_color = Color(error_color.r, error_color.g, error_color.b, 0.3);
 	const Color breakpoint_color = error_color;
+	const Color code_folding_color = alpha4;
 	const Color search_result_color = alpha1;
 	const Color search_result_border_color = alpha4;
 
@@ -1068,6 +1071,7 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	theme->set_color("text_editor/theme/member_variable_color", "Editor", member_variable_color);
 	theme->set_color("text_editor/theme/mark_color", "Editor", mark_color);
 	theme->set_color("text_editor/theme/breakpoint_color", "Editor", breakpoint_color);
+	theme->set_color("text_editor/theme/code_folding_color", "Editor", code_folding_color);
 	theme->set_color("text_editor/theme/search_result_color", "Editor", search_result_color);
 	theme->set_color("text_editor/theme/search_result_border_color", "Editor", search_result_border_color);
 

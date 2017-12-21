@@ -340,7 +340,7 @@ void EditorAssetLibraryItemDownload::_http_download_completed(int p_status, int 
 		} break;
 		case HTTPRequest::RESULT_REQUEST_FAILED: {
 			error_text = TTR("Request failed, return code:") + " " + itos(p_code);
-			status->set_text(TTR("Req. Failed."));
+			status->set_text(TTR("Request Failed."));
 		} break;
 		case HTTPRequest::RESULT_REDIRECT_LIMIT_REACHED: {
 			error_text = TTR("Request failed, too many redirects");
@@ -915,6 +915,11 @@ void EditorAssetLibrary::_search(int p_page) {
 	_api_request("asset", REQUESTING_SEARCH, args);
 }
 
+void EditorAssetLibrary::_search_text_entered(const String &p_text) {
+
+	_search();
+}
+
 HBoxContainer *EditorAssetLibrary::_make_pages(int p_page, int p_page_count, int p_page_len, int p_total_items, int p_current_items) {
 
 	HBoxContainer *hbc = memnew(HBoxContainer);
@@ -1280,6 +1285,7 @@ void EditorAssetLibrary::_bind_methods() {
 	ClassDB::bind_method("_select_category", &EditorAssetLibrary::_select_category);
 	ClassDB::bind_method("_image_request_completed", &EditorAssetLibrary::_image_request_completed);
 	ClassDB::bind_method("_search", &EditorAssetLibrary::_search, DEFVAL(0));
+	ClassDB::bind_method("_search_text_entered", &EditorAssetLibrary::_search_text_entered);
 	ClassDB::bind_method("_install_asset", &EditorAssetLibrary::_install_asset);
 	ClassDB::bind_method("_manage_plugins", &EditorAssetLibrary::_manage_plugins);
 	ClassDB::bind_method("_asset_open", &EditorAssetLibrary::_asset_open);
@@ -1309,7 +1315,7 @@ EditorAssetLibrary::EditorAssetLibrary(bool p_templates_only) {
 	filter = memnew(LineEdit);
 	search_hb->add_child(filter);
 	filter->set_h_size_flags(SIZE_EXPAND_FILL);
-	filter->connect("text_entered", this, "_search");
+	filter->connect("text_entered", this, "_search_text_entered");
 	search = memnew(Button(TTR("Search")));
 	search->connect("pressed", this, "_search");
 	search_hb->add_child(search);

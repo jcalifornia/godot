@@ -75,10 +75,9 @@ bool EditorSettings::_set(const StringName &p_name, const Variant &p_value, bool
 		return true;
 	}
 
-	if (p_value.get_type() == Variant::NIL)
+	if (p_value.get_type() == Variant::NIL) {
 		props.erase(p_name);
-	else {
-
+	} else {
 		if (props.has(p_name))
 			props[p_name].variant = p_value;
 		else
@@ -349,7 +348,7 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 	_initial_set("text_editor/files/autosave_interval_secs", 0);
 
 	_initial_set("text_editor/cursor/block_caret", false);
-	_initial_set("text_editor/cursor/caret_blink", false);
+	_initial_set("text_editor/cursor/caret_blink", true);
 	_initial_set("text_editor/cursor/caret_blink_speed", 0.65);
 	hints["text_editor/cursor/caret_blink_speed"] = PropertyInfo(Variant::REAL, "text_editor/cursor/caret_blink_speed", PROPERTY_HINT_RANGE, "0.1, 10, 0.1");
 
@@ -417,6 +416,7 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 	hints["editors/3d/freelook/freelook_modifier_speed_factor"] = PropertyInfo(Variant::REAL, "editors/3d/freelook/freelook_modifier_speed_factor", PROPERTY_HINT_RANGE, "0.0, 10.0, 0.1");
 	_initial_set("editors/3d/freelook/freelook_speed_zoom_link", false);
 
+	_initial_set("editors/2d/guides_color", Color(0.6, 0.0, 0.8));
 	_initial_set("editors/2d/bone_width", 5);
 	_initial_set("editors/2d/bone_color1", Color(1.0, 1.0, 1.0, 0.9));
 	_initial_set("editors/2d/bone_color2", Color(0.75, 0.75, 0.75, 0.9));
@@ -543,6 +543,7 @@ void EditorSettings::_load_default_text_editor_theme() {
 	_initial_set("text_editor/highlighting/line_length_guideline_color", Color(0.3, 0.5, 0.8, 0.1));
 	_initial_set("text_editor/highlighting/mark_color", Color(1.0, 0.4, 0.4, 0.4));
 	_initial_set("text_editor/highlighting/breakpoint_color", Color(0.8, 0.8, 0.4, 0.2));
+	_initial_set("text_editor/highlighting/code_folding_color", Color(0.8, 0.8, 0.8, 0.8));
 	_initial_set("text_editor/highlighting/word_highlighted_color", Color(0.8, 0.9, 0.9, 0.15));
 	_initial_set("text_editor/highlighting/search_result_color", Color(0.05, 0.25, 0.05, 1));
 	_initial_set("text_editor/highlighting/search_result_border_color", Color(0.1, 0.45, 0.1, 1));
@@ -577,6 +578,7 @@ bool EditorSettings::_save_text_editor_theme(String p_file) {
 	cf->set_value(theme_section, "line_length_guideline_color", ((Color)get("text_editor/highlighting/line_length_guideline_color")).to_html());
 	cf->set_value(theme_section, "mark_color", ((Color)get("text_editor/highlighting/mark_color")).to_html());
 	cf->set_value(theme_section, "breakpoint_color", ((Color)get("text_editor/highlighting/breakpoint_color")).to_html());
+	cf->set_value(theme_section, "code_folding_color", ((Color)get("text_editor/highlighting/code_folding_color")).to_html());
 	cf->set_value(theme_section, "word_highlighted_color", ((Color)get("text_editor/highlighting/word_highlighted_color")).to_html());
 	cf->set_value(theme_section, "search_result_color", ((Color)get("text_editor/highlighting/search_result_color")).to_html());
 	cf->set_value(theme_section, "search_result_border_color", ((Color)get("text_editor/highlighting/search_result_border_color")).to_html());
@@ -967,6 +969,8 @@ void EditorSettings::raise_order(const String &p_setting) {
 
 void EditorSettings::set_initial_value(const StringName &p_setting, const Variant &p_value) {
 
+	_THREAD_SAFE_METHOD_
+
 	if (!props.has(p_setting))
 		return;
 	props[p_setting].initial = p_value;
@@ -979,7 +983,8 @@ Variant _EDITOR_DEF(const String &p_setting, const Variant &p_default) {
 	if (EditorSettings::get_singleton()->has_setting(p_setting))
 		ret = EditorSettings::get_singleton()->get(p_setting);
 	else
-		EditorSettings::get_singleton()->set(p_setting, p_default);
+		EditorSettings::get_singleton()->set_manually(p_setting, p_default);
+
 	if (!EditorSettings::get_singleton()->has_default_value(p_setting))
 		EditorSettings::get_singleton()->set_initial_value(p_setting, p_default);
 
@@ -997,12 +1002,15 @@ bool EditorSettings::property_can_revert(const String &p_setting) {
 	if (!props.has(p_setting))
 		return false;
 
+	if (!props[p_setting].has_default_value)
+		return false;
+
 	return props[p_setting].initial != props[p_setting].variant;
 }
 
 Variant EditorSettings::property_get_revert(const String &p_setting) {
 
-	if (!props.has(p_setting))
+	if (!props.has(p_setting) || !props[p_setting].has_default_value)
 		return Variant();
 
 	return props[p_setting].initial;

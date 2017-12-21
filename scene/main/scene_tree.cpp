@@ -418,12 +418,12 @@ void SceneTree::input_event(const Ref<InputEvent> &p_event) {
 
 	if (!input_handled) {
 		call_group_flags(GROUP_CALL_REALTIME, "_viewports", "_vp_unhandled_input", ev); //special one for GUI, as controls use their own process check
-		input_handled = true;
 		_flush_ugc();
+		//		input_handled = true; - no reason to set this as handled
 		root_lock--;
 		//MessageQueue::get_singleton()->flush(); //flushing here causes UI and other places slowness
 	} else {
-		input_handled = true;
+		//		input_handled = true; - no reason to set this as handled
 		root_lock--;
 	}
 
@@ -794,6 +794,7 @@ Ref<ArrayMesh> SceneTree::get_debug_contact_mesh() {
 		Vector3(0, 0, 1)
 	};
 
+	/* clang-format off */
 	int diamond_faces[8 * 3] = {
 		0, 2, 4,
 		0, 3, 4,
@@ -804,6 +805,7 @@ Ref<ArrayMesh> SceneTree::get_debug_contact_mesh() {
 		1, 2, 5,
 		1, 3, 5,
 	};
+	/* clang-format on */
 
 	PoolVector<int> indices;
 	for (int i = 0; i < 8 * 3; i++)

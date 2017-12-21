@@ -137,6 +137,7 @@ class ScriptEditor : public PanelContainer {
 		CLOSE_ALL,
 		CLOSE_OTHER_TABS,
 		TOGGLE_SCRIPTS_PANEL,
+		FILE_COPY_PATH,
 		FILE_TOOL_RELOAD,
 		FILE_TOOL_RELOAD_SOFT,
 		DEBUG_NEXT,
@@ -255,6 +256,8 @@ class ScriptEditor : public PanelContainer {
 	void _close_other_tabs();
 	void _close_all_tabs();
 
+	void _copy_script_path();
+
 	void _ask_close_current_unsaved_tab(ScriptEditorBase *current);
 
 	bool grab_focus_block;
@@ -357,6 +360,7 @@ public:
 
 	void ensure_focus_current();
 	void apply_scripts() const;
+	void open_script_create_dialog(const String &p_base_name, const String &p_base_path);
 
 	void ensure_select_current();
 

@@ -229,8 +229,9 @@ public:
 			singleton->_instance_queue_update(this, false, true);
 		}
 
-		Instance()
-			: scenario_item(this), update_item(this) {
+		Instance() :
+				scenario_item(this),
+				update_item(this) {
 
 			octree_id = 0;
 			scenario = NULL;
@@ -280,6 +281,8 @@ public:
 		List<Instance *> gi_probes;
 		bool gi_probes_dirty;
 
+		List<Instance *> lightmap_captures;
+
 		InstanceGeometryData() {
 
 			lighting_dirty = false;
@@ -305,8 +308,8 @@ public:
 
 		int render_step;
 
-		InstanceReflectionProbeData()
-			: update_list(this) {
+		InstanceReflectionProbeData() :
+				update_list(this) {
 
 			reflection_dirty = true;
 			render_step = -1;
@@ -434,14 +437,29 @@ public:
 
 		SelfList<InstanceGIProbeData> update_element;
 
-		InstanceGIProbeData()
-			: update_element(this) {
+		InstanceGIProbeData() :
+				update_element(this) {
 			invalid = true;
 			base_version = 0;
+			dynamic.updating_stage = GI_UPDATE_STAGE_CHECK;
 		}
 	};
 
 	SelfList<InstanceGIProbeData>::List gi_probe_update_list;
+
+	struct InstanceLightmapCaptureData : public InstanceBaseData {
+
+		struct PairInfo {
+			List<Instance *>::Element *L; //iterator in geometry
+			Instance *geometry;
+		};
+		List<PairInfo> geometries;
+
+		Set<Instance *> users;
+
+		InstanceLightmapCaptureData() {
+		}
+	};
 
 	Instance *instance_cull_result[MAX_INSTANCE_CULL];
 	Instance *instance_shadow_cull_result[MAX_INSTANCE_CULL]; //used for generating shadowmaps
@@ -464,6 +482,7 @@ public:
 	virtual void instance_set_blend_shape_weight(RID p_instance, int p_shape, float p_weight);
 	virtual void instance_set_surface_material(RID p_instance, int p_surface, RID p_material);
 	virtual void instance_set_visible(RID p_instance, bool p_visible);
+	virtual void instance_set_use_lightmap(RID p_instance, RID p_lightmap_instance, RID p_lightmap);
 
 	virtual void instance_set_custom_aabb(RID p_insatnce, AABB aabb);
 
@@ -487,6 +506,7 @@ public:
 	_FORCE_INLINE_ void _update_instance(Instance *p_instance);
 	_FORCE_INLINE_ void _update_instance_aabb(Instance *p_instance);
 	_FORCE_INLINE_ void _update_dirty_instance(Instance *p_instance);
+	_FORCE_INLINE_ void _update_instance_lightmap_captures(Instance *p_instance);
 
 	_FORCE_INLINE_ void _light_instance_update_shadow(Instance *p_instance, const Transform p_cam_transform, const CameraMatrix &p_cam_projection, bool p_cam_orthogonal, RID p_shadow_atlas, Scenario *p_scenario);
 

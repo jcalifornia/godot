@@ -39,10 +39,10 @@
 #include "io/zip_io.h"
 #include "os/file_access.h"
 #include "project_settings.h"
+#include "scene/resources/scene_format_text.h"
 #include "script_language.h"
-#include "version.h"
-
 #include "thirdparty/misc/md5.h"
+#include "version.h"
 
 static int _get_pad(int p_alignment, int p_n) {
 
@@ -743,6 +743,18 @@ Error EditorExportPlatform::export_project_files(const Ref<EditorExportPreset> &
 		custom_map["path_remap/remapped_paths"] = path_remaps;
 	}
 
+	// Store icon and splash images directly, they need to bypass the import system and be loaded as images
+	String icon = ProjectSettings::get_singleton()->get("application/config/icon");
+	String splash = ProjectSettings::get_singleton()->get("application/boot_splash/image");
+	if (icon != String() && FileAccess::exists(icon)) {
+		Vector<uint8_t> array = FileAccess::get_file_as_array(icon);
+		p_func(p_udata, icon, array, idx, total);
+	}
+	if (splash != String() && FileAccess::exists(splash)) {
+		Vector<uint8_t> array = FileAccess::get_file_as_array(splash);
+		p_func(p_udata, splash, array, idx, total);
+	}
+
 	String config_file = "project.binary";
 	String engine_cfb = EditorSettings::get_singleton()->get_cache_dir().plus_file("tmp" + config_file);
 	ProjectSettings::get_singleton()->save_custom(engine_cfb, custom_map, custom_list);
@@ -1249,6 +1261,7 @@ bool EditorExportPlatformPC::can_export(const Ref<EditorExportPreset> &p_preset,
 	if (custom_debug_binary == "" && custom_release_binary == "") {
 		if (!err.empty())
 			r_error = err;
+		r_missing_templates = !valid;
 		return valid;
 	}
 
@@ -1275,8 +1288,18 @@ bool EditorExportPlatformPC::can_export(const Ref<EditorExportPreset> &p_preset,
 	return valid;
 }
 
-String EditorExportPlatformPC::get_binary_extension() const {
-	return extension;
+String EditorExportPlatformPC::get_binary_extension(const Ref<EditorExportPreset> &p_preset) const {
+	for (Map<String, String>::Element *E = extensions.front(); E; E = E->next()) {
+		if (p_preset->get(E->key())) {
+			return extensions[E->key()];
+		}
+	}
+
+	if (extensions.has("default")) {
+		return extensions["default"];
+	}
+
+	return "";
 }
 
 Error EditorExportPlatformPC::export_project(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, int p_flags) {
@@ -1324,8 +1347,8 @@ Error EditorExportPlatformPC::export_project(const Ref<EditorExportPreset> &p_pr
 	return save_pack(p_preset, pck_path);
 }
 
-void EditorExportPlatformPC::set_extension(const String &p_extension) {
-	extension = p_extension;
+void EditorExportPlatformPC::set_extension(const String &p_extension, const String &p_feature_key) {
+	extensions[p_feature_key] = p_extension;
 }
 
 void EditorExportPlatformPC::set_name(const String &p_name) {
@@ -1385,4 +1408,31 @@ void EditorExportPlatformPC::set_chmod_flags(int p_flags) {
 EditorExportPlatformPC::EditorExportPlatformPC() {
 
 	chmod_flags = -1;
+}
+
+///////////////////////
+
+void EditorExportTextSceneToBinaryPlugin::_export_file(const String &p_path, const String &p_type, const Set<String> &p_features) {
+
+	String extension = p_path.get_extension().to_lower();
+	if (extension != "tres" && extension != "tscn") {
+		return;
+	}
+
+	print_line("exporting " + p_path);
+
+	bool convert = GLOBAL_GET("editor/convert_text_resources_to_binary_on_export");
+	if (!convert)
+		return;
+	String tmp_path = EditorSettings::get_singleton()->get_cache_dir().plus_file("file.res");
+	Error err = ResourceFormatLoaderText::convert_file_to_binary(p_path, tmp_path);
+	ERR_FAIL_COND(err != OK);
+	Vector<uint8_t> data = FileAccess::get_file_as_array(tmp_path);
+	ERR_FAIL_COND(data.size() == 0);
+	add_file(p_path + ".converted.res", data, true);
+}
+
+EditorExportTextSceneToBinaryPlugin::EditorExportTextSceneToBinaryPlugin() {
+
+	GLOBAL_DEF("editor/convert_text_resources_to_binary_on_export", false);
 }

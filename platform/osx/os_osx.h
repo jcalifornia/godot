@@ -43,7 +43,6 @@
 #include "servers/visual_server.h"
 #include <ApplicationServices/ApplicationServices.h>
 
-//bitch
 #undef CursorShape
 /**
 	@author Juan Linietsky <reduzio@gmail.com>
@@ -205,7 +204,7 @@ public:
 	virtual void request_attention();
 	virtual String get_joy_guid(int p_device) const;
 
-	virtual void set_borderless_window(int p_borderless);
+	virtual void set_borderless_window(bool p_borderless);
 	virtual bool get_borderless_window();
 	virtual void set_ime_position(const Point2 &p_pos);
 	virtual void set_ime_intermediate_text_callback(ImeCallback p_callback, void *p_inp);
@@ -216,8 +215,8 @@ public:
 
 	virtual bool _check_internal_feature_support(const String &p_feature);
 
-	virtual void set_use_vsync(bool p_enable);
-	virtual bool is_vsync_enabled() const;
+	virtual void _set_use_vsync(bool p_enable);
+	//virtual bool is_vsync_enabled() const;
 
 	void run();
 
@@ -228,6 +227,8 @@ public:
 	bool is_disable_crash_handler() const;
 
 	virtual Error move_to_trash(const String &p_path);
+
+	void force_process_input();
 
 	OS_OSX();
 

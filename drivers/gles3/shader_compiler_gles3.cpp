@@ -81,6 +81,16 @@ static int _get_datatype_size(SL::DataType p_type) {
 	ERR_FAIL_V(0);
 }
 
+static String _interpstr(SL::DataInterpolation p_interp) {
+
+	switch (p_interp) {
+		case SL::INTERPOLATION_FLAT: return "flat ";
+		case SL::INTERPOLATION_NO_PERSPECTIVE: return "noperspective ";
+		case SL::INTERPOLATION_SMOOTH: return "smooth ";
+	}
+	return "";
+}
+
 static String _prestr(SL::DataPrecision p_pres) {
 
 	switch (p_pres) {
@@ -220,7 +230,6 @@ void ShaderCompilerGLES3::_dump_function_deps(SL::ShaderNode *p_node, const Stri
 
 	for (Set<StringName>::Element *E = p_node->functions[fidx].uses_function.front(); E; E = E->next()) {
 
-		print_line(String(p_node->functions[fidx].name) + " uses function: " + String(E->get()));
 		if (added.has(E->get())) {
 			continue; //was added already
 		}
@@ -383,12 +392,13 @@ String ShaderCompilerGLES3::_dump_node_code(SL::Node *p_node, int p_level, Gener
 			for (Map<StringName, SL::ShaderNode::Varying>::Element *E = pnode->varyings.front(); E; E = E->next()) {
 
 				String vcode;
+				String interp_mode = _interpstr(E->get().interpolation);
 				vcode += _prestr(E->get().precission);
 				vcode += _typestr(E->get().type);
 				vcode += " " + _mkid(E->key());
 				vcode += ";\n";
-				r_gen_code.vertex_global += "out " + vcode;
-				r_gen_code.fragment_global += "in " + vcode;
+				r_gen_code.vertex_global += interp_mode + "out " + vcode;
+				r_gen_code.fragment_global += interp_mode + "in " + vcode;
 			}
 
 			Map<StringName, String> function_code;
@@ -802,6 +812,7 @@ ShaderCompilerGLES3::ShaderCompilerGLES3() {
 	//for light
 	actions[VS::SHADER_SPATIAL].renames["VIEW"] = "view";
 	actions[VS::SHADER_SPATIAL].renames["LIGHT_COLOR"] = "light_color";
+	actions[VS::SHADER_SPATIAL].renames["LIGHT"] = "light";
 	actions[VS::SHADER_SPATIAL].renames["ATTENUATION"] = "attenuation";
 	actions[VS::SHADER_SPATIAL].renames["DIFFUSE_LIGHT"] = "diffuse_light";
 	actions[VS::SHADER_SPATIAL].renames["SPECULAR_LIGHT"] = "specular_light";

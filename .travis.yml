@@ -30,9 +30,9 @@ matrix:
     - env: GODOT_TARGET=android TOOLS=no CACHE_NAME=${GODOT_TARGET}-gcc
       os: linux
       compiler: gcc
-    - env: GODOT_TARGET=osx TOOLS=yes CACHE_NAME=${GODOT_TARGET}-clang-tools
-      os: osx
-      compiler: clang
+    #- env: GODOT_TARGET=osx TOOLS=yes CACHE_NAME=${GODOT_TARGET}-clang-tools
+    #  os: osx
+    #  compiler: clang
     #- env: GODOT_TARGET=iphone TOOLS=no CACHE_NAME=${GODOT_TARGET}-clang
     #  os: osx
     #  compiler: clang
@@ -41,20 +41,21 @@ addons:
   apt:
     sources:
       - ubuntu-toolchain-r-test
-      - llvm-toolchain-trusty-3.9
+      - llvm-toolchain-trusty-5.0
     packages:
       - build-essential
       - scons
       - pkg-config
       - libx11-dev
       - libxcursor-dev
-      - libasound2-dev
-      - libfreetype6-dev
-      - libgl1-mesa-dev
-      - libglu1-mesa-dev
-      - libssl-dev
+      - libxi-dev
       - libxinerama-dev
       - libxrandr-dev
+      - libgl1-mesa-dev
+      - libglu1-mesa-dev
+      - libasound2-dev
+      - libfreetype6-dev
+      - libssl-dev
 
       # For cross-compiling to Windows.
       #- binutils-mingw-w64-i686
@@ -66,7 +67,7 @@ addons:
       #- mingw-w64
 
       # For style checks.
-      - clang-format-3.9
+      - clang-format-5.0
 
 install:
   - if [ "$TRAVIS_OS_NAME" = "linux" ] && [ "$GODOT_TARGET" = "android" ]; then
@@ -89,5 +90,5 @@ script:
   - if [ "$STATIC_CHECKS" = "yes" ]; then
       sh ./misc/travis/clang-format.sh;
     else
-      scons -j2 CC=$CC CXX=$CXX platform=$GODOT_TARGET TOOLS=$TOOLS verbose=yes progress=no;
+      scons -j2 CC=$CC CXX=$CXX platform=$GODOT_TARGET TOOLS=$TOOLS verbose=yes progress=no openmp=no;
     fi

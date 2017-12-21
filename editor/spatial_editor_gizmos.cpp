@@ -1316,6 +1316,34 @@ void SkeletonSpatialGizmo::redraw() {
 
 	Color gizmo_color = EDITOR_GET("editors/3d_gizmos/gizmo_colors/skeleton");
 	Ref<Material> material = create_material("skeleton_material", gizmo_color);
+	SpatialMaterial *sm = Object::cast_to<SpatialMaterial>(material.ptr());
+
+	{ // Reset
+		Color c(sm->get_albedo());
+		c.a = 1;
+		sm->set_albedo(c);
+	}
+	if (sm) {
+		switch (SpatialEditor::get_singleton()->get_skeleton_visibility_state()) {
+			case 0: {
+				// Hidden
+				Color c(sm->get_albedo());
+				c.a = 0;
+				sm->set_albedo(c);
+				sm->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
+			} break;
+			case 1:
+				// Visible
+				sm->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, false);
+				sm->set_render_priority(SpatialMaterial::RENDER_PRIORITY_MIN);
+				sm->set_flag(SpatialMaterial::FLAG_DISABLE_DEPTH_TEST, false);
+				break;
+			case 2:
+				// x-ray
+				sm->set_on_top_of_alpha();
+				break;
+		}
+	}
 
 	Ref<SurfaceTool> surface_tool(memnew(SurfaceTool));
 
@@ -2725,7 +2753,122 @@ GIProbeGizmo::GIProbeGizmo(GIProbe *p_probe) {
 }
 
 ////////
+////////
 
+///
+
+String BakedIndirectLightGizmo::get_handle_name(int p_idx) const {
+
+	switch (p_idx) {
+		case 0: return "Extents X";
+		case 1: return "Extents Y";
+		case 2: return "Extents Z";
+	}
+
+	return "";
+}
+Variant BakedIndirectLightGizmo::get_handle_value(int p_idx) const {
+
+	return baker->get_extents();
+}
+void BakedIndirectLightGizmo::set_handle(int p_idx, Camera *p_camera, const Point2 &p_point) {
+
+	Transform gt = baker->get_global_transform();
+	//gt.orthonormalize();
+	Transform gi = gt.affine_inverse();
+
+	Vector3 extents = baker->get_extents();
+
+	Vector3 ray_from = p_camera->project_ray_origin(p_point);
+	Vector3 ray_dir = p_camera->project_ray_normal(p_point);
+
+	Vector3 sg[2] = { gi.xform(ray_from), gi.xform(ray_from + ray_dir * 16384) };
+
+	Vector3 axis;
+	axis[p_idx] = 1.0;
+
+	Vector3 ra, rb;
+	Geometry::get_closest_points_between_segments(Vector3(), axis * 16384, sg[0], sg[1], ra, rb);
+	float d = ra[p_idx];
+	if (d < 0.001)
+		d = 0.001;
+
+	extents[p_idx] = d;
+	baker->set_extents(extents);
+}
+
+void BakedIndirectLightGizmo::commit_handle(int p_idx, const Variant &p_restore, bool p_cancel) {
+
+	Vector3 restore = p_restore;
+
+	if (p_cancel) {
+		baker->set_extents(restore);
+		return;
+	}
+
+	UndoRedo *ur = SpatialEditor::get_singleton()->get_undo_redo();
+	ur->create_action(TTR("Change Probe Extents"));
+	ur->add_do_method(baker, "set_extents", baker->get_extents());
+	ur->add_undo_method(baker, "set_extents", restore);
+	ur->commit_action();
+}
+
+void BakedIndirectLightGizmo::redraw() {
+
+	Color gizmo_color = EDITOR_GET("editors/3d_gizmos/gizmo_colors/baked_indirect_light");
+	Ref<Material> material = create_material("baked_indirect_light_material", gizmo_color);
+	Ref<Material> icon = create_icon_material("baked_indirect_light_icon", SpatialEditor::get_singleton()->get_icon("GizmoBakedLightmap", "EditorIcons"));
+	Color gizmo_color_internal = gizmo_color;
+	gizmo_color_internal.a = 0.1;
+	Ref<Material> material_internal = create_material("baked_indirect_light_internal_material", gizmo_color_internal);
+
+	clear();
+
+	Vector<Vector3> lines;
+	Vector3 extents = baker->get_extents();
+
+	static const int subdivs[BakedLightmap::SUBDIV_MAX] = { 64, 128, 256, 512 };
+
+	AABB aabb = AABB(-extents, extents * 2);
+	int subdiv = subdivs[baker->get_bake_subdiv()];
+	float cell_size = aabb.get_longest_axis_size() / subdiv;
+
+	for (int i = 0; i < 12; i++) {
+		Vector3 a, b;
+		aabb.get_edge(i, a, b);
+		lines.push_back(a);
+		lines.push_back(b);
+	}
+
+	add_lines(lines, material);
+	add_collision_segments(lines);
+
+	Vector<Vector3> handles;
+
+	for (int i = 0; i < 3; i++) {
+
+		Vector3 ax;
+		ax[i] = aabb.position[i] + aabb.size[i];
+		handles.push_back(ax);
+	}
+
+	if (is_selected()) {
+
+		gizmo_color.a = 0.1;
+		Ref<Material> solid_material = create_material("baked_indirect_light_solid_material", gizmo_color);
+		add_solid_box(solid_material, aabb.get_size());
+	}
+
+	add_unscaled_billboard(icon, 0.05);
+	add_handles(handles);
+}
+BakedIndirectLightGizmo::BakedIndirectLightGizmo(BakedLightmap *p_baker) {
+
+	baker = p_baker;
+	set_spatial_node(p_baker);
+}
+
+////////
 void NavigationMeshSpatialGizmo::redraw() {
 
 	Ref<Material> edge_material = create_material("navigation_material", EDITOR_GET("editors/3d_gizmos/gizmo_colors/navigation_edge"));
@@ -2943,10 +3086,10 @@ void SliderJointSpatialGizmo::redraw() {
 
 	float ll = p3d->get_param(SliderJoint::PARAM_ANGULAR_LIMIT_LOWER);
 	float ul = p3d->get_param(SliderJoint::PARAM_ANGULAR_LIMIT_UPPER);
-	float lll = -p3d->get_param(SliderJoint::PARAM_LINEAR_LIMIT_LOWER);
-	float lul = -p3d->get_param(SliderJoint::PARAM_LINEAR_LIMIT_UPPER);
+	float lll = p3d->get_param(SliderJoint::PARAM_LINEAR_LIMIT_LOWER);
+	float lul = p3d->get_param(SliderJoint::PARAM_LINEAR_LIMIT_UPPER);
 
-	if (lll > lul) {
+	if (lll <= lul) {
 
 		cursor_points.push_back(Vector3(lul, 0, 0));
 		cursor_points.push_back(Vector3(lll, 0, 0));
@@ -3139,8 +3282,8 @@ void Generic6DOFJointSpatialGizmo::redraw() {
 			case 0:
 				ll = p3d->get_param_x(Generic6DOFJoint::PARAM_ANGULAR_LOWER_LIMIT);
 				ul = p3d->get_param_x(Generic6DOFJoint::PARAM_ANGULAR_UPPER_LIMIT);
-				lll = -p3d->get_param_x(Generic6DOFJoint::PARAM_LINEAR_LOWER_LIMIT);
-				lul = -p3d->get_param_x(Generic6DOFJoint::PARAM_LINEAR_UPPER_LIMIT);
+				lll = p3d->get_param_x(Generic6DOFJoint::PARAM_LINEAR_LOWER_LIMIT);
+				lul = p3d->get_param_x(Generic6DOFJoint::PARAM_LINEAR_UPPER_LIMIT);
 				enable_ang = p3d->get_flag_x(Generic6DOFJoint::FLAG_ENABLE_ANGULAR_LIMIT);
 				enable_lin = p3d->get_flag_x(Generic6DOFJoint::FLAG_ENABLE_LINEAR_LIMIT);
 				a1 = 0;
@@ -3150,25 +3293,26 @@ void Generic6DOFJointSpatialGizmo::redraw() {
 			case 1:
 				ll = p3d->get_param_y(Generic6DOFJoint::PARAM_ANGULAR_LOWER_LIMIT);
 				ul = p3d->get_param_y(Generic6DOFJoint::PARAM_ANGULAR_UPPER_LIMIT);
-				lll = -p3d->get_param_y(Generic6DOFJoint::PARAM_LINEAR_LOWER_LIMIT);
-				lul = -p3d->get_param_y(Generic6DOFJoint::PARAM_LINEAR_UPPER_LIMIT);
+				lll = p3d->get_param_y(Generic6DOFJoint::PARAM_LINEAR_LOWER_LIMIT);
+				lul = p3d->get_param_y(Generic6DOFJoint::PARAM_LINEAR_UPPER_LIMIT);
 				enable_ang = p3d->get_flag_y(Generic6DOFJoint::FLAG_ENABLE_ANGULAR_LIMIT);
 				enable_lin = p3d->get_flag_y(Generic6DOFJoint::FLAG_ENABLE_LINEAR_LIMIT);
-				a1 = 2;
-				a2 = 0;
-				a3 = 1;
-				break;
-			case 2:
-				ll = p3d->get_param_z(Generic6DOFJoint::PARAM_ANGULAR_LOWER_LIMIT);
-				ul = p3d->get_param_z(Generic6DOFJoint::PARAM_ANGULAR_UPPER_LIMIT);
-				lll = -p3d->get_param_z(Generic6DOFJoint::PARAM_LINEAR_LOWER_LIMIT);
-				lul = -p3d->get_param_z(Generic6DOFJoint::PARAM_LINEAR_UPPER_LIMIT);
-				enable_ang = p3d->get_flag_z(Generic6DOFJoint::FLAG_ENABLE_ANGULAR_LIMIT);
-				enable_lin = p3d->get_flag_z(Generic6DOFJoint::FLAG_ENABLE_LINEAR_LIMIT);
 
 				a1 = 1;
 				a2 = 2;
 				a3 = 0;
+				break;
+			case 2:
+				ll = p3d->get_param_z(Generic6DOFJoint::PARAM_ANGULAR_LOWER_LIMIT);
+				ul = p3d->get_param_z(Generic6DOFJoint::PARAM_ANGULAR_UPPER_LIMIT);
+				lll = p3d->get_param_z(Generic6DOFJoint::PARAM_LINEAR_LOWER_LIMIT);
+				lul = p3d->get_param_z(Generic6DOFJoint::PARAM_LINEAR_UPPER_LIMIT);
+				enable_ang = p3d->get_flag_z(Generic6DOFJoint::FLAG_ENABLE_ANGULAR_LIMIT);
+				enable_lin = p3d->get_flag_z(Generic6DOFJoint::FLAG_ENABLE_LINEAR_LIMIT);
+
+				a1 = 2;
+				a2 = 0;
+				a3 = 1;
 				break;
 		}
 
@@ -3190,7 +3334,7 @@ void Generic6DOFJointSpatialGizmo::redraw() {
 		what = v;              \
 	}
 
-		if (enable_lin && lll >= lul) {
+		if (enable_lin && lll <= lul) {
 
 			ADD_VTX(lul, 0, 0);
 			ADD_VTX(lll, 0, 0);
@@ -3380,6 +3524,11 @@ Ref<SpatialEditorGizmo> SpatialEditorGizmos::get_gizmo(Spatial *p_spatial) {
 		Ref<GIProbeGizmo> misg = memnew(GIProbeGizmo(Object::cast_to<GIProbe>(p_spatial)));
 		return misg;
 	}
+	if (Object::cast_to<BakedLightmap>(p_spatial)) {
+
+		Ref<BakedIndirectLightGizmo> misg = memnew(BakedIndirectLightGizmo(Object::cast_to<BakedLightmap>(p_spatial)));
+		return misg;
+	}
 
 	if (Object::cast_to<VehicleWheel>(p_spatial)) {
 
@@ -3466,6 +3615,7 @@ SpatialEditorGizmos::SpatialEditorGizmos() {
 	EDITOR_DEF("editors/3d_gizmos/gizmo_colors/particles", Color(0.8, 0.7, 0.4));
 	EDITOR_DEF("editors/3d_gizmos/gizmo_colors/reflection_probe", Color(0.6, 1, 0.5));
 	EDITOR_DEF("editors/3d_gizmos/gizmo_colors/gi_probe", Color(0.5, 1, 0.6));
+	EDITOR_DEF("editors/3d_gizmos/gizmo_colors/baked_indirect_light", Color(0.5, 0.6, 1));
 	EDITOR_DEF("editors/3d_gizmos/gizmo_colors/shape", Color(0.5, 0.7, 1));
 	EDITOR_DEF("editors/3d_gizmos/gizmo_colors/joint", Color(0.5, 0.8, 1));
 	EDITOR_DEF("editors/3d_gizmos/gizmo_colors/navigation_edge", Color(0.5, 1, 1));

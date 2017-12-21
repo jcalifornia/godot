@@ -61,14 +61,13 @@ public:
 
 private:
 	enum DataFormat {
-		FORMAT_2_1_4 = 0,
-		FORMAT_2_1_5
+		FORMAT_1 = 0,
+		FORMAT_2
 	};
 
 	Ref<TileSet> tile_set;
 	Size2i cell_size;
 	int quadrant_size;
-	bool center_x, center_y;
 	Mode mode;
 	Transform2D custom_transform;
 	HalfOffset half_offset;
@@ -147,8 +146,8 @@ private:
 			navpoly_ids = q.navpoly_ids;
 			occluder_instances = q.occluder_instances;
 		}
-		Quadrant(const Quadrant &q)
-			: dirty_list(this) {
+		Quadrant(const Quadrant &q) :
+				dirty_list(this) {
 			pos = q.pos;
 			canvas_items = q.canvas_items;
 			body = q.body;
@@ -156,8 +155,8 @@ private:
 			occluder_instances = q.occluder_instances;
 			navpoly_ids = q.navpoly_ids;
 		}
-		Quadrant()
-			: dirty_list(this) {}
+		Quadrant() :
+				dirty_list(this) {}
 	};
 
 	Map<PosKey, Quadrant> quadrant_map;
@@ -178,7 +177,7 @@ private:
 	float bounce;
 	uint32_t collision_layer;
 	uint32_t collision_mask;
-	DataFormat format;
+	mutable DataFormat format;
 
 	TileOrigin tile_origin;
 
@@ -231,18 +230,13 @@ public:
 	void set_quadrant_size(int p_size);
 	int get_quadrant_size() const;
 
-	void set_center_x(bool p_enable);
-	bool get_center_x() const;
-	void set_center_y(bool p_enable);
-	bool get_center_y() const;
-
 	void set_cell(int p_x, int p_y, int p_tile, bool p_flip_x = false, bool p_flip_y = false, bool p_transpose = false, Vector2 p_autotile_coord = Vector2());
 	int get_cell(int p_x, int p_y) const;
 	bool is_cell_x_flipped(int p_x, int p_y) const;
 	bool is_cell_y_flipped(int p_x, int p_y) const;
 	bool is_cell_transposed(int p_x, int p_y) const;
-	int get_cell_autotile_coord_x(int p_x, int p_y) const;
-	int get_cell_autotile_coord_y(int p_x, int p_y) const;
+	void set_cell_autotile_coord(int p_x, int p_y, const Vector2 &p_coord);
+	Vector2 get_cell_autotile_coord(int p_x, int p_y) const;
 
 	void set_cellv(const Vector2 &p_pos, int p_tile, bool p_flip_x = false, bool p_flip_y = false, bool p_transpose = false);
 	int get_cellv(const Vector2 &p_pos) const;
@@ -251,6 +245,7 @@ public:
 
 	void make_bitmask_area_dirty(const Vector2 &p_pos);
 	void update_bitmask_area(const Vector2 &p_pos);
+	void update_bitmask_region(const Vector2 &p_start = Vector2(), const Vector2 &p_end = Vector2());
 	void update_cell_bitmask(int p_x, int p_y);
 	void update_dirty_bitmask();
 

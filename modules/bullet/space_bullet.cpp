@@ -50,8 +50,9 @@
 #include "ustring.h"
 #include <assert.h>
 
-BulletPhysicsDirectSpaceState::BulletPhysicsDirectSpaceState(SpaceBullet *p_space)
-	: PhysicsDirectSpaceState(), space(p_space) {}
+BulletPhysicsDirectSpaceState::BulletPhysicsDirectSpaceState(SpaceBullet *p_space) :
+		PhysicsDirectSpaceState(),
+		space(p_space) {}
 
 int BulletPhysicsDirectSpaceState::intersect_point(const Vector3 &p_point, ShapeResult *r_results, int p_result_max, const Set<RID> &p_exclude, uint32_t p_collision_mask) {
 
@@ -96,7 +97,7 @@ bool BulletPhysicsDirectSpaceState::intersect_ray(const Vector3 &p_from, const V
 		B_TO_G(btResult.m_hitNormalWorld.normalize(), r_result.normal);
 		CollisionObjectBullet *gObj = static_cast<CollisionObjectBullet *>(btResult.m_collisionObject->getUserPointer());
 		if (gObj) {
-			r_result.shape = 0;
+			r_result.shape = btResult.m_shapeId;
 			r_result.rid = gObj->get_self();
 			r_result.collider_id = gObj->get_instance_id();
 			r_result.collider = 0 == r_result.collider_id ? NULL : ObjectDB::get_instance(r_result.collider_id);
@@ -330,18 +331,18 @@ Vector3 BulletPhysicsDirectSpaceState::get_closest_point_to_object_volume(RID p_
 	}
 }
 
-SpaceBullet::SpaceBullet(bool p_create_soft_world)
-	: broadphase(NULL),
-	  dispatcher(NULL),
-	  solver(NULL),
-	  collisionConfiguration(NULL),
-	  dynamicsWorld(NULL),
-	  soft_body_world_info(NULL),
-	  ghostPairCallback(NULL),
-	  godotFilterCallback(NULL),
-	  gravityDirection(0, -1, 0),
-	  gravityMagnitude(10),
-	  contactDebugCount(0) {
+SpaceBullet::SpaceBullet(bool p_create_soft_world) :
+		broadphase(NULL),
+		dispatcher(NULL),
+		solver(NULL),
+		collisionConfiguration(NULL),
+		dynamicsWorld(NULL),
+		soft_body_world_info(NULL),
+		ghostPairCallback(NULL),
+		godotFilterCallback(NULL),
+		gravityDirection(0, -1, 0),
+		gravityMagnitude(10),
+		contactDebugCount(0) {
 
 	create_empty_world(p_create_soft_world);
 	direct_access = memnew(BulletPhysicsDirectSpaceState(this));
@@ -939,14 +940,14 @@ bool SpaceBullet::test_body_motion(RigidBodyBullet *p_body, const Transform &p_f
 				r_result->collider_shape = r_recover_result.other_compound_shape_index;
 				r_result->collision_local_shape = r_recover_result.local_shape_most_recovered;
 
-//{ /// Add manifold point to manage collisions
-//    btPersistentManifold* manifold = dynamicsWorld->getDispatcher()->getNewManifold(p_body->getBtBody(), btRigid);
-//    btManifoldPoint manifoldPoint(result_callabck.m_pointWorld, result_callabck.m_pointWorld, result_callabck.m_pointNormalWorld, result_callabck.m_penetration_distance);
-//    manifoldPoint.m_index0 = r_result->collision_local_shape;
-//    manifoldPoint.m_index1 = r_result->collider_shape;
-//    manifold->addManifoldPoint(manifoldPoint);
-//    p_body->get_kinematic_utilities()->m_generatedManifold.push_back(manifold);
-//}
+				//{ /// Add manifold point to manage collisions
+				//    btPersistentManifold* manifold = dynamicsWorld->getDispatcher()->getNewManifold(p_body->getBtBody(), btRigid);
+				//    btManifoldPoint manifoldPoint(result_callabck.m_pointWorld, result_callabck.m_pointWorld, result_callabck.m_pointNormalWorld, result_callabck.m_penetration_distance);
+				//    manifoldPoint.m_index0 = r_result->collision_local_shape;
+				//    manifoldPoint.m_index1 = r_result->collider_shape;
+				//    manifold->addManifoldPoint(manifoldPoint);
+				//    p_body->get_kinematic_utilities()->m_generatedManifold.push_back(manifold);
+				//}
 
 #if debug_test_motion
 				Vector3 sup_line2;
@@ -979,10 +980,10 @@ public:
 	Vector<btCollisionObject *> result_collision_objects;
 
 public:
-	RecoverPenetrationBroadPhaseCallback(const btCollisionObject *p_self_collision_object, uint32_t p_collision_layer, uint32_t p_collision_mask)
-		: self_collision_object(p_self_collision_object),
-		  collision_layer(p_collision_layer),
-		  collision_mask(p_collision_mask) {}
+	RecoverPenetrationBroadPhaseCallback(const btCollisionObject *p_self_collision_object, uint32_t p_collision_layer, uint32_t p_collision_mask) :
+			self_collision_object(p_self_collision_object),
+			collision_layer(p_collision_layer),
+			collision_mask(p_collision_mask) {}
 
 	virtual ~RecoverPenetrationBroadPhaseCallback() {}
 

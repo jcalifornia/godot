@@ -42,6 +42,7 @@
 #include "script_debugger_remote.h"
 #include "servers/register_server_types.h"
 #include "splash.gen.h"
+#include "splash_editor.gen.h"
 
 #include "input_map.h"
 #include "io/resource_loader.h"
@@ -168,7 +169,6 @@ static String get_full_version_string() {
 }
 
 //#define DEBUG_INIT
-
 #ifdef DEBUG_INIT
 #define MAIN_PRINT(m_txt) print_line(m_txt)
 #else
@@ -820,7 +820,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 		OS::get_singleton()->_allow_hidpi = GLOBAL_DEF("display/window/dpi/allow_hidpi", false);
 	}
 
-	use_vsync = GLOBAL_DEF("display/window/vsync/use_vsync", true);
+	video_mode.use_vsync = GLOBAL_DEF("display/window/vsync/use_vsync", true);
 
 	GLOBAL_DEF("rendering/quality/intended_usage/framebuffer_allocation", 2);
 	GLOBAL_DEF("rendering/quality/intended_usage/framebuffer_allocation.mobile", 3);
@@ -994,8 +994,6 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 	// also init our arvr_server from here
 	arvr_server = memnew(ARVRServer);
 
-	OS::get_singleton()->set_use_vsync(use_vsync);
-
 	register_core_singletons();
 
 	MAIN_PRINT("Main: Setup Logo");
@@ -1054,7 +1052,12 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 #ifndef NO_DEFAULT_BOOT_LOGO
 
 			MAIN_PRINT("Main: Create bootsplash");
+#if defined(TOOLS_ENABLED) && !defined(NO_EDITOR_SPLASH)
+
+			Ref<Image> splash = editor ? memnew(Image(boot_splash_editor_png)) : memnew(Image(boot_splash_png));
+#else
 			Ref<Image> splash = memnew(Image(boot_splash_png));
+#endif
 
 			MAIN_PRINT("Main: ClearColor");
 			VisualServer::get_singleton()->set_default_clear_color(boot_splash_bg_color);
@@ -1138,6 +1141,8 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 	}
 	translation_server->load_translations();
 	ResourceLoader::load_translation_remaps(); //load remaps for resources
+
+	ResourceLoader::load_path_remaps();
 
 	audio_server->load_default_bus_layout();
 
@@ -1818,6 +1823,9 @@ void Main::cleanup() {
 	OS::get_singleton()->_cmdline.clear();
 	OS::get_singleton()->_execpath = "";
 	OS::get_singleton()->_local_clipboard = "";
+
+	ResourceLoader::clear_translation_remaps();
+	ResourceLoader::clear_path_remaps();
 
 	ScriptServer::finish_languages();
 

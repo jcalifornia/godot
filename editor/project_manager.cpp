@@ -213,7 +213,7 @@ private:
 		}
 		String sp = p.simplify_path();
 		project_path->set_text(sp);
-		set_message(TTR(" ")); // just so it does not disappear
+		set_message(" "); // just so it does not disappear
 		get_ok()->call_deferred("grab_focus");
 	}
 
@@ -508,7 +508,8 @@ public:
 			} else if (current->has_setting("application/config/name")) {
 				project_name->set_text(current->get("application/config/name"));
 			}
-			project_name->grab_focus();
+
+			project_name->call_deferred("grab_focus");
 
 			create_dir->hide();
 			status_btn->hide();

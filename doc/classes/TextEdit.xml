@@ -109,6 +109,13 @@
 				Cut the current selection.
 			</description>
 		</method>
+		<method name="deselect">
+			<return type="void">
+			</return>
+			<description>
+				Clears the current selection.
+			</description>
+		</method>
 		<method name="fold_all_lines">
 			<return type="void">
 			</return>
@@ -305,6 +312,15 @@
 				Enable text wrapping when it goes beyond he edge of what is visible.
 			</description>
 		</method>
+		<method name="toggle_fold_line">
+			<return type="void">
+			</return>
+			<argument index="0" name="line" type="int">
+			</argument>
+			<description>
+				Toggle the folding of the code block at the given line.
+			</description>
+		</method>
 		<method name="undo">
 			<return type="void">
 			</return>
@@ -428,6 +444,8 @@
 		</theme_item>
 		<theme_item name="caret_color" type="Color">
 		</theme_item>
+		<theme_item name="code_folding_color" type="Color">
+		</theme_item>
 		<theme_item name="completion" type="StyleBox">
 		</theme_item>
 		<theme_item name="completion_background_color" type="Color">
@@ -469,6 +487,8 @@
 		<theme_item name="normal" type="StyleBox">
 		</theme_item>
 		<theme_item name="number_color" type="Color">
+		</theme_item>
+		<theme_item name="read_only" type="StyleBox">
 		</theme_item>
 		<theme_item name="selection_color" type="Color">
 		</theme_item>

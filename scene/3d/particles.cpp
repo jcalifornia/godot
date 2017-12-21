@@ -598,6 +598,11 @@ void ParticlesMaterial::_update_shader() {
 	code += "}\n";
 	code += "\n";
 
+	code += "float rand_from_seed_m1_p1(inout uint seed) {\n";
+	code += "	return rand_from_seed(seed)*2.0-1.0;\n";
+	code += "}\n";
+	code += "\n";
+
 	//improve seed quality
 	code += "uint hash(uint x) {\n";
 	code += "	x = ((x >> uint(16)) ^ x) * uint(73244475);\n";
@@ -614,6 +619,8 @@ void ParticlesMaterial::_update_shader() {
 	code += "	float scale_rand = rand_from_seed(alt_seed);\n";
 	code += "	float hue_rot_rand = rand_from_seed(alt_seed);\n";
 	code += "	float anim_offset_rand = rand_from_seed(alt_seed);\n";
+	code += "	float pi = 3.14159;\n";
+	code += "	float degree_to_rad = pi / 180.0;\n";
 	code += "\n";
 
 	if (emission_shape >= EMISSION_SHAPE_POINTS) {
@@ -638,23 +645,28 @@ void ParticlesMaterial::_update_shader() {
 	else
 		code += "		float tex_anim_offset = 0.0;\n";
 
+	code += "		float spread_rad = spread*degree_to_rad;\n";
+
 	if (flags[FLAG_DISABLE_Z]) {
 
-		code += "		float angle1 = (rand_from_seed(alt_seed)*2.0-1.0)*spread/180.0*3.1416;\n";
-		code += "		vec3 rot = vec3( cos(angle1), sin(angle1),0.0 );\n";
+		code += "		float angle1_rad = rand_from_seed_m1_p1(alt_seed)*spread_rad;\n";
+		code += "		vec3 rot = vec3( cos(angle1_rad), sin(angle1_rad),0.0 );\n";
 		code += "		VELOCITY = rot*initial_linear_velocity*mix(1.0, rand_from_seed(alt_seed), initial_linear_velocity_random);\n";
 
 	} else {
 		//initiate velocity spread in 3D
-		code += "		float angle1 = rand_from_seed(alt_seed)*spread*3.1416;\n";
-		code += "		float angle2 = rand_from_seed(alt_seed)*20.0*3.1416; // make it more random like\n";
-		code += "		vec3 rot_xz = vec3( sin(angle1), 0.0, cos(angle1) );\n";
-		code += "		vec3 rot = vec3( cos(angle2)*rot_xz.x,sin(angle2)*rot_xz.x, rot_xz.z);\n";
-		code += "		VELOCITY = rot*initial_linear_velocity*mix(1.0, rand_from_seed(alt_seed), initial_linear_velocity_random);\n";
+		code += "		float angle1_rad = rand_from_seed_m1_p1(alt_seed)*spread_rad;\n";
+		code += "		float angle2_rad = rand_from_seed_m1_p1(alt_seed)*spread_rad*(1.0-flatness);\n";
+		code += "		vec3 direction_xz = vec3( sin(angle1_rad), 0, cos(angle1_rad));\n";
+		code += "		vec3 direction_yz = vec3( 0, sin(angle2_rad), cos(angle2_rad));\n";
+		code += "		direction_yz.z = direction_yz.z / sqrt(direction_yz.z); //better uniform distribution\n";
+		code += "		vec3 direction = vec3(direction_xz.x * direction_yz.z, direction_yz.y, direction_xz.z * direction_yz.z);\n";
+		code += "		direction = normalize(direction);\n";
+		code += "		VELOCITY = direction*initial_linear_velocity*mix(1.0, rand_from_seed(alt_seed), initial_linear_velocity_random);\n";
 	}
 
 	code += "		float base_angle = (initial_angle+tex_angle)*mix(1.0,angle_rand,initial_angle_random);\n";
-	code += "		CUSTOM.x = base_angle*3.1416/180.0;\n"; //angle
+	code += "		CUSTOM.x = base_angle*degree_to_rad;\n"; //angle
 	code += "		CUSTOM.y = 0.0;\n"; //phase
 	code += "		CUSTOM.z = (anim_offset+tex_anim_offset)*mix(1.0,anim_offset_rand,anim_offset_random);\n"; //animation offset (0-1)
 	switch (emission_shape) {
@@ -703,10 +715,13 @@ void ParticlesMaterial::_update_shader() {
 	else
 		code += "		float tex_linear_velocity = 0.0;\n";
 
-	if (tex_parameters[PARAM_ORBIT_VELOCITY].is_valid())
-		code += "		float tex_orbit_velocity = textureLod(orbit_velocity_texture,vec2(CUSTOM.y,0.0),0.0).r;\n";
-	else
-		code += "		float tex_orbit_velocity = 0.0;\n";
+	if (flags[FLAG_DISABLE_Z]) {
+
+		if (tex_parameters[PARAM_ORBIT_VELOCITY].is_valid())
+			code += "		float tex_orbit_velocity = textureLod(orbit_velocity_texture,vec2(CUSTOM.y,0.0),0.0).r;\n";
+		else
+			code += "		float tex_orbit_velocity = 0.0;\n";
+	}
 
 	if (tex_parameters[PARAM_ANGULAR_VELOCITY].is_valid())
 		code += "		float tex_angular_velocity = textureLod(angular_velocity_texture,vec2(CUSTOM.y,0.0),0.0).r;\n";
@@ -756,7 +771,7 @@ void ParticlesMaterial::_update_shader() {
 	code += "		//apply linear acceleration\n";
 	code += "		force += length(VELOCITY) > 0.0 ? normalize(VELOCITY) * (linear_accel+tex_linear_accel)*mix(1.0,rand_from_seed(alt_seed),linear_accel_random) : vec3(0.0);\n";
 	code += "		//apply radial acceleration\n";
-	code += "		vec3 org = vec3(0.0);\n";
+	code += "		vec3 org = EMISSION_TRANSFORM[3].xyz;\n";
 	code += "		vec3 diff = pos-org;\n";
 	code += "		force += length(diff) > 0.0 ? normalize(diff) * (radial_accel+tex_radial_accel)*mix(1.0,rand_from_seed(alt_seed),radial_accel_random) : vec3(0.0);\n";
 	code += "		//apply tangential acceleration;\n";
@@ -769,6 +784,18 @@ void ParticlesMaterial::_update_shader() {
 	}
 	code += "		//apply attractor forces\n";
 	code += "		VELOCITY += force * DELTA;\n";
+	code += "		//orbit velocity\n";
+	if (flags[FLAG_DISABLE_Z]) {
+
+		code += "		float orbit_amount = (orbit_velocity+tex_orbit_velocity)*mix(1.0,rand_from_seed(alt_seed),orbit_velocity_random);\n";
+		code += "		if (orbit_amount!=0.0) {\n";
+		code += "		     float ang = orbit_amount * DELTA * pi * 2.0;\n";
+		code += "		     mat2 rot = mat2(vec2(cos(ang),-sin(ang)),vec2(sin(ang),cos(ang)));\n";
+		code += "		     TRANSFORM[3].xy-=diff.xy;\n";
+		code += "		     TRANSFORM[3].xy+=rot * diff.xy;\n";
+		code += "		}\n";
+	}
+
 	if (tex_parameters[PARAM_INITIAL_LINEAR_VELOCITY].is_valid()) {
 		code += "		VELOCITY = normalize(VELOCITY)*tex_linear_velocity;\n";
 	}
@@ -785,7 +812,7 @@ void ParticlesMaterial::_update_shader() {
 	code += "		}\n";
 	code += "		float base_angle = (initial_angle+tex_angle)*mix(1.0,angle_rand,initial_angle_random);\n";
 	code += "		base_angle += CUSTOM.y*LIFETIME*(angular_velocity+tex_angular_velocity)*mix(1.0,rand_from_seed(alt_seed)*2.0-1.0,angular_velocity_random);\n";
-	code += "		CUSTOM.x = base_angle*3.1416/180.0;\n"; //angle
+	code += "		CUSTOM.x = base_angle*degree_to_rad;\n"; //angle
 	code += "		CUSTOM.z = (anim_offset+tex_anim_offset)*mix(1.0,anim_offset_rand,anim_offset_random)+CUSTOM.y*(anim_speed+tex_anim_speed)*mix(1.0,rand_from_seed(alt_seed),anim_speed_random);\n"; //angle
 	if (flags[FLAG_ANIM_LOOP]) {
 		code += "		CUSTOM.z = mod(CUSTOM.z,1.0);\n"; //loop
@@ -806,7 +833,7 @@ void ParticlesMaterial::_update_shader() {
 	else
 		code += "	float tex_hue_variation = 0.0;\n";
 
-	code += "	float hue_rot_angle = (hue_variation+tex_hue_variation)*3.1416*2.0*mix(1.0,hue_rot_rand*2.0-1.0,hue_variation_random);\n";
+	code += "	float hue_rot_angle = (hue_variation+tex_hue_variation)*pi*2.0*mix(1.0,hue_rot_rand*2.0-1.0,hue_variation_random);\n";
 	code += "	float hue_rot_c = cos(hue_rot_angle);\n";
 	code += "	float hue_rot_s = sin(hue_rot_angle);\n";
 	code += "	mat4 hue_rot_mat = mat4( vec4(0.299,  0.587,  0.114, 0.0),\n";
@@ -869,6 +896,7 @@ void ParticlesMaterial::_update_shader() {
 	}
 	//scale by scale
 	code += "	float base_scale = mix(scale*tex_scale,1.0,scale_random*scale_rand);\n";
+	code += "	if (base_scale==0.0) base_scale=0.000001;\n";
 	if (trail_size_modifier.is_valid()) {
 		code += "	if (trail_divisor > 1) { base_scale *= textureLod(trail_size_modifier,vec2(float(int(NUMBER)%trail_divisor)/float(trail_divisor-1),0.0),0.0).r; } \n";
 	}
@@ -1173,6 +1201,9 @@ void ParticlesMaterial::set_flag(Flags p_flag, bool p_enable) {
 	ERR_FAIL_INDEX(p_flag, FLAG_MAX);
 	flags[p_flag] = p_enable;
 	_queue_shader_change();
+	if (p_flag == FLAG_DISABLE_Z) {
+		_change_notify();
+	}
 }
 
 bool ParticlesMaterial::get_flag(Flags p_flag) const {
@@ -1358,6 +1389,15 @@ void ParticlesMaterial::_validate_property(PropertyInfo &property) const {
 	if (property.name == "emission_point_count" && (emission_shape != EMISSION_SHAPE_POINTS && emission_shape != EMISSION_SHAPE_DIRECTED_POINTS)) {
 		property.usage = 0;
 	}
+
+	if (property.name.begins_with("orbit_") && !flags[FLAG_DISABLE_Z]) {
+		property.usage = 0;
+	}
+}
+
+Shader::Mode ParticlesMaterial::get_shader_mode() const {
+
+	return Shader::MODE_PARTICLES;
 }
 
 void ParticlesMaterial::_bind_methods() {
@@ -1517,8 +1557,8 @@ void ParticlesMaterial::_bind_methods() {
 	BIND_ENUM_CONSTANT(EMISSION_SHAPE_DIRECTED_POINTS);
 }
 
-ParticlesMaterial::ParticlesMaterial()
-	: element(this) {
+ParticlesMaterial::ParticlesMaterial() :
+		element(this) {
 
 	set_spread(45);
 	set_flatness(0);

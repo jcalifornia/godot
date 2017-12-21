@@ -77,8 +77,8 @@ class VisualServerRaster : public VisualServer {
 	static void _changes_changed() {}
 
 public:
-//if editor is redrawing when it shouldn't, enable this and put a breakpoint in _changes_changed()
-//#define DEBUG_CHANGES
+	//if editor is redrawing when it shouldn't, enable this and put a breakpoint in _changes_changed()
+	//#define DEBUG_CHANGES
 
 #ifdef DEBUG_CHANGES
 	_FORCE_INLINE_ static void redraw_request() {
@@ -96,7 +96,6 @@ public:
 #define DISPLAY_CHANGED \
 	changes++;
 #endif
-//	print_line(String("CHANGED: ") + __FUNCTION__);
 
 #define BIND0R(m_r, m_name) \
 	m_r m_name() { return BINDBASE->m_name(); }
@@ -167,6 +166,8 @@ public:
 	BIND1(texture_debug_usage, List<TextureInfo> *)
 
 	BIND1(textures_keep_original, bool)
+
+	BIND2(texture_set_proxy, RID, RID)
 
 	/* SKY API */
 
@@ -360,6 +361,24 @@ public:
 	BIND2(gi_probe_set_dynamic_data, RID, const PoolVector<int> &)
 	BIND1RC(PoolVector<int>, gi_probe_get_dynamic_data, RID)
 
+	/* LIGHTMAP CAPTURE */
+
+	BIND0R(RID, lightmap_capture_create)
+
+	BIND2(lightmap_capture_set_bounds, RID, const AABB &)
+	BIND1RC(AABB, lightmap_capture_get_bounds, RID)
+
+	BIND2(lightmap_capture_set_octree, RID, const PoolVector<uint8_t> &)
+	BIND1RC(PoolVector<uint8_t>, lightmap_capture_get_octree, RID)
+
+	BIND2(lightmap_capture_set_octree_cell_transform, RID, const Transform &)
+	BIND1RC(Transform, lightmap_capture_get_octree_cell_transform, RID)
+	BIND2(lightmap_capture_set_octree_cell_subdiv, RID, int)
+	BIND1RC(int, lightmap_capture_get_octree_cell_subdiv, RID)
+
+	BIND2(lightmap_capture_set_energy, RID, float)
+	BIND1RC(float, lightmap_capture_get_energy, RID)
+
 	/* PARTICLES */
 
 	BIND0R(RID, particles_create)
@@ -449,7 +468,7 @@ public:
 	BIND2R(int, viewport_get_render_info, RID, ViewportRenderInfo)
 	BIND2(viewport_set_debug_draw, RID, ViewportDebugDraw)
 
-/* ENVIRONMENT API */
+	/* ENVIRONMENT API */
 
 #undef BINDBASE
 //from now on, calls forwarded to this singleton
@@ -479,7 +498,7 @@ public:
 	BIND6(environment_set_fog_depth, RID, bool, float, float, bool, float)
 	BIND5(environment_set_fog_height, RID, bool, float, float, float)
 
-/* SCENARIO API */
+	/* SCENARIO API */
 
 #undef BINDBASE
 #define BINDBASE VSG::scene
@@ -503,6 +522,7 @@ public:
 	BIND3(instance_set_blend_shape_weight, RID, int, float)
 	BIND3(instance_set_surface_material, RID, int, RID)
 	BIND2(instance_set_visible, RID, bool)
+	BIND3(instance_set_use_lightmap, RID, RID, RID)
 
 	BIND2(instance_set_custom_aabb, RID, AABB)
 
@@ -550,6 +570,7 @@ public:
 
 	BIND6(canvas_item_add_line, RID, const Point2 &, const Point2 &, const Color &, float, bool)
 	BIND5(canvas_item_add_polyline, RID, const Vector<Point2> &, const Vector<Color> &, float, bool)
+	BIND5(canvas_item_add_multiline, RID, const Vector<Point2> &, const Vector<Color> &, float, bool)
 	BIND3(canvas_item_add_rect, RID, const Rect2 &, const Color &)
 	BIND4(canvas_item_add_circle, RID, const Point2 &, float, const Color &)
 	BIND7(canvas_item_add_texture_rect, RID, const Rect2 &, RID, bool, const Color &, bool, RID)
@@ -646,6 +667,8 @@ public:
 
 	virtual bool has_os_feature(const String &p_feature) const;
 	virtual void set_debug_generate_wireframes(bool p_generate);
+
+	virtual void call_set_use_vsync(bool p_enable);
 
 	VisualServerRaster();
 	~VisualServerRaster();

@@ -69,6 +69,8 @@ public:
 	int get_render_priority() const;
 
 	virtual RID get_rid() const;
+
+	virtual Shader::Mode get_shader_mode() const = 0;
 	Material();
 	virtual ~Material();
 };
@@ -95,6 +97,8 @@ public:
 
 	void set_shader_param(const StringName &p_param, const Variant &p_value);
 	Variant get_shader_param(const StringName &p_param) const;
+
+	virtual Shader::Mode get_shader_mode() const;
 
 	ShaderMaterial();
 	~ShaderMaterial();
@@ -180,7 +184,9 @@ public:
 		FLAG_UV2_USE_TRIPLANAR,
 		FLAG_TRIPLANAR_USE_WORLD,
 		FLAG_AO_ON_UV2,
+		FLAG_EMISSION_ON_UV2,
 		FLAG_USE_ALPHA_SCISSOR,
+		FLAG_ALBEDO_TEXTURE_FORCE_SRGB,
 		FLAG_MAX
 	};
 
@@ -229,7 +235,7 @@ private:
 			uint64_t blend_mode : 2;
 			uint64_t depth_draw_mode : 2;
 			uint64_t cull_mode : 2;
-			uint64_t flags : 12;
+			uint64_t flags : 14;
 			uint64_t detail_blend_mode : 2;
 			uint64_t diffuse_mode : 3;
 			uint64_t specular_mode : 2;
@@ -598,6 +604,8 @@ public:
 	static RID get_material_rid_for_2d(bool p_shaded, bool p_transparent, bool p_double_sided, bool p_cut_alpha, bool p_opaque_prepass);
 
 	RID get_shader_rid() const;
+
+	virtual Shader::Mode get_shader_mode() const;
 
 	SpatialMaterial();
 	virtual ~SpatialMaterial();

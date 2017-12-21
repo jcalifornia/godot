@@ -92,7 +92,7 @@ class SpatialEditorViewport : public Control {
 		VIEW_DISPLAY_NORMAL,
 		VIEW_DISPLAY_WIREFRAME,
 		VIEW_DISPLAY_OVERDRAW,
-		VIEW_DISPLAY_SHADELESS,
+		VIEW_DISPLAY_SHADELESS
 	};
 
 public:
@@ -405,6 +405,14 @@ public:
 
 	};
 
+	enum ToolOptions {
+
+		TOOL_OPT_LOCAL_COORDS,
+		TOOL_OPT_USE_SNAP,
+		TOOL_OPT_MAX
+
+	};
+
 private:
 	EditorNode *editor;
 	EditorSelection *editor_selection;
@@ -413,7 +421,6 @@ private:
 	SpatialEditorViewport *viewports[VIEWPORTS_COUNT];
 	VSplitContainer *shader_split;
 	HSplitContainer *palette_split;
-	HBoxContainer *palette_split_container;
 
 	/////
 
@@ -450,17 +457,6 @@ private:
 	Spatial *preview_node;
 	AABB preview_bounds;
 
-	/*
-	struct Selected {
-		AABB aabb;
-		Transform original; // original location when moving
-		Transform last_xform; // last transform
-		Spatial *sp;
-		RID poly_instance;
-	};
-
-	Map<uint32_t,Selected> selected;
-*/
 	struct Gizmo {
 
 		bool visible;
@@ -475,9 +471,9 @@ private:
 		MENU_TOOL_ROTATE,
 		MENU_TOOL_SCALE,
 		MENU_TOOL_LIST_SELECT,
-		MENU_TRANSFORM_USE_SNAP,
+		MENU_TOOL_LOCAL_COORDS,
+		MENU_TOOL_USE_SNAP,
 		MENU_TRANSFORM_CONFIGURE_SNAP,
-		MENU_TRANSFORM_LOCAL_COORDS,
 		MENU_TRANSFORM_DIALOG,
 		MENU_VIEW_USE_1_VIEWPORT,
 		MENU_VIEW_USE_2_VIEWPORTS,
@@ -489,10 +485,12 @@ private:
 		MENU_VIEW_GRID,
 		MENU_VIEW_CAMERA_SETTINGS,
 		MENU_LOCK_SELECTED,
-		MENU_UNLOCK_SELECTED
+		MENU_UNLOCK_SELECTED,
+		MENU_VISIBILITY_SKELETON
 	};
 
 	Button *tool_button[TOOL_MAX];
+	Button *tool_option_button[TOOL_OPT_MAX];
 
 	MenuButton *transform_menu;
 	MenuButton *view_menu;
@@ -524,11 +522,10 @@ private:
 
 	void _xform_dialog_action();
 	void _menu_item_pressed(int p_option);
+	void _menu_item_toggled(bool pressed, int p_option);
 
 	HBoxContainer *hbc_menu;
 
-	//
-	//
 	void _generate_selection_box();
 	UndoRedo *undo_redo;
 
@@ -579,12 +576,11 @@ public:
 	bool is_gizmo_visible() const { return gizmo.visible; }
 
 	ToolMode get_tool_mode() const { return tool_mode; }
+	bool are_local_coords_enabled() const { return tool_option_button[SpatialEditor::TOOL_OPT_LOCAL_COORDS]->is_pressed(); }
 	bool is_snap_enabled() const { return snap_enabled; }
 	float get_translate_snap() const { return snap_translate->get_text().to_double(); }
 	float get_rotate_snap() const { return snap_rotate->get_text().to_double(); }
 	float get_scale_snap() const { return snap_scale->get_text().to_double(); }
-
-	bool are_local_coords_enabled() const { return transform_menu->get_popup()->is_item_checked(transform_menu->get_popup()->get_item_index(SpatialEditor::MENU_TRANSFORM_LOCAL_COORDS)); }
 
 	Ref<ArrayMesh> get_move_gizmo(int idx) const { return move_gizmo[idx]; }
 	Ref<ArrayMesh> get_move_plane_gizmo(int idx) const { return move_plane_gizmo[idx]; }
@@ -592,7 +588,10 @@ public:
 	Ref<ArrayMesh> get_scale_gizmo(int idx) const { return scale_gizmo[idx]; }
 	Ref<ArrayMesh> get_scale_plane_gizmo(int idx) const { return scale_plane_gizmo[idx]; }
 
+	int get_skeleton_visibility_state() const;
+
 	void update_transform_gizmo();
+	void update_all_gizmos();
 
 	void select_gizmo_highlight_axis(int p_axis);
 	void set_custom_camera(Node *p_camera) { custom_camera = p_camera; }
@@ -608,7 +607,7 @@ public:
 	void add_control_to_menu_panel(Control *p_control);
 
 	VSplitContainer *get_shader_split();
-	HBoxContainer *get_palette_split();
+	HSplitContainer *get_palette_split();
 
 	Spatial *get_selected() { return selected; }
 

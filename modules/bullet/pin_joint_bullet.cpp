@@ -34,14 +34,14 @@
 #include "bullet_types_converter.h"
 #include "rigid_body_bullet.h"
 
-PinJointBullet::PinJointBullet(RigidBodyBullet *p_body_a, const Vector3 &p_pos_a, RigidBodyBullet *p_body_b, const Vector3 &p_pos_b)
-	: JointBullet() {
+PinJointBullet::PinJointBullet(RigidBodyBullet *p_body_a, const Vector3 &p_pos_a, RigidBodyBullet *p_body_b, const Vector3 &p_pos_b) :
+		JointBullet() {
 	if (p_body_b) {
 
 		btVector3 btPivotA;
 		btVector3 btPivotB;
-		G_TO_B(p_pos_a, btPivotA);
-		G_TO_B(p_pos_b, btPivotB);
+		G_TO_B(p_pos_a * p_body_a->get_body_scale(), btPivotA);
+		G_TO_B(p_pos_b * p_body_b->get_body_scale(), btPivotB);
 		p2pConstraint = bulletnew(btPoint2PointConstraint(*p_body_a->get_bt_rigid_body(),
 				*p_body_b->get_bt_rigid_body(),
 				btPivotA,

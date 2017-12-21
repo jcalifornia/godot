@@ -597,12 +597,36 @@ GDScriptParser::Node *GDScriptParser::_parse_expression(Node *p_parent, bool p_s
 			OperatorNode *op = alloc_node<OperatorNode>();
 			op->op = OperatorNode::OP_CALL;
 
-			if (tokenizer->get_token() == GDScriptTokenizer::TK_BUILT_IN_TYPE) {
+			//Do a quick Array and Dictionary Check.  Replace if either require no arguments.
+			bool replaced = false;
 
-				TypeNode *tn = alloc_node<TypeNode>();
-				tn->vtype = tokenizer->get_token_type();
-				op->arguments.push_back(tn);
-				tokenizer->advance(2);
+			if (tokenizer->get_token() == GDScriptTokenizer::TK_BUILT_IN_TYPE) {
+				Variant::Type ct = tokenizer->get_token_type();
+				if (p_parsing_constant == false) {
+					if (ct == Variant::ARRAY) {
+						if (tokenizer->get_token(2) == GDScriptTokenizer::TK_PARENTHESIS_CLOSE) {
+							ArrayNode *arr = alloc_node<ArrayNode>();
+							expr = arr;
+							replaced = true;
+							tokenizer->advance(3);
+						}
+					}
+					if (ct == Variant::DICTIONARY) {
+						if (tokenizer->get_token(2) == GDScriptTokenizer::TK_PARENTHESIS_CLOSE) {
+							DictionaryNode *dict = alloc_node<DictionaryNode>();
+							expr = dict;
+							replaced = true;
+							tokenizer->advance(3);
+						}
+					}
+				}
+
+				if (!replaced) {
+					TypeNode *tn = alloc_node<TypeNode>();
+					tn->vtype = tokenizer->get_token_type();
+					op->arguments.push_back(tn);
+					tokenizer->advance(2);
+				}
 			} else if (tokenizer->get_token() == GDScriptTokenizer::TK_BUILT_IN_FUNC) {
 
 				BuiltInFunctionNode *bn = alloc_node<BuiltInFunctionNode>();
@@ -628,11 +652,11 @@ GDScriptParser::Node *GDScriptParser::_parse_expression(Node *p_parent, bool p_s
 				_make_completable_call(0);
 				completion_node = op;
 			}
-			if (!_parse_arguments(op, op->arguments, p_static, true))
-				return NULL;
-
-			expr = op;
-
+			if (!replaced) {
+				if (!_parse_arguments(op, op->arguments, p_static, true))
+					return NULL;
+				expr = op;
+			}
 		} else if (tokenizer->is_token_literal(0, true)) {
 			// We check with is_token_literal, as this allows us to use match/sync/etc. as a name
 			//identifier (reference)
@@ -1140,6 +1164,7 @@ GDScriptParser::Node *GDScriptParser::_parse_expression(Node *p_parent, bool p_s
 			bool unary = false;
 			bool ternary = false;
 			bool error = false;
+			bool right_to_left = false;
 
 			switch (expression[i].op) {
 
@@ -1194,11 +1219,13 @@ GDScriptParser::Node *GDScriptParser::_parse_expression(Node *p_parent, bool p_s
 				case OperatorNode::OP_TERNARY_IF:
 					priority = 14;
 					ternary = true;
+					right_to_left = true;
 					break;
 				case OperatorNode::OP_TERNARY_ELSE:
 					priority = 14;
 					error = true;
-					break; // Errors out when found without IF (since IF would consume it)
+					// Rigth-to-left should be false in this case, otherwise it would always error.
+					break;
 
 				case OperatorNode::OP_ASSIGN: priority = 15; break;
 				case OperatorNode::OP_ASSIGN_ADD: priority = 15; break;
@@ -1218,13 +1245,13 @@ GDScriptParser::Node *GDScriptParser::_parse_expression(Node *p_parent, bool p_s
 				}
 			}
 
-			if (priority < min_priority) {
+			if (priority < min_priority || (right_to_left && priority == min_priority)) {
+				// < is used for left to right (default)
+				// <= is used for right to left
 				if (error) {
 					_set_error("Unexpected operator");
 					return NULL;
 				}
-				// < is used for left to right (default)
-				// <= is used for right to left
 				next_op = i;
 				min_priority = priority;
 				is_unary = unary;
@@ -2976,10 +3003,9 @@ void GDScriptParser::_parse_extends(ClassNode *p_class) {
 
 			case GDScriptTokenizer::TK_IDENTIFIER: {
 
-					StringName identifier = tokenizer->get_token_identifier();
-					p_class->extends_class.push_back(identifier);
-				}
-				break;
+				StringName identifier = tokenizer->get_token_identifier();
+				p_class->extends_class.push_back(identifier);
+			} break;
 
 			case GDScriptTokenizer::TK_PERIOD:
 				break;
@@ -3388,6 +3414,10 @@ void GDScriptParser::_parse_class(ClassNode *p_class) {
 						Variant::Type type = tokenizer->get_token_type();
 						if (type == Variant::NIL) {
 							_set_error("Can't export null type.");
+							return;
+						}
+						if (type == Variant::OBJECT) {
+							_set_error("Can't export raw object type.");
 							return;
 						}
 						current_export.type = type;

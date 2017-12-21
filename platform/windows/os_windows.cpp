@@ -34,19 +34,19 @@
 #include "drivers/windows/dir_access_windows.h"
 #include "drivers/windows/file_access_windows.h"
 #include "drivers/windows/mutex_windows.h"
+#include "drivers/windows/packet_peer_udp_winsock.h"
 #include "drivers/windows/rw_lock_windows.h"
 #include "drivers/windows/semaphore_windows.h"
+#include "drivers/windows/stream_peer_tcp_winsock.h"
+#include "drivers/windows/tcp_server_winsock.h"
 #include "drivers/windows/thread_windows.h"
 #include "io/marshalls.h"
 #include "joypad.h"
 #include "lang_table.h"
 #include "main/main.h"
-#include "packet_peer_udp_winsock.h"
 #include "servers/audio_server.h"
 #include "servers/visual/visual_server_raster.h"
 #include "servers/visual/visual_server_wrap_mt.h"
-#include "stream_peer_winsock.h"
-#include "tcp_server_winsock.h"
 #include "version_generated.gen.h"
 #include "windows_terminal_logger.h"
 
@@ -68,6 +68,19 @@ __attribute__((visibility("default"))) DWORD NvOptimusEnablement = 0x00000001;
 #ifndef WM_TOUCH
 #define WM_TOUCH 576
 #endif
+
+static String format_error_message(DWORD id) {
+
+	LPWSTR messageBuffer = NULL;
+	size_t size = FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+			NULL, id, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPWSTR)&messageBuffer, 0, NULL);
+
+	String msg = "Error " + itos(id) + ": " + String(messageBuffer, size);
+
+	LocalFree(messageBuffer);
+
+	return msg;
+}
 
 extern HINSTANCE godot_hinstance;
 
@@ -183,7 +196,7 @@ void OS_Windows::initialize_core() {
 	DirAccess::make_default<DirAccessWindows>(DirAccess::ACCESS_FILESYSTEM);
 
 	TCPServerWinsock::make_default();
-	StreamPeerWinsock::make_default();
+	StreamPeerTCPWinsock::make_default();
 	PacketPeerUDPWinsock::make_default();
 
 	// We need to know how often the clock is updated
@@ -210,7 +223,17 @@ bool OS_Windows::can_draw() const {
 #define SIGNATURE_MASK 0xFFFFFF00
 #define IsPenEvent(dw) (((dw)&SIGNATURE_MASK) == MI_WP_SIGNATURE)
 
-void OS_Windows::_touch_event(bool p_pressed, int p_x, int p_y, int idx) {
+void OS_Windows::_touch_event(bool p_pressed, float p_x, float p_y, int idx) {
+
+	// Defensive
+	if (touch_state.has(idx) == p_pressed)
+		return;
+
+	if (p_pressed) {
+		touch_state.insert(idx, Vector2(p_x, p_y));
+	} else {
+		touch_state.erase(idx);
+	}
 
 	Ref<InputEventScreenTouch> event;
 	event.instance();
@@ -223,7 +246,17 @@ void OS_Windows::_touch_event(bool p_pressed, int p_x, int p_y, int idx) {
 	}
 };
 
-void OS_Windows::_drag_event(int p_x, int p_y, int idx) {
+void OS_Windows::_drag_event(float p_x, float p_y, int idx) {
+
+	Map<int, Vector2>::Element *curr = touch_state.find(idx);
+	// Defensive
+	if (!curr)
+		return;
+
+	if (curr->get() == Vector2(p_x, p_y))
+		return;
+
+	curr->get() = Vector2(p_x, p_y);
 
 	Ref<InputEventScreenDrag> event;
 	event.instance();
@@ -253,6 +286,13 @@ LRESULT OS_Windows::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 			if (mouse_mode == MOUSE_MODE_CAPTURED || mouse_mode == MOUSE_MODE_CONFINED) {
 				ReleaseCapture();
 			}
+
+			// Release every touch to avoid sticky points
+			for (Map<int, Vector2>::Element *E = touch_state.front(); E; E = E->next()) {
+				_touch_event(false, E->get().x, E->get().y, E->key());
+			}
+			touch_state.clear();
+
 			break;
 		}
 		case WM_ACTIVATE: // Watch For Window Activate Message
@@ -656,7 +696,6 @@ LRESULT OS_Windows::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 			print_line("input lang change");
 		} break;
 
-#if WINVER >= 0x0601 // for windows 7
 		case WM_TOUCH: {
 
 			BOOL bHandled = FALSE;
@@ -669,10 +708,10 @@ LRESULT OS_Windows::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 						//do something with each touch input entry
 						if (ti.dwFlags & TOUCHEVENTF_MOVE) {
 
-							_drag_event(ti.x / 100, ti.y / 100, ti.dwID);
+							_drag_event(ti.x / 100.0f, ti.y / 100.0f, ti.dwID);
 						} else if (ti.dwFlags & (TOUCHEVENTF_UP | TOUCHEVENTF_DOWN)) {
 
-							_touch_event(ti.dwFlags & TOUCHEVENTF_DOWN != 0, ti.x / 100, ti.y / 100, ti.dwID);
+							_touch_event(ti.dwFlags & TOUCHEVENTF_DOWN, ti.x / 100.0f, ti.y / 100.0f, ti.dwID);
 						};
 					}
 					bHandled = TRUE;
@@ -690,7 +729,6 @@ LRESULT OS_Windows::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 
 		} break;
 
-#endif
 		case WM_DEVICECHANGE: {
 
 			joypad->probe_joypads();
@@ -1036,6 +1074,8 @@ void OS_Windows::initialize(const VideoMode &p_desired, int p_video_driver, int 
 	RasterizerGLES3::register_config();
 
 	RasterizerGLES3::make_current();
+
+	gl_context->set_use_vsync(video_mode.use_vsync);
 #endif
 
 	visual_server = memnew(VisualServerRaster);
@@ -1074,7 +1114,7 @@ void OS_Windows::initialize(const VideoMode &p_desired, int p_video_driver, int 
 	tme.dwHoverTime = HOVER_DEFAULT;
 	TrackMouseEvent(&tme);
 
-	//RegisterTouchWindow(hWnd, 0); // Windows 7
+	RegisterTouchWindow(hWnd, 0);
 
 	_ensure_user_data_dir();
 
@@ -1188,6 +1228,7 @@ void OS_Windows::finalize() {
 
 	memdelete(joypad);
 	memdelete(input);
+	touch_state.clear();
 
 	visual_server->finish();
 	memdelete(visual_server);
@@ -1212,7 +1253,7 @@ void OS_Windows::finalize_core() {
 	memdelete(process_map);
 
 	TCPServerWinsock::cleanup();
-	StreamPeerWinsock::cleanup();
+	StreamPeerTCPWinsock::cleanup();
 }
 
 void OS_Windows::alert(const String &p_alert, const String &p_title) {
@@ -1557,7 +1598,7 @@ bool OS_Windows::is_window_maximized() const {
 	return maximized;
 }
 
-void OS_Windows::set_borderless_window(int p_borderless) {
+void OS_Windows::set_borderless_window(bool p_borderless) {
 	if (video_mode.borderless_window == p_borderless)
 		return;
 
@@ -1588,10 +1629,29 @@ void OS_Windows::_update_window_style(bool repaint) {
 	}
 }
 
-Error OS_Windows::open_dynamic_library(const String p_path, void *&p_library_handle) {
-	p_library_handle = (void *)LoadLibrary(p_path.utf8().get_data());
+Error OS_Windows::open_dynamic_library(const String p_path, void *&p_library_handle, bool p_also_set_library_path) {
+
+	typedef DLL_DIRECTORY_COOKIE(WINAPI * PAddDllDirectory)(PCWSTR);
+	typedef BOOL(WINAPI * PRemoveDllDirectory)(DLL_DIRECTORY_COOKIE);
+
+	PAddDllDirectory add_dll_directory = (PAddDllDirectory)GetProcAddress(GetModuleHandle("kernel32.dll"), "AddDllDirectory");
+	PRemoveDllDirectory remove_dll_directory = (PRemoveDllDirectory)GetProcAddress(GetModuleHandle("kernel32.dll"), "RemoveDllDirectory");
+
+	bool has_dll_directory_api = ((add_dll_directory != NULL) && (remove_dll_directory != NULL));
+	DLL_DIRECTORY_COOKIE cookie;
+
+	if (p_also_set_library_path && has_dll_directory_api) {
+		cookie = add_dll_directory(p_path.get_base_dir().c_str());
+	}
+
+	p_library_handle = (void *)LoadLibraryExW(p_path.c_str(), NULL, (p_also_set_library_path && has_dll_directory_api) ? LOAD_LIBRARY_SEARCH_DEFAULT_DIRS : 0);
+
+	if (p_also_set_library_path && has_dll_directory_api) {
+		remove_dll_directory(cookie);
+	}
+
 	if (!p_library_handle) {
-		ERR_EXPLAIN("Can't open dynamic library: " + p_path + ". Error: " + String::num(GetLastError()));
+		ERR_EXPLAIN("Can't open dynamic library: " + p_path + ". Error: " + format_error_message(GetLastError()));
 		ERR_FAIL_V(ERR_CANT_OPEN);
 	}
 	return OK;
@@ -1954,7 +2014,7 @@ void OS_Windows::set_icon(const Ref<Image> &p_icon) {
 
 bool OS_Windows::has_environment(const String &p_var) const {
 
-	return getenv(p_var.utf8().get_data()) != NULL;
+	return _wgetenv(p_var.c_str()) != NULL;
 };
 
 String OS_Windows::get_environment(const String &p_var) const {
@@ -2096,6 +2156,10 @@ void OS_Windows::swap_buffers() {
 	gl_context->swap_buffers();
 }
 
+void OS_Windows::force_process_input() {
+	process_events(); // get rid of pending events
+}
+
 void OS_Windows::run() {
 
 	if (!main_loop)
@@ -2224,19 +2288,19 @@ String OS_Windows::get_joy_guid(int p_device) const {
 	return input->get_joy_guid_remapped(p_device);
 }
 
-void OS_Windows::set_use_vsync(bool p_enable) {
+void OS_Windows::_set_use_vsync(bool p_enable) {
 
 	if (gl_context)
 		gl_context->set_use_vsync(p_enable);
 }
-
+/*
 bool OS_Windows::is_vsync_enabled() const {
 
 	if (gl_context)
 		return gl_context->is_using_vsync();
 
 	return true;
-}
+}*/
 
 OS::PowerState OS_Windows::get_power_state() {
 	return power_manager->get_power_state();
