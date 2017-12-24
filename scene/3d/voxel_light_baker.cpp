@@ -1,5 +1,39 @@
+/*************************************************************************/
+/*  voxel_light_baker.cpp                                                */
+/*************************************************************************/
+/*                       This file is part of:                           */
+/*                           GODOT ENGINE                                */
+/*                      https://godotengine.org                          */
+/*************************************************************************/
+/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/*                                                                       */
+/* Permission is hereby granted, free of charge, to any person obtaining */
+/* a copy of this software and associated documentation files (the       */
+/* "Software"), to deal in the Software without restriction, including   */
+/* without limitation the rights to use, copy, modify, merge, publish,   */
+/* distribute, sublicense, and/or sell copies of the Software, and to    */
+/* permit persons to whom the Software is furnished to do so, subject to */
+/* the following conditions:                                             */
+/*                                                                       */
+/* The above copyright notice and this permission notice shall be        */
+/* included in all copies or substantial portions of the Software.       */
+/*                                                                       */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*/
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY  */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
+/*************************************************************************/
+
 #include "voxel_light_baker.h"
 #include "os/os.h"
+#include "os/threaded_array_processor.h"
+
+#include <stdlib.h>
+
 #define FINDMINMAX(x0, x1, x2, min, max) \
 	min = max = x0;                      \
 	if (x1 < min) min = x1;              \
@@ -183,14 +217,23 @@ static bool fast_tri_box_overlap(const Vector3 &boxcenter, const Vector3 boxhalf
 	return true; /* box and triangle overlaps */
 }
 
-static _FORCE_INLINE_ Vector2 get_uv(const Vector3 &p_pos, const Vector3 *p_vtx, const Vector2 *p_uv) {
+static _FORCE_INLINE_ void get_uv_and_normal(const Vector3 &p_pos, const Vector3 *p_vtx, const Vector2 *p_uv, const Vector3 *p_normal, Vector2 &r_uv, Vector3 &r_normal) {
 
-	if (p_pos.distance_squared_to(p_vtx[0]) < CMP_EPSILON2)
-		return p_uv[0];
-	if (p_pos.distance_squared_to(p_vtx[1]) < CMP_EPSILON2)
-		return p_uv[1];
-	if (p_pos.distance_squared_to(p_vtx[2]) < CMP_EPSILON2)
-		return p_uv[2];
+	if (p_pos.distance_squared_to(p_vtx[0]) < CMP_EPSILON2) {
+		r_uv = p_uv[0];
+		r_normal = p_normal[0];
+		return;
+	}
+	if (p_pos.distance_squared_to(p_vtx[1]) < CMP_EPSILON2) {
+		r_uv = p_uv[1];
+		r_normal = p_normal[1];
+		return;
+	}
+	if (p_pos.distance_squared_to(p_vtx[2]) < CMP_EPSILON2) {
+		r_uv = p_uv[2];
+		r_normal = p_normal[2];
+		return;
+	}
 
 	Vector3 v0 = p_vtx[1] - p_vtx[0];
 	Vector3 v1 = p_vtx[2] - p_vtx[0];
@@ -202,16 +245,20 @@ static _FORCE_INLINE_ Vector2 get_uv(const Vector3 &p_pos, const Vector3 *p_vtx,
 	float d20 = v2.dot(v0);
 	float d21 = v2.dot(v1);
 	float denom = (d00 * d11 - d01 * d01);
-	if (denom == 0)
-		return p_uv[0];
+	if (denom == 0) {
+		r_uv = p_uv[0];
+		r_normal = p_normal[0];
+		return;
+	}
 	float v = (d11 * d20 - d01 * d21) / denom;
 	float w = (d00 * d21 - d01 * d20) / denom;
 	float u = 1.0f - v - w;
 
-	return p_uv[0] * u + p_uv[1] * v + p_uv[2] * w;
+	r_uv = p_uv[0] * u + p_uv[1] * v + p_uv[2] * w;
+	r_normal = (p_normal[0] * u + p_normal[1] * v + p_normal[2] * w).normalized();
 }
 
-void VoxelLightBaker::_plot_face(int p_idx, int p_level, int p_x, int p_y, int p_z, const Vector3 *p_vtx, const Vector2 *p_uv, const MaterialCache &p_material, const AABB &p_aabb) {
+void VoxelLightBaker::_plot_face(int p_idx, int p_level, int p_x, int p_y, int p_z, const Vector3 *p_vtx, const Vector3 *p_normal, const Vector2 *p_uv, const MaterialCache &p_material, const AABB &p_aabb) {
 
 	if (p_level == cell_subdiv - 1) {
 		//plot the face by guessing it's albedo and emission value
@@ -289,7 +336,11 @@ void VoxelLightBaker::_plot_face(int p_idx, int p_level, int p_x, int p_y, int p
 
 				intersection = Face3(p_vtx[0], p_vtx[1], p_vtx[2]).get_closest_point_to(intersection);
 
-				Vector2 uv = get_uv(intersection, p_vtx, p_uv);
+				Vector2 uv;
+				Vector3 lnormal;
+				get_uv_and_normal(intersection, p_vtx, p_uv, p_normal, uv, lnormal);
+				if (lnormal == Vector3()) //just in case normal as nor provided
+					lnormal = normal;
 
 				int uv_x = CLAMP(Math::fposmod(uv.x, 1.0f) * bake_texture_size, 0, bake_texture_size - 1);
 				int uv_y = CLAMP(Math::fposmod(uv.y, 1.0f) * bake_texture_size, 0, bake_texture_size - 1);
@@ -304,7 +355,7 @@ void VoxelLightBaker::_plot_face(int p_idx, int p_level, int p_x, int p_y, int p
 				emission_accum.g += p_material.emission[ofs].g;
 				emission_accum.b += p_material.emission[ofs].b;
 
-				normal_accum += normal;
+				normal_accum += lnormal;
 
 				alpha += 1.0;
 			}
@@ -316,7 +367,11 @@ void VoxelLightBaker::_plot_face(int p_idx, int p_level, int p_x, int p_y, int p
 			Face3 f(p_vtx[0], p_vtx[1], p_vtx[2]);
 			Vector3 inters = f.get_closest_point_to(p_aabb.position + p_aabb.size * 0.5);
 
-			Vector2 uv = get_uv(inters, p_vtx, p_uv);
+			Vector3 lnormal;
+			Vector2 uv;
+			get_uv_and_normal(inters, p_vtx, p_uv, p_normal, uv, normal);
+			if (lnormal == Vector3()) //just in case normal as nor provided
+				lnormal = normal;
 
 			int uv_x = CLAMP(Math::fposmod(uv.x, 1.0f) * bake_texture_size, 0, bake_texture_size - 1);
 			int uv_y = CLAMP(Math::fposmod(uv.y, 1.0f) * bake_texture_size, 0, bake_texture_size - 1);
@@ -334,7 +389,7 @@ void VoxelLightBaker::_plot_face(int p_idx, int p_level, int p_x, int p_y, int p
 			emission_accum.g = p_material.emission[ofs].g * alpha;
 			emission_accum.b = p_material.emission[ofs].b * alpha;
 
-			normal_accum *= alpha;
+			normal_accum = lnormal * alpha;
 
 		} else {
 
@@ -415,7 +470,7 @@ void VoxelLightBaker::_plot_face(int p_idx, int p_level, int p_x, int p_y, int p
 				bake_cells[child_idx].level = p_level + 1;
 			}
 
-			_plot_face(bake_cells[p_idx].childs[i], p_level + 1, nx, ny, nz, p_vtx, p_uv, p_material, aabb);
+			_plot_face(bake_cells[p_idx].childs[i], p_level + 1, nx, ny, nz, p_vtx, p_normal, p_uv, p_material, aabb);
 		}
 	}
 }
@@ -539,14 +594,22 @@ void VoxelLightBaker::plot_mesh(const Transform &p_xform, Ref<Mesh> &p_mesh, con
 		PoolVector<Vector3>::Read vr = vertices.read();
 		PoolVector<Vector2> uv = a[Mesh::ARRAY_TEX_UV];
 		PoolVector<Vector2>::Read uvr;
+		PoolVector<Vector3> normals = a[Mesh::ARRAY_NORMAL];
+		PoolVector<Vector3>::Read nr;
 		PoolVector<int> index = a[Mesh::ARRAY_INDEX];
 
 		bool read_uv = false;
+		bool read_normals = false;
 
 		if (uv.size()) {
 
 			uvr = uv.read();
 			read_uv = true;
+		}
+
+		if (normals.size()) {
+			read_normals = true;
+			nr = normals.read();
 		}
 
 		if (index.size()) {
@@ -558,6 +621,7 @@ void VoxelLightBaker::plot_mesh(const Transform &p_xform, Ref<Mesh> &p_mesh, con
 
 				Vector3 vtxs[3];
 				Vector2 uvs[3];
+				Vector3 normal[3];
 
 				for (int k = 0; k < 3; k++) {
 					vtxs[k] = p_xform.xform(vr[ir[j * 3 + k]]);
@@ -569,11 +633,17 @@ void VoxelLightBaker::plot_mesh(const Transform &p_xform, Ref<Mesh> &p_mesh, con
 					}
 				}
 
+				if (read_normals) {
+					for (int k = 0; k < 3; k++) {
+						normal[k] = nr[ir[j * 3 + k]];
+					}
+				}
+
 				//test against original bounds
 				if (!fast_tri_box_overlap(original_bounds.position + original_bounds.size * 0.5, original_bounds.size * 0.5, vtxs))
 					continue;
 				//plot
-				_plot_face(0, 0, 0, 0, 0, vtxs, uvs, material, po2_bounds);
+				_plot_face(0, 0, 0, 0, 0, vtxs, normal, uvs, material, po2_bounds);
 			}
 
 		} else {
@@ -584,6 +654,7 @@ void VoxelLightBaker::plot_mesh(const Transform &p_xform, Ref<Mesh> &p_mesh, con
 
 				Vector3 vtxs[3];
 				Vector2 uvs[3];
+				Vector3 normal[3];
 
 				for (int k = 0; k < 3; k++) {
 					vtxs[k] = p_xform.xform(vr[j * 3 + k]);
@@ -595,11 +666,17 @@ void VoxelLightBaker::plot_mesh(const Transform &p_xform, Ref<Mesh> &p_mesh, con
 					}
 				}
 
+				if (read_normals) {
+					for (int k = 0; k < 3; k++) {
+						normal[k] = nr[j * 3 + k];
+					}
+				}
+
 				//test against original bounds
 				if (!fast_tri_box_overlap(original_bounds.position + original_bounds.size * 0.5, original_bounds.size * 0.5, vtxs))
 					continue;
 				//plot face
-				_plot_face(0, 0, 0, 0, 0, vtxs, uvs, material, po2_bounds);
+				_plot_face(0, 0, 0, 0, 0, vtxs, normal, uvs, material, po2_bounds);
 			}
 		}
 	}
@@ -833,11 +910,13 @@ void VoxelLightBaker::plot_light_directional(const Vector3 &p_direction, const C
 				}
 			}
 
-			for (int i = 0; i < 6; i++) {
-				float s = MAX(0.0, aniso_normal[i].dot(-light_axis)); //light depending on normal for direct
-				light->direct_accum[i][0] += light_energy.x * s;
-				light->direct_accum[i][1] += light_energy.y * s;
-				light->direct_accum[i][2] += light_energy.z * s;
+			if (p_direct) {
+				for (int i = 0; i < 6; i++) {
+					float s = MAX(0.0, aniso_normal[i].dot(-light_axis)); //light depending on normal for direct
+					light->direct_accum[i][0] += light_energy.x * s;
+					light->direct_accum[i][1] += light_energy.y * s;
+					light->direct_accum[i][2] += light_energy.z * s;
+				}
 			}
 			success_count++;
 		}
@@ -897,17 +976,7 @@ void VoxelLightBaker::plot_light_omni(const Vector3 &p_pos, const Color &p_color
 			float dt = CLAMP((d + distance_adv) / local_radius, 0, 1);
 			att *= powf(1.0 - dt, p_attenutation);
 		}
-#if 0
-		if (light_cache.type == VS::LIGHT_SPOT) {
 
-			float angle = Math::rad2deg(acos(light_axis.dot(spot_axis)));
-			if (angle > light_cache.spot_angle)
-				continue;
-
-			float d = CLAMP(angle / light_cache.spot_angle, 1, 0);
-			att *= powf(1.0 - d, light_cache.spot_attenuation);
-		}
-#endif
 		clip_planes = 0;
 
 		for (int c = 0; c < 3; c++) {
@@ -972,11 +1041,13 @@ void VoxelLightBaker::plot_light_omni(const Vector3 &p_pos, const Color &p_color
 				}
 			}
 
-			for (int i = 0; i < 6; i++) {
-				float s = MAX(0.0, aniso_normal[i].dot(-light_axis)); //light depending on normal for direct
-				light->direct_accum[i][0] += light_energy.x * s * att;
-				light->direct_accum[i][1] += light_energy.y * s * att;
-				light->direct_accum[i][2] += light_energy.z * s * att;
+			if (p_direct) {
+				for (int i = 0; i < 6; i++) {
+					float s = MAX(0.0, aniso_normal[i].dot(-light_axis)); //light depending on normal for direct
+					light->direct_accum[i][0] += light_energy.x * s * att;
+					light->direct_accum[i][1] += light_energy.y * s * att;
+					light->direct_accum[i][2] += light_energy.z * s * att;
+				}
 			}
 		}
 
@@ -1041,17 +1112,7 @@ void VoxelLightBaker::plot_light_spot(const Vector3 &p_pos, const Vector3 &p_axi
 			float dt = CLAMP((d + distance_adv) / local_radius, 0, 1);
 			att *= powf(1.0 - dt, p_attenutation);
 		}
-#if 0
-		if (light_cache.type == VS::LIGHT_SPOT) {
 
-			float angle = Math::rad2deg(acos(light_axis.dot(spot_axis)));
-			if (angle > light_cache.spot_angle)
-				continue;
-
-			float d = CLAMP(angle / light_cache.spot_angle, 1, 0);
-			att *= powf(1.0 - d, light_cache.spot_attenuation);
-		}
-#endif
 		clip_planes = 0;
 
 		for (int c = 0; c < 3; c++) {
@@ -1115,11 +1176,13 @@ void VoxelLightBaker::plot_light_spot(const Vector3 &p_pos, const Vector3 &p_axi
 				}
 			}
 
-			for (int i = 0; i < 6; i++) {
-				float s = MAX(0.0, aniso_normal[i].dot(-light_axis)); //light depending on normal for direct
-				light->direct_accum[i][0] += light_energy.x * s * att;
-				light->direct_accum[i][1] += light_energy.y * s * att;
-				light->direct_accum[i][2] += light_energy.z * s * att;
+			if (p_direct) {
+				for (int i = 0; i < 6; i++) {
+					float s = MAX(0.0, aniso_normal[i].dot(-light_axis)); //light depending on normal for direct
+					light->direct_accum[i][0] += light_energy.x * s * att;
+					light->direct_accum[i][1] += light_energy.y * s * att;
+					light->direct_accum[i][2] += light_energy.z * s * att;
+				}
 			}
 		}
 
@@ -1614,6 +1677,16 @@ Vector3 VoxelLightBaker::_compute_pixel_light_at_pos(const Vector3 &p_pos, const
 	return accum;
 }
 
+_ALWAYS_INLINE_ uint32_t xorshift32(uint32_t *state) {
+	/* Algorithm "xor" from p. 4 of Marsaglia, "Xorshift RNGs" */
+	uint32_t x = *state;
+	x ^= x << 13;
+	x ^= x >> 17;
+	x ^= x << 5;
+	*state = x;
+	return x;
+}
+
 Vector3 VoxelLightBaker::_compute_ray_trace_at_pos(const Vector3 &p_pos, const Vector3 &p_normal) {
 
 	int samples_per_quality[3] = { 48, 128, 512 };
@@ -1636,19 +1709,21 @@ Vector3 VoxelLightBaker::_compute_ray_trace_at_pos(const Vector3 &p_pos, const V
 	const Light *light = bake_light.ptr();
 	const Cell *cells = bake_cells.ptr();
 
+	uint32_t local_rng_state = rand(); //needs to be fixed again
+
 	for (int i = 0; i < samples; i++) {
 
-		float random_angle1 = (((Math::rand() % 65535) / 65535.0) * 2.0 - 1.0) * spread;
+		float random_angle1 = (((xorshift32(&local_rng_state) % 65535) / 65535.0) * 2.0 - 1.0) * spread;
 		Vector3 axis(0, sin(random_angle1), cos(random_angle1));
-		float random_angle2 = ((Math::rand() % 65535) / 65535.0) * Math_PI * 2.0;
+		float random_angle2 = ((xorshift32(&local_rng_state) % 65535) / 65535.0) * Math_PI * 2.0;
 		Basis rot(Vector3(0, 0, 1), random_angle2);
 		axis = rot.xform(axis);
 
 		Vector3 direction = normal_xform.xform(axis).normalized();
 
-		Vector3 pos = p_pos + Vector3(0.5, 0.5, 0.5) + direction * bias;
-
 		Vector3 advance = direction * _get_normal_advance(direction);
+
+		Vector3 pos = p_pos /*+ Vector3(0.5, 0.5, 0.5)*/ + advance * bias;
 
 		uint32_t cell = CHILD_EMPTY;
 
@@ -1692,7 +1767,7 @@ Vector3 VoxelLightBaker::_compute_ray_trace_at_pos(const Vector3 &p_pos, const V
 				}
 
 				cell = bc->childs[child];
-				if (cell == CHILD_EMPTY)
+				if (unlikely(cell == CHILD_EMPTY))
 					break;
 
 				half >>= 1;
@@ -1701,20 +1776,45 @@ Vector3 VoxelLightBaker::_compute_ray_trace_at_pos(const Vector3 &p_pos, const V
 			pos += advance;
 		}
 
-		if (cell != CHILD_EMPTY) {
+		if (unlikely(cell != CHILD_EMPTY)) {
 			for (int i = 0; i < 6; i++) {
 				//anisotropic read light
 				float amount = direction.dot(aniso_normal[i]);
-				if (amount < 0)
-					amount = 0;
+				if (amount <= 0)
+					continue;
 				accum.x += light[cell].accum[i][0] * amount;
 				accum.y += light[cell].accum[i][1] * amount;
 				accum.z += light[cell].accum[i][2] * amount;
 			}
+			accum.x += cells[cell].emission[0];
+			accum.y += cells[cell].emission[1];
+			accum.z += cells[cell].emission[2];
 		}
 	}
 
+	// Make sure we don't reset this thread's RNG state
+
 	return accum / samples;
+}
+
+void VoxelLightBaker::_lightmap_bake_point(uint32_t p_x, LightMap *p_line) {
+
+
+	LightMap *pixel = &p_line[p_x];
+	if (pixel->pos == Vector3())
+		return;
+	//print_line("pos: " + pixel->pos + " normal " + pixel->normal);
+	switch (bake_mode) {
+		case BAKE_MODE_CONE_TRACE: {
+			pixel->light = _compute_pixel_light_at_pos(pixel->pos, pixel->normal) * energy;
+		} break;
+		case BAKE_MODE_RAY_TRACE: {
+			pixel->light = _compute_ray_trace_at_pos(pixel->pos, pixel->normal) * energy;
+		} break;
+			//	pixel->light = Vector3(1, 1, 1);
+			//}
+	}
+
 }
 
 Error VoxelLightBaker::make_lightmap(const Transform &p_xform, Ref<Mesh> &p_mesh, LightMapData &r_lightmap, bool (*p_bake_time_func)(void *, float, float), void *p_bake_time_ud) {
@@ -1760,6 +1860,7 @@ Error VoxelLightBaker::make_lightmap(const Transform &p_xform, Ref<Mesh> &p_mesh
 			Vector3 vertex[3];
 			Vector3 normal[3];
 			Vector2 uv[3];
+
 			for (int j = 0; j < 3; j++) {
 				int idx = ic ? ir[i * 3 + j] : i * 3 + j;
 				vertex[j] = xform.xform(vr[idx]);
@@ -1770,39 +1871,18 @@ Error VoxelLightBaker::make_lightmap(const Transform &p_xform, Ref<Mesh> &p_mesh
 			_plot_triangle(uv, vertex, normal, lightmap.ptrw(), width, height);
 		}
 	}
-	//step 3 perform voxel cone trace on lightmap pixels
 
+	//step 3 perform voxel cone trace on lightmap pixels
 	{
 		LightMap *lightmap_ptr = lightmap.ptrw();
 		uint64_t begin_time = OS::get_singleton()->get_ticks_usec();
 		volatile int lines = 0;
 
+		// make sure our OS-level rng is seeded
+
 		for (int i = 0; i < height; i++) {
 
-		//print_line("bake line " + itos(i) + " / " + itos(height));
-#ifdef _OPENMP
-#pragma omp parallel for
-#endif
-			for (int j = 0; j < width; j++) {
-
-				//if (i == 125 && j == 280) {
-
-				LightMap *pixel = &lightmap_ptr[i * width + j];
-				if (pixel->pos == Vector3())
-					continue; //unused, skipe
-
-				//print_line("pos: " + pixel->pos + " normal " + pixel->normal);
-				switch (bake_mode) {
-					case BAKE_MODE_CONE_TRACE: {
-						pixel->light = _compute_pixel_light_at_pos(pixel->pos, pixel->normal) * energy;
-					} break;
-					case BAKE_MODE_RAY_TRACE: {
-						pixel->light = _compute_ray_trace_at_pos(pixel->pos, pixel->normal) * energy;
-					} break;
-						//	pixel->light = Vector3(1, 1, 1);
-						//}
-				}
-			}
+			thread_process_array(width,this,&VoxelLightBaker::_lightmap_bake_point,&lightmap_ptr[i*width]);
 
 			lines = MAX(lines, i); //for multithread
 			if (p_bake_time_func) {
@@ -1878,12 +1958,14 @@ Error VoxelLightBaker::make_lightmap(const Transform &p_xform, Ref<Mesh> &p_mesh
 			LightMap *lightmap_ptr = lightmap.ptrw();
 			const Cell *cells = bake_cells.ptr();
 			const Light *light = bake_light.ptr();
-
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
 			for (int i = 0; i < height; i++) {
 
 			//print_line("bake line " + itos(i) + " / " + itos(height));
 #ifdef _OPENMP
-#pragma omp parallel for
+#pragma omp parallel for schedule(dynamic, 1)
 #endif
 				for (int j = 0; j < width; j++) {
 
@@ -2002,6 +2084,7 @@ Error VoxelLightBaker::make_lightmap(const Transform &p_xform, Ref<Mesh> &p_mesh
 			}
 		}
 
+// Enable for debugging
 #if 0
 		{
 			PoolVector<uint8_t> img;
