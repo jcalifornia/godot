@@ -16,9 +16,21 @@ thirdparty_libskeleton_sources = [thirdparty_libskeleton_dir + "src/" + f for f 
 env_talking_tree_storage.Append(CPPPATH=[thirdparty_libskeleton_dir + "include" ])
 env_talking_tree_storage.add_source_files(env.modules_sources, thirdparty_libskeleton_sources)
 
-# also requires libogg
-if env['builtin_libogg']:
-	env_talking_tree_storage.Append(CPPPATH=["#thirdparty/libogg"])
+if env['builtin_opus']:
+	thirdparty_dir = "#thirdparty/opus/"
+
+	thirdparty_include_paths = [
+		"",
+		"celt",
+		"opus",
+		"silk",
+		"silk/fixed",
+		"silk/float",
+	]
+	env_talking_tree_storage.Append(CPPPATH=[thirdparty_dir + "/" + dir for dir in thirdparty_include_paths])
+	# also requires libogg
+	if env['builtin_libogg']:
+		env_talking_tree_storage.Append(CPPPATH=["#thirdparty/libogg"])
 
 env_talking_tree_storage.add_source_files(env.modules_sources,"*.cpp")
 env_talking_tree_storage.Append(CXXFLAGS=['-O2', '-std=c++11'])
