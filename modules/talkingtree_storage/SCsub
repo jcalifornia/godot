@@ -1,7 +1,22 @@
+#!/usr/bin/env python
+
 # SCsub
 Import('env')
 
 env_talking_tree_storage = env.Clone()
+
+thirdparty_libskeleton_srcs = [
+	"skeleton.c",
+	"skeleton_query.c",
+	"skeleton_vector.c"
+]
+thirdparty_libskeleton_includes = [
+	"include/",
+]
+thirdparty_libskeleton_dir = "#thirdparty/libskeleton/"
+thirdparty_libskeleton_sources = [thirdparty_libskeleton_dir + "src/" + f for f in thirdparty_libskeleton_srcs]
+env_talking_tree_storage.Append(CPPPATH=[thirdparty_libskeleton_dir + d for d in thirdparty_libskeleton_includes ])
+env_talking_tree_storage.add_source_files(env.modules_sources, thirdparty_libskeleton_sources)
 
 # also requires libogg
 if env['builtin_libogg']:
