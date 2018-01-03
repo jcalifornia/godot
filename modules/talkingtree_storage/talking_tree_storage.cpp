@@ -7,4 +7,10 @@ void TalkingTreeStorage::_bind_methods() {
 }
 
 TalkingTreeStorage::TalkingTreeStorage() {
+	//opusEncoder = opus_multistream_encoder_create();
+}
+TalkingTreeStorage::~TalkingTreeStorage() {
+	if(opusEncoder){
+		opus_multistream_encoder_destroy(opusEncoder);
+	}
 }
