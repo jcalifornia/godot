@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -1086,19 +1086,22 @@ void RasterizerCanvasGLES3::canvas_render_items(Item *p_item_list, int p_z, cons
 				}
 			}
 
-			if (shader_ptr && shader_ptr != shader_cache) {
+			if (shader_ptr) {
 
 				if (shader_ptr->canvas_item.uses_screen_texture && !state.canvas_texscreen_used) {
 					//copy if not copied before
 					_copy_texscreen(Rect2());
 				}
 
-				if (shader_ptr->canvas_item.uses_time) {
-					VisualServerRaster::redraw_request();
-				}
+				if (shader_ptr != shader_cache) {
 
-				state.canvas_shader.set_custom_shader(shader_ptr->custom_code_id);
-				state.canvas_shader.bind();
+					if (shader_ptr->canvas_item.uses_time) {
+						VisualServerRaster::redraw_request();
+					}
+
+					state.canvas_shader.set_custom_shader(shader_ptr->custom_code_id);
+					state.canvas_shader.bind();
+				}
 
 				if (material_ptr->ubo_id) {
 					glBindBufferBase(GL_UNIFORM_BUFFER, 2, material_ptr->ubo_id);
@@ -1147,7 +1150,7 @@ void RasterizerCanvasGLES3::canvas_render_items(Item *p_item_list, int p_z, cons
 					glBindTexture(t->target, t->tex_id);
 				}
 
-			} else if (!shader_ptr) {
+			} else {
 				state.canvas_shader.set_custom_shader(0);
 				state.canvas_shader.bind();
 			}

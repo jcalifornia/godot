@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -566,6 +566,37 @@ String FileAccess::get_md5(const String &p_file) {
 	String ret = String::md5(md5.digest);
 
 	memdelete(f);
+	return ret;
+}
+
+String FileAccess::get_multiple_md5(const Vector<String> &p_file) {
+
+	MD5_CTX md5;
+	MD5Init(&md5);
+
+	for (int i = 0; i < p_file.size(); i++) {
+		FileAccess *f = FileAccess::open(p_file[i], READ);
+		ERR_CONTINUE(!f);
+
+		unsigned char step[32768];
+
+		while (true) {
+
+			int br = f->get_buffer(step, 32768);
+			if (br > 0) {
+
+				MD5Update(&md5, step, br);
+			}
+			if (br < 4096)
+				break;
+		}
+		memdelete(f);
+	}
+
+	MD5Final(&md5);
+
+	String ret = String::md5(md5.digest);
+
 	return ret;
 }
 

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -199,6 +199,9 @@ static ResourceFormatLoaderText *resource_loader_text = NULL;
 static ResourceFormatLoaderDynamicFont *resource_loader_dynamic_font = NULL;
 
 static ResourceFormatLoaderStreamTexture *resource_loader_stream_texture = NULL;
+
+static ResourceFormatSaverShader *resource_saver_shader = NULL;
+static ResourceFormatLoaderShader *resource_loader_shader = NULL;
 
 void register_scene_types() {
 
@@ -607,6 +610,12 @@ void register_scene_types() {
 	resource_loader_text = memnew(ResourceFormatLoaderText);
 	ResourceLoader::add_resource_format_loader(resource_loader_text, true);
 
+	resource_saver_shader = memnew(ResourceFormatSaverShader);
+	ResourceSaver::add_resource_format_saver(resource_saver_shader, true);
+
+	resource_loader_shader = memnew(ResourceFormatLoaderShader);
+	ResourceLoader::add_resource_format_loader(resource_loader_shader, true);
+
 	for (int i = 0; i < 20; i++) {
 		GLOBAL_DEF("layer_names/2d_render/layer_" + itos(i + 1), "");
 		GLOBAL_DEF("layer_names/2d_physics/layer_" + itos(i + 1), "");
@@ -630,6 +639,13 @@ void unregister_scene_types() {
 	}
 	if (resource_loader_text) {
 		memdelete(resource_loader_text);
+	}
+
+	if (resource_saver_shader) {
+		memdelete(resource_saver_shader);
+	}
+	if (resource_loader_shader) {
+		memdelete(resource_loader_shader);
 	}
 
 	SpatialMaterial::finish_shaders();

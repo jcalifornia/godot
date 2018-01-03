@@ -184,12 +184,12 @@ void FacialLandmark::startStreaming(){
 						std::vector<uchar> status;
 						std::vector<float> err;
 						cv::calcOpticalFlowPyrLK(prevgray, gray, prevTrackPts, nextTrackPts, status, err);
-						std::cout << "variance:" <<variance(prevTrackPts, nextTrackPts) << std::endl;
+						// std::cout << "variance:" <<variance(prevTrackPts, nextTrackPts) << std::endl;
 						// if the face is moving so fast, use dlib to detect the face
 						double diff = variance(prevTrackPts, nextTrackPts);
 						if (diff > 1.0) {
 							const dlib::full_object_detection& d = shapes[0];
-							std::cout<< "DLIB" << std::endl;
+							// std::cout<< "DLIB" << std::endl;
 							for (int i = 0; i < d.num_parts(); i++) {
 								nextTrackPts[i].x = d.part(i).x();
 								nextTrackPts[i].y = d.part(i).y();
@@ -202,7 +202,7 @@ void FacialLandmark::startStreaming(){
 							}
 						}*/ else {
 							// In this case, use Kalman Filter
-							print_line("KF");
+							// print_line("KF");
 							for (int i = 0; i < predict_points.size(); i++) {
 								nextTrackPts[i].x = predict_points[i].x;
 								nextTrackPts[i].y = predict_points[i].y;

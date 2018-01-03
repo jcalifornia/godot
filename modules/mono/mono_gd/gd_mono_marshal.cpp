@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -490,8 +490,9 @@ Variant mono_object_to_variant(MonoObject *p_obj, const ManagedType &p_type) {
 			return unbox<double>(p_obj);
 
 		case MONO_TYPE_STRING: {
-			String str = mono_string_to_godot((MonoString *)p_obj);
-			return str;
+			if (p_obj == NULL)
+				return Variant(); // NIL
+			return mono_string_to_godot_not_null((MonoString *)p_obj);
 		} break;
 
 		case MONO_TYPE_VALUETYPE: {

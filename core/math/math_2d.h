@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -187,6 +187,70 @@ _FORCE_INLINE_ Vector2 operator*(real_t p_scalar, const Vector2 &p_vec) {
 	return p_vec * p_scalar;
 }
 
+_FORCE_INLINE_ Vector2 Vector2::operator+(const Vector2 &p_v) const {
+
+	return Vector2(x + p_v.x, y + p_v.y);
+}
+_FORCE_INLINE_ void Vector2::operator+=(const Vector2 &p_v) {
+
+	x += p_v.x;
+	y += p_v.y;
+}
+_FORCE_INLINE_ Vector2 Vector2::operator-(const Vector2 &p_v) const {
+
+	return Vector2(x - p_v.x, y - p_v.y);
+}
+_FORCE_INLINE_ void Vector2::operator-=(const Vector2 &p_v) {
+
+	x -= p_v.x;
+	y -= p_v.y;
+}
+
+_FORCE_INLINE_ Vector2 Vector2::operator*(const Vector2 &p_v1) const {
+
+	return Vector2(x * p_v1.x, y * p_v1.y);
+};
+
+_FORCE_INLINE_ Vector2 Vector2::operator*(const real_t &rvalue) const {
+
+	return Vector2(x * rvalue, y * rvalue);
+};
+_FORCE_INLINE_ void Vector2::operator*=(const real_t &rvalue) {
+
+	x *= rvalue;
+	y *= rvalue;
+};
+
+_FORCE_INLINE_ Vector2 Vector2::operator/(const Vector2 &p_v1) const {
+
+	return Vector2(x / p_v1.x, y / p_v1.y);
+};
+
+_FORCE_INLINE_ Vector2 Vector2::operator/(const real_t &rvalue) const {
+
+	return Vector2(x / rvalue, y / rvalue);
+};
+
+_FORCE_INLINE_ void Vector2::operator/=(const real_t &rvalue) {
+
+	x /= rvalue;
+	y /= rvalue;
+};
+
+_FORCE_INLINE_ Vector2 Vector2::operator-() const {
+
+	return Vector2(-x, -y);
+}
+
+_FORCE_INLINE_ bool Vector2::operator==(const Vector2 &p_vec2) const {
+
+	return x == p_vec2.x && y == p_vec2.y;
+}
+_FORCE_INLINE_ bool Vector2::operator!=(const Vector2 &p_vec2) const {
+
+	return x != p_vec2.x || y != p_vec2.y;
+}
+
 Vector2 Vector2::linear_interpolate(const Vector2 &p_b, real_t p_t) const {
 
 	Vector2 res = *this;
@@ -239,22 +303,31 @@ struct Rect2 {
 
 	inline real_t distance_to(const Vector2 &p_point) const {
 
-		real_t dist = 1e20;
+		real_t dist;
+		bool inside = true;
 
 		if (p_point.x < position.x) {
-			dist = MIN(dist, position.x - p_point.x);
+			real_t d = position.x - p_point.x;
+			dist = inside ? d : MIN(dist, d);
+			inside = false;
 		}
 		if (p_point.y < position.y) {
-			dist = MIN(dist, position.y - p_point.y);
+			real_t d = position.y - p_point.y;
+			dist = inside ? d : MIN(dist, d);
+			inside = false;
 		}
 		if (p_point.x >= (position.x + size.x)) {
-			dist = MIN(p_point.x - (position.x + size.x), dist);
+			real_t d = p_point.x - (position.x + size.x);
+			dist = inside ? d : MIN(dist, d);
+			inside = false;
 		}
 		if (p_point.y >= (position.y + size.y)) {
-			dist = MIN(p_point.y - (position.y + size.y), dist);
+			real_t d = p_point.y - (position.y + size.y);
+			dist = inside ? d : MIN(dist, d);
+			inside = false;
 		}
 
-		if (dist == 1e20)
+		if (inside)
 			return 0;
 		else
 			return dist;

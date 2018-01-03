@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -109,7 +109,6 @@ private:
 	float idle_process_time;
 	bool accept_quit;
 	bool quit_on_go_back;
-	uint32_t last_id;
 
 #ifdef DEBUG_ENABLED
 	bool debug_collisions_hint;
@@ -130,6 +129,7 @@ private:
 
 	bool use_font_oversampling;
 	int64_t current_frame;
+	int64_t current_event;
 	int node_count;
 
 #ifdef TOOLS_ENABLED
@@ -325,7 +325,7 @@ public:
 		NOTIFICATION_TRANSFORM_CHANGED = 29
 	};
 
-	enum CallGroupFlags {
+	enum GroupCallFlags {
 		GROUP_CALL_DEFAULT = 0,
 		GROUP_CALL_REVERSE = 1,
 		GROUP_CALL_REALTIME = 2,
@@ -334,8 +334,6 @@ public:
 	};
 
 	_FORCE_INLINE_ Viewport *get_root() const { return root; }
-
-	uint32_t get_last_event_id() const;
 
 	void call_group_flags(uint32_t p_call_flags, const StringName &p_group, const StringName &p_function, VARIANT_ARG_LIST);
 	void notify_group_flags(uint32_t p_call_flags, const StringName &p_group, int p_notification);
@@ -412,6 +410,7 @@ public:
 	int get_collision_debug_contact_count() { return collision_debug_contacts; }
 
 	int64_t get_frame() const;
+	int64_t get_event_count() const;
 
 	int get_node_count() const;
 
@@ -467,6 +466,6 @@ public:
 
 VARIANT_ENUM_CAST(SceneTree::StretchMode);
 VARIANT_ENUM_CAST(SceneTree::StretchAspect);
-VARIANT_ENUM_CAST(SceneTree::CallGroupFlags);
+VARIANT_ENUM_CAST(SceneTree::GroupCallFlags);
 
 #endif

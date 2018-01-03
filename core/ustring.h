@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -279,6 +279,29 @@ struct NaturalNoCaseComparator {
 	}
 };
 
+template <typename L, typename R>
+_FORCE_INLINE_ bool is_str_less(const L *l_ptr, const R *r_ptr) {
+
+	while (true) {
+
+		if (*l_ptr == 0 && *r_ptr == 0)
+			return false;
+		else if (*l_ptr == 0)
+			return true;
+		else if (*r_ptr == 0)
+			return false;
+		else if (*l_ptr < *r_ptr)
+			return true;
+		else if (*l_ptr > *r_ptr)
+			return false;
+
+		l_ptr++;
+		r_ptr++;
+	}
+
+	CRASH_COND(true); // unreachable
+}
+
 /* end of namespace */
 
 //tool translate
@@ -294,5 +317,8 @@ String TTR(const String &);
 
 //tool or regular translate
 String RTR(const String &);
+
+bool is_symbol(CharType c);
+bool select_word(const String &p_s, int p_col, int &r_beg, int &r_end);
 
 #endif

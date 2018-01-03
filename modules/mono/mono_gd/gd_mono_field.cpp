@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -290,7 +290,7 @@ int GDMonoField::get_int_value(MonoObject *p_object) {
 
 String GDMonoField::get_string_value(MonoObject *p_object) {
 	MonoObject *val = get_value(p_object);
-	return val ? GDMonoMarshal::mono_string_to_godot((MonoString *)val) : String();
+	return GDMonoMarshal::mono_string_to_godot((MonoString *)val);
 }
 
 bool GDMonoField::has_attribute(GDMonoClass *p_attr_class) {

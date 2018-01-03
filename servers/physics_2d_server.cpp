@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -653,6 +653,10 @@ void Physics2DServer::_bind_methods() {
 	BIND_ENUM_CONSTANT(JOINT_PIN);
 	BIND_ENUM_CONSTANT(JOINT_GROOVE);
 	BIND_ENUM_CONSTANT(JOINT_DAMPED_SPRING);
+
+	BIND_ENUM_CONSTANT(JOINT_PARAM_BIAS);
+	BIND_ENUM_CONSTANT(JOINT_PARAM_MAX_BIAS);
+	BIND_ENUM_CONSTANT(JOINT_PARAM_MAX_FORCE);
 
 	BIND_ENUM_CONSTANT(DAMPED_STRING_REST_LENGTH);
 	BIND_ENUM_CONSTANT(DAMPED_STRING_STIFFNESS);

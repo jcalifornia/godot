@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -335,6 +335,8 @@ bool CustomPropertyEditor::edit(Object *p_owner, const String &p_name, Variant::
 	easing_draw->hide();
 	spinbox->hide();
 	slider->hide();
+	menu->clear();
+	menu->set_size(Size2(1, 1) * EDSCALE);
 
 	for (int i = 0; i < MAX_VALUE_EDITORS; i++) {
 
@@ -413,7 +415,6 @@ bool CustomPropertyEditor::edit(Object *p_owner, const String &p_name, Variant::
 
 			} else if (hint == PROPERTY_HINT_ENUM) {
 
-				menu->clear();
 				Vector<String> options = hint_text.split(",");
 				for (int i = 0; i < options.size(); i++) {
 					if (options[i].find(":") != -1) {
@@ -494,7 +495,6 @@ bool CustomPropertyEditor::edit(Object *p_owner, const String &p_name, Variant::
 				easing_draw->show();
 				set_size(Size2(200, 150) * EDSCALE);
 			} else if (hint == PROPERTY_HINT_FLAGS) {
-				menu->clear();
 				Vector<String> flags = hint_text.split(",");
 				for (int i = 0; i < flags.size(); i++) {
 					String flag = flags[i];
@@ -536,7 +536,6 @@ bool CustomPropertyEditor::edit(Object *p_owner, const String &p_name, Variant::
 				config_action_buttons(names);
 			} else if (hint == PROPERTY_HINT_ENUM) {
 
-				menu->clear();
 				Vector<String> options = hint_text.split(",");
 				for (int i = 0; i < options.size(); i++) {
 					menu->add_item(options[i], i);
@@ -868,9 +867,6 @@ bool CustomPropertyEditor::edit(Object *p_owner, const String &p_name, Variant::
 
 			if (hint != PROPERTY_HINT_RESOURCE_TYPE)
 				break;
-
-			menu->clear();
-			menu->set_size(Size2(1, 1) * EDSCALE);
 
 			if (p_name == "script" && hint_text == "Script" && Object::cast_to<Node>(owner)) {
 				menu->add_icon_item(get_icon("Script", "EditorIcons"), TTR("New Script"), OBJ_MENU_NEW_SCRIPT);
@@ -1764,24 +1760,40 @@ void CustomPropertyEditor::_focus_exit() {
 
 void CustomPropertyEditor::config_action_buttons(const List<String> &p_strings) {
 
-	int cell_width = 60;
-	int cell_height = 25;
-	int cell_margin = 5;
+	Ref<StyleBox> sb = get_stylebox("panel");
+	int margin_top = sb->get_margin(MARGIN_TOP);
+	int margin_left = sb->get_margin(MARGIN_LEFT);
+	int margin_bottom = sb->get_margin(MARGIN_BOTTOM);
+	int margin_right = sb->get_margin(MARGIN_RIGHT);
 
-	set_size(Size2(cell_margin + (cell_width + cell_margin) * p_strings.size(), (cell_margin * 2) + cell_height) * EDSCALE);
+	int max_width = 0;
+	int height = 0;
 
 	for (int i = 0; i < MAX_ACTION_BUTTONS; i++) {
 
 		if (i < p_strings.size()) {
+
 			action_buttons[i]->show();
 			action_buttons[i]->set_text(p_strings[i]);
-			action_buttons[i]->set_position(Point2(cell_margin + (cell_width + cell_margin) * i, cell_margin) * EDSCALE);
-			action_buttons[i]->set_size(Size2(cell_width, cell_height - cell_margin * 2) * EDSCALE);
-			action_buttons[i]->set_flat(true);
+
+			Size2 btn_m_size = action_buttons[i]->get_minimum_size();
+			if (btn_m_size.width > max_width)
+				max_width = btn_m_size.width;
+
 		} else {
 			action_buttons[i]->hide();
 		}
 	}
+
+	for (int i = 0; i < p_strings.size(); i++) {
+
+		Size2 btn_m_size = action_buttons[i]->get_size();
+		action_buttons[i]->set_position(Point2(0, height) + Point2(margin_left, margin_top));
+		action_buttons[i]->set_size(Size2(max_width, btn_m_size.height));
+
+		height += btn_m_size.height;
+	}
+	set_size(Size2(max_width, height) + Size2(margin_left + margin_right, margin_top + margin_bottom));
 }
 
 void CustomPropertyEditor::config_value_editors(int p_amount, int p_columns, int p_label_w, const List<String> &p_strings) {
@@ -1902,6 +1914,7 @@ CustomPropertyEditor::CustomPropertyEditor() {
 		Vector<Variant> binds;
 		binds.push_back(i);
 		action_buttons[i]->connect("pressed", this, "_action_pressed", binds);
+		action_buttons[i]->set_flat(true);
 	}
 
 	color_picker = NULL;
@@ -3956,11 +3969,13 @@ void PropertyEditor::_edit_button(Object *p_item, int p_column, int p_button) {
 		if (t == Variant::NODE_PATH) {
 
 			Variant v = obj->get(n);
-			custom_editor->edit(obj, n, (Variant::Type)t, v, h, ht);
 			Rect2 where = tree->get_item_rect(ti, 1);
 			where.position -= tree->get_scroll();
-			where.position += tree->get_global_position();
+			where.position += tree->get_global_position() + Point2(where.size.width, 0);
+			for (int i = ti->get_button_count(p_column) - 1; i >= p_button; i--)
+				where.position.x -= ti->get_button(p_column, i)->get_width();
 			custom_editor->set_position(where.position);
+			custom_editor->edit(obj, n, (Variant::Type)t, v, h, ht);
 			custom_editor->popup();
 
 		} else if (t == Variant::STRING) {
@@ -3971,7 +3986,9 @@ void PropertyEditor::_edit_button(Object *p_item, int p_column, int p_button) {
 
 				Rect2 where = tree->get_item_rect(ti, 1);
 				where.position -= tree->get_scroll();
-				where.position += tree->get_global_position();
+				where.position += tree->get_global_position() + Point2(where.size.width, 0);
+				for (int i = ti->get_button_count(p_column) - 1; i >= p_button; i--)
+					where.position.x -= ti->get_button(p_column, i)->get_width();
 				custom_editor->set_position(where.position);
 				custom_editor->popup();
 			} else {
@@ -4591,6 +4608,8 @@ SectionedPropertyEditor::SectionedPropertyEditor() {
 
 	search_box = NULL;
 
+	add_constant_override("autohide", 1); // Fixes the dragger always showing up
+
 	VBoxContainer *left_vb = memnew(VBoxContainer);
 	left_vb->set_custom_minimum_size(Size2(170, 0) * EDSCALE);
 	add_child(left_vb);
@@ -4602,6 +4621,7 @@ SectionedPropertyEditor::SectionedPropertyEditor() {
 	left_vb->add_child(sections, true);
 
 	VBoxContainer *right_vb = memnew(VBoxContainer);
+	right_vb->set_custom_minimum_size(Size2(300, 0) * EDSCALE);
 	right_vb->set_h_size_flags(SIZE_EXPAND_FILL);
 	add_child(right_vb);
 

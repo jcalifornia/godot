@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -46,7 +46,7 @@ StringBuffer &StringBuffer::append(const char *p_str) {
 	reserve(string_length + len + 1);
 
 	CharType *buf = current_buffer_ptr();
-	for (const char *c_ptr = p_str; c_ptr; ++c_ptr) {
+	for (const char *c_ptr = p_str; *c_ptr; ++c_ptr) {
 		buf[string_length++] = *c_ptr;
 	}
 	return *this;
