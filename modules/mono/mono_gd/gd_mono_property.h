@@ -1,12 +1,12 @@
 /*************************************************************************/
-/*  register_types.cpp                                                   */
+/*  gd_mono_property.h                                                   */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,19 +27,51 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
-#include "register_types.h"
+#ifndef GD_MONO_PROPERTY_H
+#define GD_MONO_PROPERTY_H
 
-#include "bitmap_loader_pbm.h"
+#include "gd_mono.h"
+#include "gd_mono_class_member.h"
+#include "gd_mono_header.h"
 
-static ResourceFormatPBM *pbm_loader = NULL;
+class GDMonoProperty : public GDMonoClassMember {
 
-void register_pbm_types() {
+	GDMonoClass *owner;
+	MonoProperty *mono_property;
 
-	pbm_loader = memnew(ResourceFormatPBM);
-	ResourceLoader::add_resource_format_loader(pbm_loader);
-}
+	StringName name;
+	ManagedType type;
 
-void unregister_pbm_types() {
+	bool attrs_fetched;
+	MonoCustomAttrInfo *attributes;
 
-	memdelete(pbm_loader);
-}
+public:
+	virtual MemberType get_member_type() { return MEMBER_TYPE_PROPERTY; }
+
+	virtual StringName get_name() { return name; }
+
+	virtual bool is_static();
+	virtual Visibility get_visibility();
+
+	virtual bool has_attribute(GDMonoClass *p_attr_class);
+	virtual MonoObject *get_attribute(GDMonoClass *p_attr_class);
+	void fetch_attributes();
+
+	bool has_getter();
+	bool has_setter();
+
+	_FORCE_INLINE_ ManagedType get_type() const { return type; }
+
+	void set_value(MonoObject *p_object, MonoObject *p_value, MonoObject **r_exc = NULL);
+	void set_value(MonoObject *p_object, void **p_params, MonoObject **r_exc = NULL);
+	MonoObject *get_value(MonoObject *p_object, MonoObject **r_exc = NULL);
+
+	bool get_bool_value(MonoObject *p_object);
+	int get_int_value(MonoObject *p_object);
+	String get_string_value(MonoObject *p_object);
+
+	GDMonoProperty(MonoProperty *p_mono_property, GDMonoClass *p_owner);
+	~GDMonoProperty();
+};
+
+#endif // GD_MONO_PROPERTY_H

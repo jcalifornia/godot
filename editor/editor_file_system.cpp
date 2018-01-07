@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "editor_file_system.h"
 
 #include "editor_node.h"
@@ -1507,6 +1508,19 @@ void EditorFileSystem::_reimport_file(const String &p_file) {
 }
 
 void EditorFileSystem::reimport_files(const Vector<String> &p_files) {
+
+	{ //check that .import folder exists
+		DirAccess *da = DirAccess::open("res://");
+		if (da->change_dir(".import") != OK) {
+			Error err = da->make_dir(".import");
+			if (err) {
+				memdelete(da);
+				ERR_EXPLAIN("Failed to create 'res://.import' folder.");
+				ERR_FAIL_COND(err != OK);
+			}
+		}
+		memdelete(da);
+	}
 
 	importing = true;
 	EditorProgress pr("reimport", TTR("(Re)Importing Assets"), p_files.size());

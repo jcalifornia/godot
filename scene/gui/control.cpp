@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "control.h"
 #include "project_settings.h"
 #include "scene/main/canvas_layer.h"
@@ -860,6 +861,8 @@ Ref<StyleBox> Control::get_stylebox(const StringName &p_name, const StringName &
 			class_name = ClassDB::get_parent_class_nocheck(class_name);
 		}
 
+		class_name = type;
+
 		Control *parent = Object::cast_to<Control>(theme_owner->get_parent());
 
 		if (parent)
@@ -867,8 +870,6 @@ Ref<StyleBox> Control::get_stylebox(const StringName &p_name, const StringName &
 		else
 			theme_owner = NULL;
 	}
-
-	class_name = type;
 
 	while (class_name != StringName()) {
 		if (Theme::get_default()->has_stylebox(p_name, class_name))
@@ -2154,6 +2155,7 @@ void Control::set_theme(const Ref<Theme> &p_theme) {
 	data.theme = p_theme;
 	if (!p_theme.is_null()) {
 
+		data.theme_owner = this;
 		_propagate_theme_changed(this, this);
 	} else {
 

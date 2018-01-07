@@ -1,13 +1,12 @@
 /*************************************************************************/
 /*  shape_owner_bullet.h                                                 */
-/*  Author: AndreaCatania                                                */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
-/*                    http://www.godotengine.org                         */
+/*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -34,11 +33,15 @@
 
 #include "rid_bullet.h"
 
+/**
+	@author AndreaCatania
+*/
+
 class ShapeBullet;
 class btCollisionShape;
 class CollisionObjectBullet;
 
-/// Each clas that want to use Shapes must inherit this class
+/// Each class that want to use Shapes must inherit this class
 /// E.G. BodyShape is a child of this
 class ShapeOwnerBullet {
 public:

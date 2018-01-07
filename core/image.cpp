@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "image.h"
 
 #include "core/io/image_loader.h"
@@ -446,8 +447,6 @@ void Image::convert(Format p_new_format) {
 
 	Image new_img(width, height, 0, p_new_format);
 
-	//int len=data.size();
-
 	PoolVector<uint8_t>::Read r = data.read();
 	PoolVector<uint8_t>::Write w = new_img.data.write();
 
@@ -694,6 +693,11 @@ void Image::resize_to_po2(bool p_square) {
 }
 
 void Image::resize(int p_width, int p_height, Interpolation p_interpolation) {
+
+	if (data.size() == 0) {
+		ERR_EXPLAIN("Cannot resize image before creating it, use create() or create_from_data() first.");
+		ERR_FAIL();
+	}
 
 	if (!_can_modify(format)) {
 		ERR_EXPLAIN("Cannot resize in indexed, compressed or custom image formats.");

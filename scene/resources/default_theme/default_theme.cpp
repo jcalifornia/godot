@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -880,7 +880,7 @@ void make_default_theme(bool p_hidpi, Ref<Font> p_font) {
 
 	Ref<StyleBox> default_style;
 	Ref<Texture> default_icon;
-	Ref<BitmapFont> default_font;
+	Ref<Font> default_font;
 	if (p_font.is_valid()) {
 		default_font = p_font;
 	} else if (p_hidpi) {
@@ -888,7 +888,7 @@ void make_default_theme(bool p_hidpi, Ref<Font> p_font) {
 	} else {
 		default_font = make_font2(_lodpi_font_height, _lodpi_font_ascent, _lodpi_font_charcount, &_lodpi_font_charrects[0][0], _lodpi_font_kerning_pair_count, &_lodpi_font_kerning_pairs[0][0], _lodpi_font_img_width, _lodpi_font_img_height, _lodpi_font_img_data);
 	}
-	Ref<BitmapFont> large_font = default_font;
+	Ref<Font> large_font = default_font;
 	fill_default_theme(t, default_font, large_font, default_icon, default_style, p_hidpi ? 2.0 : 1.0);
 
 	Theme::set_default(t);

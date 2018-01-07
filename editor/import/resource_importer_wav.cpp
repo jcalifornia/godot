@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "resource_importer_wav.h"
 
 #include "io/marshalls.h"
@@ -386,7 +387,7 @@ Error ResourceImporterWAV::import(const String &p_source_file, const String &p_s
 
 			Vector<float> new_data;
 			new_data.resize((last - first + 1) * format_channels);
-			for (int i = first * format_channels; i <= last * format_channels; i++) {
+			for (int i = first * format_channels; i < (last + 1) * format_channels; i++) {
 				new_data[i - first * format_channels] = data[i];
 			}
 

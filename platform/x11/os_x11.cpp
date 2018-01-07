@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "os_x11.h"
 #include "drivers/gles3/rasterizer_gles3.h"
 #include "errno.h"
@@ -100,7 +101,7 @@ void OS_X11::initialize_core() {
 	OS_Unix::initialize_core();
 }
 
-void OS_X11::initialize(const VideoMode &p_desired, int p_video_driver, int p_audio_driver) {
+Error OS_X11::initialize(const VideoMode &p_desired, int p_video_driver, int p_audio_driver) {
 
 	long im_event_mask = 0;
 	last_button_state = 0;
@@ -123,21 +124,24 @@ void OS_X11::initialize(const VideoMode &p_desired, int p_video_driver, int p_au
 	/** XLIB INITIALIZATION **/
 	x11_display = XOpenDisplay(NULL);
 
+	if (!x11_display) {
+		ERR_PRINT("X11 Display is not available");
+		return ERR_UNAVAILABLE;
+	}
+
 	char *modifiers = NULL;
 	Bool xkb_dar = False;
-	if (x11_display) {
-		XAutoRepeatOn(x11_display);
-		xkb_dar = XkbSetDetectableAutoRepeat(x11_display, True, NULL);
+	XAutoRepeatOn(x11_display);
+	xkb_dar = XkbSetDetectableAutoRepeat(x11_display, True, NULL);
 
-		// Try to support IME if detectable auto-repeat is supported
-		if (xkb_dar == True) {
+	// Try to support IME if detectable auto-repeat is supported
+	if (xkb_dar == True) {
 
 #ifdef X_HAVE_UTF8_STRING
-			// Xutf8LookupString will be used later instead of XmbLookupString before
-			// the multibyte sequences can be converted to unicode string.
-			modifiers = XSetLocaleModifiers("");
+		// Xutf8LookupString will be used later instead of XmbLookupString before
+		// the multibyte sequences can be converted to unicode string.
+		modifiers = XSetLocaleModifiers("");
 #endif
-		}
 	}
 
 	if (modifiers == NULL) {
@@ -331,8 +335,8 @@ void OS_X11::initialize(const VideoMode &p_desired, int p_video_driver, int p_au
 
 	AudioDriverManager::initialize(p_audio_driver);
 
-	ERR_FAIL_COND(!visual_server);
-	ERR_FAIL_COND(x11_window == 0);
+	ERR_FAIL_COND_V(!visual_server, ERR_UNAVAILABLE);
+	ERR_FAIL_COND_V(x11_window == 0, ERR_UNAVAILABLE);
 
 	XSetWindowAttributes new_attr;
 
@@ -519,6 +523,8 @@ void OS_X11::initialize(const VideoMode &p_desired, int p_video_driver, int p_au
 			_window_changed(&xevent);
 		}
 	}
+
+	return OK;
 }
 
 void OS_X11::xim_destroy_callback(::XIM im, ::XPointer client_data,
@@ -1050,11 +1056,57 @@ void OS_X11::set_window_maximized(bool p_enabled) {
 
 	XSendEvent(x11_display, DefaultRootWindow(x11_display), False, SubstructureRedirectMask | SubstructureNotifyMask, &xev);
 
-	while (p_enabled && !is_window_maximized()) {
-		// Wait for effective resizing (so the GLX context is too).
+	if (is_window_maximize_allowed()) {
+		while (p_enabled && !is_window_maximized()) {
+			// Wait for effective resizing (so the GLX context is too).
+		}
 	}
 
 	maximized = p_enabled;
+}
+
+bool OS_X11::is_window_maximize_allowed() {
+	Atom property = XInternAtom(x11_display, "_NET_WM_ALLOWED_ACTIONS", False);
+	Atom type;
+	int format;
+	unsigned long len;
+	unsigned long remaining;
+	unsigned char *data = NULL;
+
+	int result = XGetWindowProperty(
+			x11_display,
+			x11_window,
+			property,
+			0,
+			1024,
+			False,
+			XA_ATOM,
+			&type,
+			&format,
+			&len,
+			&remaining,
+			&data);
+
+	if (result == Success) {
+		Atom *atoms = (Atom *)data;
+		Atom wm_act_max_horz = XInternAtom(x11_display, "_NET_WM_ACTION_MAXIMIZE_HORZ", False);
+		Atom wm_act_max_vert = XInternAtom(x11_display, "_NET_WM_ACTION_MAXIMIZE_VERT", False);
+		bool found_wm_act_max_horz = false;
+		bool found_wm_act_max_vert = false;
+
+		for (unsigned int i = 0; i < len; i++) {
+			if (atoms[i] == wm_act_max_horz)
+				found_wm_act_max_horz = true;
+			if (atoms[i] == wm_act_max_vert)
+				found_wm_act_max_vert = true;
+
+			if (found_wm_act_max_horz || found_wm_act_max_vert)
+				return true;
+		}
+		XFree(atoms);
+	}
+
+	return false;
 }
 
 bool OS_X11::is_window_maximized() const {
@@ -2203,6 +2255,48 @@ void OS_X11::set_cursor_shape(CursorShape p_shape) {
 	}
 
 	current_cursor = p_shape;
+}
+
+void OS_X11::set_custom_mouse_cursor(const RES &p_cursor, CursorShape p_shape, const Vector2 &p_hotspot) {
+	if (p_cursor.is_valid()) {
+		Ref<Texture> texture = p_cursor;
+		Ref<Image> image = texture->get_data();
+
+		ERR_FAIL_COND(texture->get_width() != 32 || texture->get_height() != 32);
+
+		// Create the cursor structure
+		XcursorImage *cursor_image = XcursorImageCreate(texture->get_width(), texture->get_height());
+		XcursorUInt image_size = 32 * 32;
+		XcursorDim size = sizeof(XcursorPixel) * image_size;
+
+		cursor_image->version = 1;
+		cursor_image->size = size;
+		cursor_image->xhot = p_hotspot.x;
+		cursor_image->yhot = p_hotspot.y;
+
+		// allocate memory to contain the whole file
+		cursor_image->pixels = (XcursorPixel *)malloc(size);
+
+		image->lock();
+
+		for (XcursorPixel index = 0; index < image_size; index++) {
+			int column_index = floor(index / 32);
+			int row_index = index % 32;
+
+			*(cursor_image->pixels + index) = image->get_pixel(row_index, column_index).to_argb32();
+		}
+
+		image->unlock();
+
+		ERR_FAIL_COND(cursor_image->pixels == NULL);
+
+		// Save it for a further usage
+		cursors[p_shape] = XcursorImageLoadCursor(x11_display, cursor_image);
+
+		if (p_shape == CURSOR_ARROW) {
+			XDefineCursor(x11_display, x11_window, cursors[p_shape]);
+		}
+	}
 }
 
 void OS_X11::release_rendering_thread() {

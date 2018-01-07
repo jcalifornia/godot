@@ -20,7 +20,7 @@ allprojects {
 }
 
 dependencies {
-	compile 'com.android.support:support-v4:23.+'  // can be removed if minSdkVersion 16 and modify DownloadNotification.java & V14CustomNotification.java
+	compile 'com.android.support:support-v4:27.+'  // can be removed if minSdkVersion 16 and modify DownloadNotification.java & V14CustomNotification.java
 	$$GRADLE_DEPENDENCIES$$
 }
 
@@ -31,8 +31,8 @@ android {
 		disable 'MissingTranslation'
 	}
 
-	compileSdkVersion 26
-	buildToolsVersion "26.0.1"
+	compileSdkVersion 27
+	buildToolsVersion "27.0.3"
 	useLibrary 'org.apache.http.legacy'
 
 	packagingOptions {

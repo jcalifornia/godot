@@ -1,13 +1,12 @@
 /*************************************************************************/
 /*  godot_result_callbacks.h                                             */
-/*  Author: AndreaCatania                                                */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
-/*                    http://www.godotengine.org                         */
+/*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -32,9 +31,14 @@
 #ifndef GODOT_RESULT_CALLBACKS_H
 #define GODOT_RESULT_CALLBACKS_H
 
-#include "BulletCollision/BroadphaseCollision/btBroadphaseProxy.h"
-#include "btBulletDynamicsCommon.h"
 #include "servers/physics_server.h"
+
+#include <BulletCollision/BroadphaseCollision/btBroadphaseProxy.h>
+#include <btBulletDynamicsCommon.h>
+
+/**
+	@author AndreaCatania
+*/
 
 class RigidBodyBullet;
 

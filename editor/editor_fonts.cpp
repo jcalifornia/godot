@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,12 +27,10 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "editor_fonts.h"
 
 #include "builtin_fonts.gen.h"
-#include "doc_code_font.h"
-#include "doc_font.h"
-#include "doc_title_font.h"
 #include "editor_scale.h"
 #include "editor_settings.h"
 #include "scene/resources/default_theme/default_theme.h"
@@ -77,12 +75,27 @@ static Ref<BitmapFont> make_font(int p_height, int p_ascent, int p_valign, int p
 	Ref<DynamicFont> m_name;                                    \
 	m_name.instance();                                          \
 	m_name->set_size(m_size);                                   \
-	m_name->set_font_data(DefaultFont);                         \
+	if (CustomFont.is_valid()) {                                \
+		m_name->set_font_data(CustomFont);                      \
+		m_name->add_fallback(DefaultFont);                      \
+	} else {                                                    \
+		m_name->set_font_data(DefaultFont);                     \
+	}                                                           \
 	m_name->set_spacing(DynamicFont::SPACING_TOP, -EDSCALE);    \
 	m_name->set_spacing(DynamicFont::SPACING_BOTTOM, -EDSCALE); \
 	MAKE_FALLBACKS(m_name);
 
 void editor_register_fonts(Ref<Theme> p_theme) {
+	/* Custom font */
+
+	String custom_font = EditorSettings::get_singleton()->get("interface/editor/custom_font");
+	Ref<DynamicFontData> CustomFont;
+	if (custom_font.length() > 0) {
+		CustomFont.instance();
+		CustomFont->set_font_path(custom_font);
+		CustomFont->set_force_autohinter(true); //just looks better..i think?
+	}
+
 	/* Droid Sans */
 
 	Ref<DynamicFontData> DefaultFont;
@@ -129,10 +142,6 @@ void editor_register_fonts(Ref<Theme> p_theme) {
 
 	MAKE_DEFAULT_FONT(df_title, default_font_size + 2 * EDSCALE);
 	p_theme->set_font("title", "EditorFonts", df_title);
-
-	//Ref<BitmapFont> doc_font = make_font(_bi_font_doc_font_height,_bi_font_doc_font_ascent,0,_bi_font_doc_font_charcount,_bi_font_doc_font_characters,p_theme->get_icon("DocFont","EditorIcons"));
-	//Ref<BitmapFont> doc_title_font = make_font(_bi_font_doc_title_font_height,_bi_font_doc_title_font_ascent,0,_bi_font_doc_title_font_charcount,_bi_font_doc_title_font_characters,p_theme->get_icon("DocTitleFont","EditorIcons"));
-	//Ref<BitmapFont> doc_code_font = make_font(_bi_font_doc_code_font_height,_bi_font_doc_code_font_ascent,0,_bi_font_doc_code_font_charcount,_bi_font_doc_code_font_characters,p_theme->get_icon("DocCodeFont","EditorIcons"));
 
 	MAKE_DEFAULT_FONT(df_doc_title, int(EDITOR_DEF("text_editor/help/help_title_font_size", 23)) * EDSCALE);
 

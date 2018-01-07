@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "canvas_item_editor_plugin.h"
 
 #include "editor/animation_editor.h"
@@ -612,6 +613,7 @@ void CanvasItemEditor::_find_canvas_items_at_pos(const Point2 &p_pos, Node *p_no
 	if (Object::cast_to<Viewport>(p_node))
 		return;
 
+	const real_t grab_distance = EDITOR_DEF("editors/poly_editor/point_grab_radius", 8);
 	CanvasItem *c = Object::cast_to<CanvasItem>(p_node);
 
 	for (int i = p_node->get_child_count() - 1; i >= 0; i--) {
@@ -630,14 +632,17 @@ void CanvasItemEditor::_find_canvas_items_at_pos(const Point2 &p_pos, Node *p_no
 	if (c && c->is_visible_in_tree() && !c->has_meta("_edit_lock_") && !Object::cast_to<CanvasLayer>(c)) {
 
 		Rect2 rect = c->_edit_get_rect();
-		Point2 local_pos = (p_parent_xform * p_canvas_xform * c->get_transform()).affine_inverse().xform(p_pos);
+		Transform2D to_local = (p_parent_xform * p_canvas_xform * c->get_transform()).affine_inverse();
+		Point2 local_pos = to_local.xform(p_pos);
+		const real_t local_grab_distance = (to_local.xform(p_pos + Vector2(grab_distance, 0)) - local_pos).length();
+		Rect2 local_pos_rect = Rect2(local_pos, Vector2(0, 0)).grow(local_grab_distance);
 
-		if (rect.has_point(local_pos)) {
+		if (rect.intersects(local_pos_rect) && c->_edit_is_selected_on_click(local_pos, local_grab_distance)) {
 			Node2D *node = Object::cast_to<Node2D>(c);
 
 			_SelectResult res;
 			res.item = c;
-			res.z = node ? node->get_z() : 0;
+			res.z_index = node ? node->get_z_index() : 0;
 			res.has_z = node;
 			r_items.push_back(res);
 		}
@@ -3464,7 +3469,7 @@ void CanvasItemEditor::_popup_callback(int p_op) {
 			for (List<Node *>::Element *E = selection.front(); E; E = E->next()) {
 
 				CanvasItem *canvas_item = Object::cast_to<CanvasItem>(E->get());
-				if (!canvas_item || !canvas_item->is_visible_in_tree())
+				if (!canvas_item || !canvas_item->is_inside_tree())
 					continue;
 
 				if (canvas_item->get_viewport() != EditorNode::get_singleton()->get_scene_root())
@@ -3482,7 +3487,7 @@ void CanvasItemEditor::_popup_callback(int p_op) {
 			for (List<Node *>::Element *E = selection.front(); E; E = E->next()) {
 
 				CanvasItem *canvas_item = Object::cast_to<CanvasItem>(E->get());
-				if (!canvas_item || !canvas_item->is_visible_in_tree())
+				if (!canvas_item || !canvas_item->is_inside_tree())
 					continue;
 
 				if (canvas_item->get_viewport() != EditorNode::get_singleton()->get_scene_root())
@@ -3502,7 +3507,7 @@ void CanvasItemEditor::_popup_callback(int p_op) {
 			for (List<Node *>::Element *E = selection.front(); E; E = E->next()) {
 
 				CanvasItem *canvas_item = Object::cast_to<CanvasItem>(E->get());
-				if (!canvas_item || !canvas_item->is_visible_in_tree())
+				if (!canvas_item || !canvas_item->is_inside_tree())
 					continue;
 
 				if (canvas_item->get_viewport() != EditorNode::get_singleton()->get_scene_root())
@@ -3520,7 +3525,7 @@ void CanvasItemEditor::_popup_callback(int p_op) {
 			for (List<Node *>::Element *E = selection.front(); E; E = E->next()) {
 
 				CanvasItem *canvas_item = Object::cast_to<CanvasItem>(E->get());
-				if (!canvas_item || !canvas_item->is_visible_in_tree())
+				if (!canvas_item || !canvas_item->is_inside_tree())
 					continue;
 
 				if (canvas_item->get_viewport() != EditorNode::get_singleton()->get_scene_root())
@@ -3986,6 +3991,7 @@ void CanvasItemEditor::_bind_methods() {
 	ClassDB::bind_method("_snap_changed", &CanvasItemEditor::_snap_changed);
 	ClassDB::bind_method(D_METHOD("_selection_result_pressed"), &CanvasItemEditor::_selection_result_pressed);
 	ClassDB::bind_method(D_METHOD("_selection_menu_hide"), &CanvasItemEditor::_selection_menu_hide);
+	ClassDB::bind_method(D_METHOD("set_state"), &CanvasItemEditor::set_state);
 
 	ADD_SIGNAL(MethodInfo("item_lock_status_changed"));
 	ADD_SIGNAL(MethodInfo("item_group_status_changed"));
@@ -4344,7 +4350,7 @@ CanvasItemEditor::CanvasItemEditor(EditorNode *p_editor) {
 	additive_selection = false;
 
 	// Update the menus checkboxes
-	set_state(get_state());
+	call_deferred("set_state", get_state());
 }
 
 CanvasItemEditor *CanvasItemEditor::singleton = NULL;

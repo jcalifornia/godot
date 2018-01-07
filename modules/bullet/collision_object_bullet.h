@@ -1,13 +1,12 @@
 /*************************************************************************/
 /*  collision_object_bullet.h                                            */
-/*  Author: AndreaCatania                                                */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
-/*                    http://www.godotengine.org                         */
+/*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -32,12 +31,17 @@
 #ifndef COLLISION_OBJECT_BULLET_H
 #define COLLISION_OBJECT_BULLET_H
 
-#include "LinearMath/btTransform.h"
 #include "core/vset.h"
 #include "object.h"
 #include "shape_owner_bullet.h"
 #include "transform.h"
 #include "vector3.h"
+
+#include <LinearMath/btTransform.h>
+
+/**
+	@author AndreaCatania
+*/
 
 class AreaBullet;
 class ShapeBullet;
@@ -115,6 +119,7 @@ protected:
 	bool ray_pickable;
 	btCollisionObject *bt_collision_object;
 	Vector3 body_scale;
+	bool force_shape_reset;
 	SpaceBullet *space;
 
 	VSet<RID> exceptions;

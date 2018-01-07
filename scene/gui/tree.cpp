@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "tree.h"
 #include <limits.h>
 
@@ -915,6 +916,7 @@ int Tree::compute_item_height(TreeItem *p_item) const {
 	if (p_item == root && hide_root)
 		return 0;
 
+	ERR_FAIL_COND_V(cache.font.is_null(), 0);
 	int height = cache.font->get_height();
 
 	for (int i = 0; i < columns.size(); i++) {
@@ -988,6 +990,8 @@ int Tree::get_item_height(TreeItem *p_item) const {
 
 void Tree::draw_item_rect(const TreeItem::Cell &p_cell, const Rect2i &p_rect, const Color &p_color, const Color &p_icon_color) {
 
+	ERR_FAIL_COND(cache.font.is_null());
+
 	Rect2i rect = p_rect;
 	Ref<Font> font = cache.font;
 	String text = p_cell.text;
@@ -1009,10 +1013,10 @@ void Tree::draw_item_rect(const TreeItem::Cell &p_cell, const Rect2i &p_rect, co
 		case TreeItem::ALIGN_LEFT:
 			break; //do none
 		case TreeItem::ALIGN_CENTER:
-			rect.position.x = MAX(0, (rect.size.width - w) / 2);
+			rect.position.x += MAX(0, (rect.size.width - w) / 2);
 			break; //do none
 		case TreeItem::ALIGN_RIGHT:
-			rect.position.x = MAX(0, (rect.size.width - w));
+			rect.position.x += MAX(0, (rect.size.width - w));
 			break; //do none
 	}
 
@@ -1057,6 +1061,7 @@ int Tree::draw_item(const Point2i &p_pos, const Point2 &p_draw_ofs, const Size2 
 		//draw separation.
 		//if (p_item->get_parent()!=root || !hide_root)
 
+		ERR_FAIL_COND_V(cache.font.is_null(), -1);
 		Ref<Font> font = cache.font;
 
 		int font_ascent = font->get_ascent();
@@ -1423,17 +1428,33 @@ int Tree::draw_item(const Point2i &p_pos, const Point2 &p_draw_ofs, const Size2 
 #endif
 
 				Point2i parent_pos = Point2i(parent_ofs - cache.arrow->get_width() / 2, p_pos.y + label_h / 2 + cache.arrow->get_height() / 2) - cache.offset + p_draw_ofs;
-				VisualServer::get_singleton()->canvas_item_add_line(ci, root_pos, Point2i(parent_pos.x - Math::floor(line_width / 2), root_pos.y), cache.relationship_line_color, line_width);
-				VisualServer::get_singleton()->canvas_item_add_line(ci, Point2i(parent_pos.x, root_pos.y), parent_pos, cache.relationship_line_color, line_width);
+
+				if (root_pos.y + line_width >= 0) {
+					VisualServer::get_singleton()->canvas_item_add_line(ci, root_pos, Point2i(parent_pos.x - Math::floor(line_width / 2), root_pos.y), cache.relationship_line_color, line_width);
+					VisualServer::get_singleton()->canvas_item_add_line(ci, Point2i(parent_pos.x, root_pos.y), parent_pos, cache.relationship_line_color, line_width);
+				}
+
+				if (htotal < 0) {
+					return -1;
+				}
 			}
 
-			int child_h = draw_item(children_pos, p_draw_ofs, p_draw_size, c);
+			if (htotal >= 0) {
+				int child_h = draw_item(children_pos, p_draw_ofs, p_draw_size, c);
 
-			if (child_h < 0 && cache.draw_relationship_lines == 0)
-				return -1; // break, stop drawing, no need to anymore
+				if (child_h < 0) {
+					if (cache.draw_relationship_lines == 0) {
+						return -1; // break, stop drawing, no need to anymore
+					} else {
+						htotal = -1;
+						children_pos.y = cache.offset.y + p_draw_size.height;
+					}
+				} else {
+					htotal += child_h;
+					children_pos.y += child_h;
+				}
+			}
 
-			htotal += child_h;
-			children_pos.y += child_h;
 			c = c->next;
 		}
 	}
@@ -2352,8 +2373,6 @@ void Tree::_gui_input(Ref<InputEvent> p_event) {
 						last_keypress = 0;
 				}
 			} break;
-
-				last_keypress = 0;
 		}
 	}
 
@@ -2779,6 +2798,7 @@ void Tree::update_scrollbars() {
 
 int Tree::_get_title_button_height() const {
 
+	ERR_FAIL_COND_V(cache.font.is_null() || cache.title_button.is_null(), 0);
 	return show_column_titles ? cache.font->get_height() + cache.title_button->get_minimum_size().height : 0;
 }
 

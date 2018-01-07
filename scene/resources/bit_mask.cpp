@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "bit_mask.h"
 #include "io/image_loader.h"
 
@@ -111,8 +112,8 @@ int BitMap::get_true_bit_count() const {
 
 void BitMap::set_bit(const Point2 &p_pos, bool p_value) {
 
-	int x = Math::fast_ftoi(p_pos.x);
-	int y = Math::fast_ftoi(p_pos.y);
+	int x = p_pos.x;
+	int y = p_pos.y;
 
 	ERR_FAIL_INDEX(x, width);
 	ERR_FAIL_INDEX(y, height);

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -541,7 +541,9 @@ Error EditorExportPlatformOSX::export_project(const Ref<EditorExportPreset> &p_p
 		} else {
 
 			String pack_path = EditorSettings::get_singleton()->get_cache_dir().plus_file(pkg_name + ".pck");
-			Error err = save_pack(p_preset, pack_path);
+
+			Vector<SharedObject> shared_objects;
+			Error err = save_pack(p_preset, pack_path, &shared_objects);
 
 			if (err == OK) {
 				zipOpenNewFileInZip(dst_pkg_zip,
@@ -567,10 +569,31 @@ Error EditorExportPlatformOSX::export_project(const Ref<EditorExportPreset> &p_p
 							break;
 						zipWriteInFileInZip(dst_pkg_zip, buf, r);
 					}
+
 					zipCloseFileInZip(dst_pkg_zip);
 					memdelete(pf);
 				} else {
 					err = ERR_CANT_OPEN;
+				}
+
+				//add shared objects
+				for (int i = 0; i < shared_objects.size(); i++) {
+					Vector<uint8_t> file = FileAccess::get_file_as_array(shared_objects[i].path);
+					ERR_CONTINUE(file.empty());
+
+					zipOpenNewFileInZip(dst_pkg_zip,
+							(pkg_name + ".app/Contents/MacOS/").plus_file(shared_objects[i].path.get_file()).utf8().get_data(),
+							NULL,
+							NULL,
+							0,
+							NULL,
+							0,
+							NULL,
+							Z_DEFLATED,
+							Z_DEFAULT_COMPRESSION);
+
+					zipWriteInFileInZip(dst_pkg_zip, file.ptr(), file.size());
+					zipCloseFileInZip(dst_pkg_zip);
 				}
 			}
 		}

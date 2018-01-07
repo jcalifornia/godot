@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "nativescript.h"
 
 #include "gdnative/gdnative.h"
@@ -789,8 +790,13 @@ NativeScriptInstance::~NativeScriptInstance() {
 
 NativeScriptLanguage *NativeScriptLanguage::singleton;
 
-void NativeScriptLanguage::_unload_stuff() {
+void NativeScriptLanguage::_unload_stuff(bool p_reload) {
 	for (Map<String, Map<StringName, NativeScriptDesc> >::Element *L = library_classes.front(); L; L = L->next()) {
+
+		if (p_reload && !library_gdnatives[L->key()]->get_library()->is_reloadable()) {
+			continue;
+		}
+
 		for (Map<StringName, NativeScriptDesc>::Element *C = L->get().front(); C; C = C->next()) {
 
 			// free property stuff first
@@ -1107,10 +1113,16 @@ void NativeReloadNode::_notification(int p_what) {
 #ifndef NO_THREADS
 			MutexLock lock(NSL->mutex);
 #endif
-			NSL->_unload_stuff();
+			NSL->_unload_stuff(true);
 			for (Map<String, Ref<GDNative> >::Element *L = NSL->library_gdnatives.front(); L; L = L->next()) {
 
-				L->get()->terminate();
+				Ref<GDNative> gdn = L->get();
+
+				if (!gdn->get_library()->is_reloadable()) {
+					continue;
+				}
+
+				gdn->terminate();
 				NSL->library_classes.erase(L->key());
 			}
 
@@ -1128,21 +1140,23 @@ void NativeReloadNode::_notification(int p_what) {
 			Set<StringName> libs_to_remove;
 			for (Map<String, Ref<GDNative> >::Element *L = NSL->library_gdnatives.front(); L; L = L->next()) {
 
-				if (!L->get()->initialize()) {
+				Ref<GDNative> gdn = L->get();
+
+				if (!gdn->get_library()->is_reloadable()) {
+					continue;
+				}
+
+				if (!gdn->initialize()) {
 					libs_to_remove.insert(L->key());
 					continue;
 				}
 
 				NSL->library_classes.insert(L->key(), Map<StringName, NativeScriptDesc>());
 
-				void *args[1] = {
-					(void *)&L->key()
-				};
-
 				// here the library registers all the classes and stuff.
 
 				void *proc_ptr;
-				Error err = L->get()->get_symbol(L->get()->get_library()->get_symbol_prefix() + "nativescript_init", proc_ptr);
+				Error err = gdn->get_symbol(gdn->get_library()->get_symbol_prefix() + "nativescript_init", proc_ptr);
 				if (err != OK) {
 					ERR_PRINT(String("No godot_nativescript_init in \"" + L->key() + "\" found").utf8().get_data());
 				} else {

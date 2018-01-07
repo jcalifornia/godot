@@ -190,7 +190,11 @@ def configure(env):
 
         if (env["use_lto"]):
             env.Append(CCFLAGS=['/GL'])
-            env.Append(LINKFLAGS=['/LTCG'])
+            env.Append(ARFLAGS=['/LTCG'])
+            if env["progress"]:
+                env.Append(LINKFLAGS=['/LTCG:STATUS'])
+            else:
+                env.Append(LINKFLAGS=['/LTCG'])
 
         env.Append(CCFLAGS=["/I" + p for p in os.getenv("INCLUDE").split(";")])
         env.Append(LIBPATH=[p for p in os.getenv("LIB").split(";")])
@@ -261,7 +265,7 @@ def configure(env):
         env['CXX'] = mingw_prefix + "g++"
         env['AR'] = mingw_prefix + "gcc-ar"
         env['RANLIB'] = mingw_prefix + "gcc-ranlib"
-        env['LD'] = mingw_prefix + "g++"
+        env['LINK'] = mingw_prefix + "g++"
         env["x86_libtheora_opt_gcc"] = True
 
         if env['use_lto']:

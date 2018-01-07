@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "os_osx.h"
 
 #include "dir_access_osx.h"
@@ -57,25 +58,31 @@
 #include <unistd.h>
 
 #if MAC_OS_X_VERSION_MAX_ALLOWED < 101200
+#define NSEventMaskAny NSAnyEventMask
+#define NSEventTypeKeyDown NSKeyDown
+#define NSEventTypeKeyUp NSKeyUp
+#define NSEventModifierFlagShift NSShiftKeyMask
+#define NSEventModifierFlagCommand NSCommandKeyMask
+#define NSEventModifierFlagControl NSControlKeyMask
+#define NSEventModifierFlagOption NSAlternateKeyMask
+#define NSWindowStyleMaskTitled NSTitledWindowMask
+#define NSWindowStyleMaskResizable NSResizableWindowMask
+#define NSWindowStyleMaskMiniaturizable NSMiniaturizableWindowMask
+#define NSWindowStyleMaskClosable NSClosableWindowMask
 #define NSWindowStyleMaskBorderless NSBorderlessWindowMask
 #endif
 
 static NSRect convertRectToBacking(NSRect contentRect) {
 
-#if MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
-	if (floor(NSAppKitVersionNumber) > NSAppKitVersionNumber10_6)
-		return [OS_OSX::singleton->window_view convertRectToBacking:contentRect];
-	else
-#endif /*MAC_OS_X_VERSION_MAX_ALLOWED*/
-		return contentRect;
+	return [OS_OSX::singleton->window_view convertRectToBacking:contentRect];
 }
 
 static void get_key_modifier_state(unsigned int p_osx_state, Ref<InputEventWithModifiers> state) {
 
-	state->set_shift((p_osx_state & NSShiftKeyMask));
-	state->set_control((p_osx_state & NSControlKeyMask));
-	state->set_alt((p_osx_state & NSAlternateKeyMask));
-	state->set_metakey((p_osx_state & NSCommandKeyMask));
+	state->set_shift((p_osx_state & NSEventModifierFlagShift));
+	state->set_control((p_osx_state & NSEventModifierFlagControl));
+	state->set_alt((p_osx_state & NSEventModifierFlagOption));
+	state->set_metakey((p_osx_state & NSEventModifierFlagCommand));
 }
 
 static int mouse_x = 0;
@@ -99,11 +106,29 @@ static Vector2 get_mouse_pos(NSEvent *event) {
 
 @implementation GodotApplication
 
-// From http://cocoadev.com/index.pl?GameKeyboardHandlingAlmost
-// This works around an AppKit bug, where key up events while holding
-// down the command key don't get sent to the key window.
 - (void)sendEvent:(NSEvent *)event {
-	if ([event type] == NSKeyUp && ([event modifierFlags] & NSCommandKeyMask))
+
+	// special case handling of command-period, which is traditionally a special
+	// shortcut in macOS and doesn't arrive at our regular keyDown handler.
+	if ([event type] == NSEventTypeKeyDown) {
+		if (([event modifierFlags] & NSEventModifierFlagCommand) && [event keyCode] == 0x2f) {
+
+			Ref<InputEventKey> k;
+			k.instance();
+
+			get_key_modifier_state([event modifierFlags], k);
+			k->set_pressed(true);
+			k->set_scancode(KEY_PERIOD);
+			k->set_echo([event isARepeat]);
+
+			OS_OSX::singleton->push_input(k);
+		}
+	}
+
+	// From http://cocoadev.com/index.pl?GameKeyboardHandlingAlmost
+	// This works around an AppKit bug, where key up events while holding
+	// down the command key don't get sent to the key window.
+	if ([event type] == NSEventTypeKeyUp && ([event modifierFlags] & NSEventModifierFlagCommand))
 		[[self keyWindow] sendEvent:event];
 	else
 		[super sendEvent:event];
@@ -169,7 +194,6 @@ static Vector2 get_mouse_pos(NSEvent *event) {
 	return NO;
 }
 
-#if MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
 - (void)windowDidEnterFullScreen:(NSNotification *)notification {
 	OS_OSX::singleton->zoomed = true;
 }
@@ -177,7 +201,6 @@ static Vector2 get_mouse_pos(NSEvent *event) {
 - (void)windowDidExitFullScreen:(NSNotification *)notification {
 	OS_OSX::singleton->zoomed = false;
 }
-#endif // MAC_OS_X_VERSION_MAX_ALLOWED
 
 - (void)windowDidChangeBackingProperties:(NSNotification *)notification {
 	if (!OS_OSX::singleton)
@@ -371,8 +394,8 @@ static const NSRange kEmptyRange = { NSNotFound, 0 };
 
 - (void)cancelComposition {
 	[self unmarkText];
-	NSInputManager *currentInputManager = [NSInputManager currentInputManager];
-	[currentInputManager markedTextAbandoned:self];
+	NSTextInputContext *currentInputContext = [NSTextInputContext currentInputContext];
+	[currentInputContext discardMarkedText];
 }
 
 - (void)insertText:(id)aString {
@@ -401,8 +424,8 @@ static const NSRange kEmptyRange = { NSNotFound, 0 };
 	NSCharacterSet *ctrlChars = [NSCharacterSet controlCharacterSet];
 	NSCharacterSet *wsnlChars = [NSCharacterSet whitespaceAndNewlineCharacterSet];
 	if ([characters rangeOfCharacterFromSet:ctrlChars].length && [characters rangeOfCharacterFromSet:wsnlChars].length == 0) {
-		NSInputManager *currentInputManager = [NSInputManager currentInputManager];
-		[currentInputManager markedTextAbandoned:self];
+		NSTextInputContext *currentInputContext = [NSTextInputContext currentInputContext];
+		[currentInputContext discardMarkedText];
 		[self cancelComposition];
 		return;
 	}
@@ -488,7 +511,7 @@ static void _mouseDownEvent(NSEvent *event, int index, int mask, bool pressed) {
 }
 
 - (void)mouseDown:(NSEvent *)event {
-	if (([event modifierFlags] & NSControlKeyMask)) {
+	if (([event modifierFlags] & NSEventModifierFlagControl)) {
 		mouse_down_control = true;
 		_mouseDownEvent(event, BUTTON_RIGHT, BUTTON_MASK_RIGHT, true);
 	} else {
@@ -577,8 +600,11 @@ static void _mouseDownEvent(NSEvent *event, int index, int mask, bool pressed) {
 		return;
 	if (OS_OSX::singleton->main_loop && OS_OSX::singleton->mouse_mode != OS::MOUSE_MODE_CAPTURED)
 		OS_OSX::singleton->main_loop->notification(MainLoop::NOTIFICATION_WM_MOUSE_ENTER);
-	if (OS_OSX::singleton->input)
+	if (OS_OSX::singleton->input) {
 		OS_OSX::singleton->input->set_mouse_in_window(true);
+		OS_OSX::singleton->cursor_shape = OS::CURSOR_MAX;
+		OS_OSX::singleton->set_cursor_shape(OS::CURSOR_ARROW);
+	}
 }
 
 - (void)magnifyWithEvent:(NSEvent *)event {
@@ -786,29 +812,29 @@ static int translateKey(unsigned int key) {
 	int mod = [event modifierFlags];
 
 	if (key == 0x36 || key == 0x37) {
-		if (mod & NSCommandKeyMask) {
-			mod &= ~NSCommandKeyMask;
+		if (mod & NSEventModifierFlagCommand) {
+			mod &= ~NSEventModifierFlagCommand;
 			k->set_pressed(true);
 		} else {
 			k->set_pressed(false);
 		}
 	} else if (key == 0x38 || key == 0x3c) {
-		if (mod & NSShiftKeyMask) {
-			mod &= ~NSShiftKeyMask;
+		if (mod & NSEventModifierFlagShift) {
+			mod &= ~NSEventModifierFlagShift;
 			k->set_pressed(true);
 		} else {
 			k->set_pressed(false);
 		}
 	} else if (key == 0x3a || key == 0x3d) {
-		if (mod & NSAlternateKeyMask) {
-			mod &= ~NSAlternateKeyMask;
+		if (mod & NSEventModifierFlagOption) {
+			mod &= ~NSEventModifierFlagOption;
 			k->set_pressed(true);
 		} else {
 			k->set_pressed(false);
 		}
 	} else if (key == 0x3b || key == 0x3e) {
-		if (mod & NSControlKeyMask) {
-			mod &= ~NSControlKeyMask;
+		if (mod & NSEventModifierFlagControl) {
+			mod &= ~NSEventModifierFlagControl;
 			k->set_pressed(true);
 		} else {
 			k->set_pressed(false);
@@ -868,20 +894,12 @@ inline void sendPanEvent(double dx, double dy, int modifierFlags) {
 - (void)scrollWheel:(NSEvent *)event {
 	double deltaX, deltaY;
 
-#if MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
-	if (floor(NSAppKitVersionNumber) > NSAppKitVersionNumber10_6) {
-		deltaX = [event scrollingDeltaX];
-		deltaY = [event scrollingDeltaY];
+	deltaX = [event scrollingDeltaX];
+	deltaY = [event scrollingDeltaY];
 
-		if ([event hasPreciseScrollingDeltas]) {
-			deltaX *= 0.03;
-			deltaY *= 0.03;
-		}
-	} else
-#endif // MAC_OS_X_VERSION_MAX_ALLOWED
-	{
-		deltaX = [event deltaX];
-		deltaY = [event deltaY];
+	if ([event hasPreciseScrollingDeltas]) {
+		deltaX *= 0.03;
+		deltaY *= 0.03;
 	}
 
 	if ([event phase] != NSEventPhaseNone || [event momentumPhase] != NSEventPhaseNone) {
@@ -955,7 +973,7 @@ static void displays_arrangement_changed(CGDirectDisplayID display_id, CGDisplay
 	displays_arrangement_dirty = true;
 }
 
-void OS_OSX::initialize(const VideoMode &p_desired, int p_video_driver, int p_audio_driver) {
+Error OS_OSX::initialize(const VideoMode &p_desired, int p_video_driver, int p_audio_driver) {
 
 	/*** OSX INITIALIZATION ***/
 	/*** OSX INITIALIZATION ***/
@@ -983,7 +1001,7 @@ void OS_OSX::initialize(const VideoMode &p_desired, int p_video_driver, int p_au
 	if (p_desired.borderless_window) {
 		styleMask = NSWindowStyleMaskBorderless;
 	} else {
-		styleMask = NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask | (p_desired.resizable ? NSResizableWindowMask : 0);
+		styleMask = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable | (p_desired.resizable ? NSWindowStyleMaskResizable : 0);
 	}
 
 	window_object = [[GodotWindow alloc]
@@ -992,7 +1010,7 @@ void OS_OSX::initialize(const VideoMode &p_desired, int p_video_driver, int p_au
 						backing:NSBackingStoreBuffered
 						  defer:NO];
 
-	ERR_FAIL_COND(window_object == nil);
+	ERR_FAIL_COND_V(window_object == nil, ERR_UNAVAILABLE);
 
 	window_view = [[GodotContentView alloc] init];
 
@@ -1008,7 +1026,7 @@ void OS_OSX::initialize(const VideoMode &p_desired, int p_video_driver, int p_au
 	window_size.width = p_desired.width * displayScale;
 	window_size.height = p_desired.height * displayScale;
 
-	if (floor(NSAppKitVersionNumber) > NSAppKitVersionNumber10_6 && displayScale > 1.0) {
+	if (displayScale > 1.0) {
 		[window_view setWantsBestResolutionOpenGLSurface:YES];
 		//if (current_videomode.resizable)
 		[window_object setCollectionBehavior:NSWindowCollectionBehaviorFullScreenPrimary];
@@ -1020,8 +1038,7 @@ void OS_OSX::initialize(const VideoMode &p_desired, int p_video_driver, int p_au
 	[window_object setAcceptsMouseMovedEvents:YES];
 	[window_object center];
 
-	if (floor(NSAppKitVersionNumber) > NSAppKitVersionNumber10_6)
-		[window_object setRestorable:NO];
+	[window_object setRestorable:NO];
 
 	unsigned int attributeCount = 0;
 
@@ -1079,11 +1096,11 @@ void OS_OSX::initialize(const VideoMode &p_desired, int p_video_driver, int p_au
 #undef ADD_ATTR2
 
 	pixelFormat = [[NSOpenGLPixelFormat alloc] initWithAttributes:attributes];
-	ERR_FAIL_COND(pixelFormat == nil);
+	ERR_FAIL_COND_V(pixelFormat == nil, ERR_UNAVAILABLE);
 
 	context = [[NSOpenGLContext alloc] initWithFormat:pixelFormat shareContext:nil];
 
-	ERR_FAIL_COND(context == nil);
+	ERR_FAIL_COND_V(context == nil, ERR_UNAVAILABLE);
 
 	[context setView:window_view];
 
@@ -1127,6 +1144,8 @@ void OS_OSX::initialize(const VideoMode &p_desired, int p_video_driver, int p_au
 	_ensure_user_data_dir();
 
 	restore_rect = Rect2(get_window_position(), get_window_size());
+
+	return OK;
 }
 
 void OS_OSX::finalize() {
@@ -1179,34 +1198,42 @@ public:
 
 		switch (p_type) {
 			case ERR_WARNING:
-				os_log_info(OS_LOG_DEFAULT,
-						"WARNING: %{public}s: %{public}s\nAt: %{public}s:%i.",
-						p_function, err_details, p_file, p_line);
+				if (floor(NSAppKitVersionNumber) >= NSAppKitVersionNumber10_12) {
+					os_log_info(OS_LOG_DEFAULT,
+							"WARNING: %{public}s: %{public}s\nAt: %{public}s:%i.",
+							p_function, err_details, p_file, p_line);
+				}
 				logf_error("\E[1;33mWARNING: %s: \E[0m\E[1m%s\n", p_function,
 						err_details);
 				logf_error("\E[0;33m   At: %s:%i.\E[0m\n", p_file, p_line);
 				break;
 			case ERR_SCRIPT:
-				os_log_error(OS_LOG_DEFAULT,
-						"SCRIPT ERROR: %{public}s: %{public}s\nAt: %{public}s:%i.",
-						p_function, err_details, p_file, p_line);
+				if (floor(NSAppKitVersionNumber) >= NSAppKitVersionNumber10_12) {
+					os_log_error(OS_LOG_DEFAULT,
+							"SCRIPT ERROR: %{public}s: %{public}s\nAt: %{public}s:%i.",
+							p_function, err_details, p_file, p_line);
+				}
 				logf_error("\E[1;35mSCRIPT ERROR: %s: \E[0m\E[1m%s\n", p_function,
 						err_details);
 				logf_error("\E[0;35m   At: %s:%i.\E[0m\n", p_file, p_line);
 				break;
 			case ERR_SHADER:
-				os_log_error(OS_LOG_DEFAULT,
-						"SHADER ERROR: %{public}s: %{public}s\nAt: %{public}s:%i.",
-						p_function, err_details, p_file, p_line);
+				if (floor(NSAppKitVersionNumber) >= NSAppKitVersionNumber10_12) {
+					os_log_error(OS_LOG_DEFAULT,
+							"SHADER ERROR: %{public}s: %{public}s\nAt: %{public}s:%i.",
+							p_function, err_details, p_file, p_line);
+				}
 				logf_error("\E[1;36mSHADER ERROR: %s: \E[0m\E[1m%s\n", p_function,
 						err_details);
 				logf_error("\E[0;36m   At: %s:%i.\E[0m\n", p_file, p_line);
 				break;
 			case ERR_ERROR:
 			default:
-				os_log_error(OS_LOG_DEFAULT,
-						"ERROR: %{public}s: %{public}s\nAt: %{public}s:%i.",
-						p_function, err_details, p_file, p_line);
+				if (floor(NSAppKitVersionNumber) >= NSAppKitVersionNumber10_12) {
+					os_log_error(OS_LOG_DEFAULT,
+							"ERROR: %{public}s: %{public}s\nAt: %{public}s:%i.",
+							p_function, err_details, p_file, p_line);
+				}
 				logf_error("\E[1;31mERROR: %s: \E[0m\E[1m%s\n", p_function, err_details);
 				logf_error("\E[0;31m   At: %s:%i.\E[0m\n", p_file, p_line);
 				break;
@@ -1240,28 +1267,82 @@ void OS_OSX::set_cursor_shape(CursorShape p_shape) {
 	if (cursor_shape == p_shape)
 		return;
 
-	switch (p_shape) {
-		case CURSOR_ARROW: [[NSCursor arrowCursor] set]; break;
-		case CURSOR_IBEAM: [[NSCursor IBeamCursor] set]; break;
-		case CURSOR_POINTING_HAND: [[NSCursor pointingHandCursor] set]; break;
-		case CURSOR_CROSS: [[NSCursor crosshairCursor] set]; break;
-		case CURSOR_WAIT: [[NSCursor arrowCursor] set]; break;
-		case CURSOR_BUSY: [[NSCursor arrowCursor] set]; break;
-		case CURSOR_DRAG: [[NSCursor closedHandCursor] set]; break;
-		case CURSOR_CAN_DROP: [[NSCursor openHandCursor] set]; break;
-		case CURSOR_FORBIDDEN: [[NSCursor arrowCursor] set]; break;
-		case CURSOR_VSIZE: [[NSCursor resizeUpDownCursor] set]; break;
-		case CURSOR_HSIZE: [[NSCursor resizeLeftRightCursor] set]; break;
-		case CURSOR_BDIAGSIZE: [[NSCursor arrowCursor] set]; break;
-		case CURSOR_FDIAGSIZE: [[NSCursor arrowCursor] set]; break;
-		case CURSOR_MOVE: [[NSCursor arrowCursor] set]; break;
-		case CURSOR_VSPLIT: [[NSCursor resizeUpDownCursor] set]; break;
-		case CURSOR_HSPLIT: [[NSCursor resizeLeftRightCursor] set]; break;
-		case CURSOR_HELP: [[NSCursor arrowCursor] set]; break;
-		default: {};
+	if (cursors[p_shape] != NULL) {
+		[cursors[p_shape] set];
+	} else {
+		switch (p_shape) {
+			case CURSOR_ARROW: [[NSCursor arrowCursor] set]; break;
+			case CURSOR_IBEAM: [[NSCursor IBeamCursor] set]; break;
+			case CURSOR_POINTING_HAND: [[NSCursor pointingHandCursor] set]; break;
+			case CURSOR_CROSS: [[NSCursor crosshairCursor] set]; break;
+			case CURSOR_WAIT: [[NSCursor arrowCursor] set]; break;
+			case CURSOR_BUSY: [[NSCursor arrowCursor] set]; break;
+			case CURSOR_DRAG: [[NSCursor closedHandCursor] set]; break;
+			case CURSOR_CAN_DROP: [[NSCursor openHandCursor] set]; break;
+			case CURSOR_FORBIDDEN: [[NSCursor arrowCursor] set]; break;
+			case CURSOR_VSIZE: [[NSCursor resizeUpDownCursor] set]; break;
+			case CURSOR_HSIZE: [[NSCursor resizeLeftRightCursor] set]; break;
+			case CURSOR_BDIAGSIZE: [[NSCursor arrowCursor] set]; break;
+			case CURSOR_FDIAGSIZE: [[NSCursor arrowCursor] set]; break;
+			case CURSOR_MOVE: [[NSCursor arrowCursor] set]; break;
+			case CURSOR_VSPLIT: [[NSCursor resizeUpDownCursor] set]; break;
+			case CURSOR_HSPLIT: [[NSCursor resizeLeftRightCursor] set]; break;
+			case CURSOR_HELP: [[NSCursor arrowCursor] set]; break;
+			default: {};
+		}
 	}
 
 	cursor_shape = p_shape;
+}
+
+void OS_OSX::set_custom_mouse_cursor(const RES &p_cursor, CursorShape p_shape, const Vector2 &p_hotspot) {
+	if (p_cursor.is_valid()) {
+		Ref<Texture> texture = p_cursor;
+		Ref<Image> image = texture->get_data();
+
+		int image_size = 32 * 32;
+
+		ERR_FAIL_COND(texture->get_width() != 32 || texture->get_height() != 32);
+
+		NSBitmapImageRep *imgrep = [[[NSBitmapImageRep alloc]
+				initWithBitmapDataPlanes:NULL
+							  pixelsWide:image->get_width()
+							  pixelsHigh:image->get_height()
+						   bitsPerSample:8
+						 samplesPerPixel:4
+								hasAlpha:YES
+								isPlanar:NO
+						  colorSpaceName:NSDeviceRGBColorSpace
+							 bytesPerRow:image->get_width() * 4
+							bitsPerPixel:32] autorelease];
+
+		ERR_FAIL_COND(imgrep == nil);
+		uint8_t *pixels = [imgrep bitmapData];
+
+		int len = image->get_width() * image->get_height();
+		PoolVector<uint8_t> data = image->get_data();
+		PoolVector<uint8_t>::Read r = data.read();
+
+		/* Premultiply the alpha channel */
+		for (int i = 0; i < len; i++) {
+			uint8_t alpha = r[i * 4 + 3];
+			pixels[i * 4 + 0] = (uint8_t)(((uint16_t)r[i * 4 + 0] * alpha) / 255);
+			pixels[i * 4 + 1] = (uint8_t)(((uint16_t)r[i * 4 + 1] * alpha) / 255);
+			pixels[i * 4 + 2] = (uint8_t)(((uint16_t)r[i * 4 + 2] * alpha) / 255);
+			pixels[i * 4 + 3] = alpha;
+		}
+
+		NSImage *nsimage = [[[NSImage alloc] initWithSize:NSMakeSize(image->get_width(), image->get_height())] autorelease];
+		[nsimage addRepresentation:imgrep];
+
+		NSCursor *cursor = [[NSCursor alloc] initWithImage:nsimage hotSpot:NSMakePoint(p_hotspot.x, p_hotspot.y)];
+
+		cursors[p_shape] = cursor;
+
+		if (p_shape == CURSOR_ARROW) {
+			[cursor set];
+		}
+	}
 }
 
 void OS_OSX::set_mouse_show(bool p_show) {
@@ -1665,9 +1746,8 @@ float OS_OSX::_display_scale(id screen) const {
 		if ([screen respondsToSelector:@selector(backingScaleFactor)]) {
 			return fmax(1.0, [screen backingScaleFactor]);
 		}
-	} else {
-		return 1.0;
 	}
+	return 1.0;
 }
 
 Point2 OS_OSX::get_native_window_position() const {
@@ -1726,10 +1806,14 @@ void OS_OSX::set_window_size(const Size2 p_size) {
 		CGFloat menuBarHeight = [[[NSApplication sharedApplication] mainMenu] menuBarHeight];
 		if (menuBarHeight != 0.f) {
 			size.y += menuBarHeight;
-#if MAC_OS_X_VERSION_MAX_ALLOWED <= 101104
 		} else {
-			size.y += [[NSStatusBar systemStatusBar] thickness];
+#if MAC_OS_X_VERSION_MAX_ALLOWED >= 101200
+			if (floor(NSAppKitVersionNumber) < NSAppKitVersionNumber10_12) {
+#else
+			{
 #endif
+				size.y += [[NSStatusBar systemStatusBar] thickness];
+			}
 		}
 	}
 
@@ -1742,21 +1826,12 @@ void OS_OSX::set_window_size(const Size2 p_size) {
 void OS_OSX::set_window_fullscreen(bool p_enabled) {
 
 	if (zoomed != p_enabled) {
-#if MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
 		[window_object toggleFullScreen:nil];
-#else
-		[window_object performZoom:nil];
-#endif /*MAC_OS_X_VERSION_MAX_ALLOWED*/
 	}
 	zoomed = p_enabled;
 };
 
 bool OS_OSX::is_window_fullscreen() const {
-
-#if MAC_OS_X_VERSION_MAX_ALLOWED < 1070
-	if ([window_object respondsToSelector:@selector(isZoomed)])
-		return [window_object isZoomed];
-#endif /*MAC_OS_X_VERSION_MAX_ALLOWED*/
 
 	return zoomed;
 };
@@ -1764,14 +1839,14 @@ bool OS_OSX::is_window_fullscreen() const {
 void OS_OSX::set_window_resizable(bool p_enabled) {
 
 	if (p_enabled)
-		[window_object setStyleMask:[window_object styleMask] | NSResizableWindowMask];
+		[window_object setStyleMask:[window_object styleMask] | NSWindowStyleMaskResizable];
 	else
-		[window_object setStyleMask:[window_object styleMask] & ~NSResizableWindowMask];
+		[window_object setStyleMask:[window_object styleMask] & ~NSWindowStyleMaskResizable];
 };
 
 bool OS_OSX::is_window_resizable() const {
 
-	return [window_object styleMask] & NSResizableWindowMask;
+	return [window_object styleMask] & NSWindowStyleMaskResizable;
 };
 
 void OS_OSX::set_window_minimized(bool p_enabled) {
@@ -1826,7 +1901,7 @@ void OS_OSX::set_borderless_window(bool p_borderless) {
 	if (p_borderless) {
 		[window_object setStyleMask:NSWindowStyleMaskBorderless];
 	} else {
-		[window_object setStyleMask:NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask | NSResizableWindowMask];
+		[window_object setStyleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable];
 
 		// Force update of the window styles
 		NSRect frameRect = [window_object frame];
@@ -1950,7 +2025,7 @@ void OS_OSX::process_events() {
 
 	while (true) {
 		NSEvent *event = [NSApp
-				nextEventMatchingMask:NSAnyEventMask
+				nextEventMatchingMask:NSEventMaskAny
 							untilDate:[NSDate distantPast]
 							   inMode:NSDefaultRunLoopMode
 							  dequeue:YES];
@@ -2142,7 +2217,7 @@ OS_OSX::OS_OSX() {
 	[apple_menu addItemWithTitle:title action:@selector(hide:) keyEquivalent:@"h"];
 
 	menu_item = [apple_menu addItemWithTitle:NSLocalizedString(@"Hide Others", nil) action:@selector(hideOtherApplications:) keyEquivalent:@"h"];
-	[menu_item setKeyEquivalentModifierMask:(NSAlternateKeyMask | NSCommandKeyMask)];
+	[menu_item setKeyEquivalentModifierMask:(NSEventModifierFlagOption | NSEventModifierFlagCommand)];
 
 	[apple_menu addItemWithTitle:NSLocalizedString(@"Show all", nil) action:@selector(unhideAllApplications:) keyEquivalent:@""];
 

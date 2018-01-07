@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "viewport.h"
 
 #include "os/input.h"
@@ -677,6 +678,20 @@ void Viewport::_notification(int p_what) {
 				}
 			}
 
+		} break;
+		case SceneTree::NOTIFICATION_WM_FOCUS_OUT: {
+			if (gui.mouse_focus) {
+				//if mouse is being pressed, send a release event
+				Ref<InputEventMouseButton> mb;
+				mb.instance();
+				mb->set_position(gui.mouse_focus->get_local_mouse_position());
+				mb->set_global_position(gui.mouse_focus->get_local_mouse_position());
+				mb->set_button_index(gui.mouse_focus_button);
+				mb->set_pressed(false);
+				Control *c = gui.mouse_focus;
+				gui.mouse_focus = NULL;
+				c->call_multilevel(SceneStringNames::get_singleton()->_gui_input, mb);
+			}
 		} break;
 	}
 }
@@ -2030,6 +2045,8 @@ void Viewport::_gui_input_event(Ref<InputEvent> p_event) {
 	Ref<InputEventGesture> gesture_event = p_event;
 	if (gesture_event.is_valid()) {
 
+		_gui_cancel_tooltip();
+
 		Size2 pos = gesture_event->get_position();
 
 		Control *over = _gui_find_control(pos);
@@ -2374,12 +2391,9 @@ List<Control *>::Element *Viewport::_gui_show_modal(Control *p_control) {
 		mb->set_global_position(gui.mouse_focus->get_local_mouse_position());
 		mb->set_button_index(gui.mouse_focus_button);
 		mb->set_pressed(false);
-		gui.mouse_focus->call_multilevel(SceneStringNames::get_singleton()->_gui_input, mb);
-
-		//if (gui.mouse_over == gui.mouse_focus) {
-		//	gui.mouse_focus->notification(Control::NOTIFICATION_MOUSE_EXIT);
-		//}
+		Control *c = gui.mouse_focus;
 		gui.mouse_focus = NULL;
+		c->call_multilevel(SceneStringNames::get_singleton()->_gui_input, mb);
 	}
 
 	return gui.modal_stack.back();

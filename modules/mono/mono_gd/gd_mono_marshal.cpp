@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "gd_mono_marshal.h"
 
 #include "gd_mono.h"
@@ -113,7 +114,7 @@ Variant::Type managed_to_variant_type(const ManagedType &p_type) {
 			if (tclass == CACHED_CLASS(Plane))
 				return Variant::PLANE;
 
-			if (mono_class_is_enum(tclass->get_raw()))
+			if (mono_class_is_enum(tclass->get_mono_ptr()))
 				return Variant::INT;
 		} break;
 
@@ -164,7 +165,7 @@ Variant::Type managed_to_variant_type(const ManagedType &p_type) {
 		} break;
 
 		case MONO_TYPE_GENERICINST: {
-			if (CACHED_RAW_MONO_CLASS(Dictionary) == p_type.type_class->get_raw()) {
+			if (CACHED_RAW_MONO_CLASS(Dictionary) == p_type.type_class->get_mono_ptr()) {
 				return Variant::DICTIONARY;
 			}
 		} break;
@@ -306,9 +307,9 @@ MonoObject *variant_to_mono_object(const Variant *p_var, const ManagedType &p_ty
 			if (tclass == CACHED_CLASS(Plane))
 				RETURN_BOXED_STRUCT(Plane, p_var);
 
-			if (mono_class_is_enum(tclass->get_raw())) {
+			if (mono_class_is_enum(tclass->get_mono_ptr())) {
 				int val = p_var->operator signed int();
-				return BOX_ENUM(tclass->get_raw(), val);
+				return BOX_ENUM(tclass->get_mono_ptr(), val);
 			}
 		} break;
 
@@ -432,7 +433,7 @@ MonoObject *variant_to_mono_object(const Variant *p_var, const ManagedType &p_ty
 			}
 			break;
 			case MONO_TYPE_GENERICINST: {
-				if (CACHED_RAW_MONO_CLASS(Dictionary) == p_type.type_class->get_raw()) {
+				if (CACHED_RAW_MONO_CLASS(Dictionary) == p_type.type_class->get_mono_ptr()) {
 					return Dictionary_to_mono_object(p_var->operator Dictionary());
 				}
 			} break;
@@ -528,7 +529,7 @@ Variant mono_object_to_variant(MonoObject *p_obj, const ManagedType &p_type) {
 			if (tclass == CACHED_CLASS(Plane))
 				RETURN_UNBOXED_STRUCT(Plane, p_obj);
 
-			if (mono_class_is_enum(tclass->get_raw()))
+			if (mono_class_is_enum(tclass->get_mono_ptr()))
 				return unbox<int32_t>(p_obj);
 		} break;
 
@@ -585,7 +586,7 @@ Variant mono_object_to_variant(MonoObject *p_obj, const ManagedType &p_type) {
 		} break;
 
 		case MONO_TYPE_GENERICINST: {
-			if (CACHED_RAW_MONO_CLASS(Dictionary) == p_type.type_class->get_raw()) {
+			if (CACHED_RAW_MONO_CLASS(Dictionary) == p_type.type_class->get_mono_ptr()) {
 				return mono_object_to_Dictionary(p_obj);
 			}
 		} break;

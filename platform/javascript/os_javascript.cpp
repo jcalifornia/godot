@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "os_javascript.h"
 
 #include "core/engine.h"
@@ -419,7 +420,7 @@ void send_notification(int notif) {
 }
 }
 
-void OS_JavaScript::initialize(const VideoMode &p_desired, int p_video_driver, int p_audio_driver) {
+Error OS_JavaScript::initialize(const VideoMode &p_desired, int p_video_driver, int p_audio_driver) {
 
 	print_line("Init OS");
 
@@ -429,7 +430,7 @@ void OS_JavaScript::initialize(const VideoMode &p_desired, int p_video_driver, i
 	attributes.antialias = false;
 	attributes.majorVersion = 2;
 	EMSCRIPTEN_WEBGL_CONTEXT_HANDLE ctx = emscripten_webgl_create_context(NULL, &attributes);
-	ERR_FAIL_COND(emscripten_webgl_make_context_current(ctx) != EMSCRIPTEN_RESULT_SUCCESS);
+	ERR_FAIL_COND_V(emscripten_webgl_make_context_current(ctx) != EMSCRIPTEN_RESULT_SUCCESS, ERR_UNAVAILABLE);
 
 	video_mode = p_desired;
 	// can't fulfil fullscreen request due to browser security
@@ -507,6 +508,8 @@ void OS_JavaScript::initialize(const VideoMode &p_desired, int p_video_driver, i
 #undef EM_CHECK
 
 	visual_server->init();
+
+	return OK;
 }
 
 void OS_JavaScript::set_main_loop(MainLoop *p_main_loop) {
@@ -563,7 +566,7 @@ void OS_JavaScript::set_css_cursor(const char *p_cursor) {
 
 	/* clang-format off */
 	EM_ASM_({
-		Module.canvas.style.cursor = Module.UTF8ToString($0);
+		Module.canvas.style.cursor = UTF8ToString($0);
 	}, p_cursor);
 	/* clang-format on */
 }
@@ -573,7 +576,7 @@ const char *OS_JavaScript::get_css_cursor() const {
 	char cursor[16];
 	/* clang-format off */
 	EM_ASM_INT({
-		Module.stringToUTF8(Module.canvas.style.cursor ? Module.canvas.style.cursor : 'auto', $0, 16);
+		stringToUTF8(Module.canvas.style.cursor ? Module.canvas.style.cursor : 'auto', $0, 16);
 	}, cursor);
 	/* clang-format on */
 	return cursor;
@@ -779,6 +782,9 @@ void OS_JavaScript::set_cursor_shape(CursorShape p_shape) {
 		set_css_cursor(godot2dom_cursor(cursor_shape));
 }
 
+void OS_JavaScript::set_custom_mouse_cursor(const RES &p_cursor, CursorShape p_shape, const Vector2 &p_hotspot) {
+}
+
 void OS_JavaScript::main_loop_begin() {
 
 	if (main_loop)
@@ -786,7 +792,7 @@ void OS_JavaScript::main_loop_begin() {
 
 	/* clang-format off */
 	EM_ASM_ARGS({
-		const send_notification = Module.cwrap('send_notification', null, ['number']);
+		const send_notification = cwrap('send_notification', null, ['number']);
 		const notifs = arguments;
 		(['mouseover', 'mouseleave', 'focus', 'blur']).forEach(function(event, i) {
 			Module.canvas.addEventListener(event, send_notification.bind(null, notifs[i]));
@@ -983,6 +989,7 @@ bool OS_JavaScript::is_userfs_persistent() const {
 }
 
 OS_JavaScript::OS_JavaScript(const char *p_execpath, GetUserDataDirFunc p_get_user_data_dir_func) {
+
 	set_cmdline(p_execpath, get_cmdline_args());
 	main_loop = NULL;
 	gl_extensions = NULL;
@@ -995,6 +1002,10 @@ OS_JavaScript::OS_JavaScript(const char *p_execpath, GetUserDataDirFunc p_get_us
 
 	idbfs_available = false;
 	time_to_save_sync = -1;
+
+	Vector<Logger *> loggers;
+	loggers.push_back(memnew(StdLogger));
+	_set_logger(memnew(CompositeLogger(loggers)));
 }
 
 OS_JavaScript::~OS_JavaScript() {
