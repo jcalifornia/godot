@@ -54,7 +54,18 @@ Ref<EditorSettings> EditorSettings::singleton = NULL;
 
 // Properties
 
-bool EditorSettings::_set(const StringName &p_name, const Variant &p_value, bool p_emit_signal) {
+bool EditorSettings::_set(const StringName &p_name, const Variant &p_value) {
+
+	_THREAD_SAFE_METHOD_
+
+	bool changed = _set_only(p_name, p_value);
+	if (changed) {
+		emit_signal("settings_changed");
+	}
+	return true;
+}
+
+bool EditorSettings::_set_only(const StringName &p_name, const Variant &p_value) {
 
 	_THREAD_SAFE_METHOD_
 
@@ -73,7 +84,7 @@ bool EditorSettings::_set(const StringName &p_name, const Variant &p_value, bool
 			add_shortcut(name, sc);
 		}
 
-		return true;
+		return false;
 	}
 
 	bool changed = false;
@@ -102,10 +113,7 @@ bool EditorSettings::_set(const StringName &p_name, const Variant &p_value, bool
 		}
 	}
 
-	if (changed && p_emit_signal) {
-		emit_signal("settings_changed");
-	}
-	return true;
+	return changed;
 }
 
 bool EditorSettings::_get(const StringName &p_name, Variant &r_ret) const {
@@ -273,12 +281,14 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 	_initial_set("interface/editor/hidpi_mode", 0);
 	hints["interface/editor/hidpi_mode"] = PropertyInfo(Variant::INT, "interface/editor/hidpi_mode", PROPERTY_HINT_ENUM, "Auto,VeryLoDPI,LoDPI,MidDPI,HiDPI", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED);
 	_initial_set("interface/scene_tabs/show_script_button", false);
-	_initial_set("interface/editor/font_size", 14);
-	hints["interface/editor/font_size"] = PropertyInfo(Variant::INT, "interface/editor/font_size", PROPERTY_HINT_RANGE, "10,40,1", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED);
-	_initial_set("interface/editor/source_font_size", 14);
-	hints["interface/editor/source_font_size"] = PropertyInfo(Variant::INT, "interface/editor/source_font_size", PROPERTY_HINT_RANGE, "8,96,1", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED);
-	_initial_set("interface/editor/custom_font", "");
-	hints["interface/editor/custom_font"] = PropertyInfo(Variant::STRING, "interface/editor/custom_font", PROPERTY_HINT_GLOBAL_FILE, "*.ttf,*.otf", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED);
+	_initial_set("interface/editor/main_font_size", 14);
+	hints["interface/editor/main_font_size"] = PropertyInfo(Variant::INT, "interface/editor/main_font_size", PROPERTY_HINT_RANGE, "10,40,1", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED);
+	_initial_set("interface/editor/code_font_size", 14);
+	hints["interface/editor/code_font_size"] = PropertyInfo(Variant::INT, "interface/editor/code_font_size", PROPERTY_HINT_RANGE, "8,96,1", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED);
+	_initial_set("interface/editor/main_font", "");
+	hints["interface/editor/main_font"] = PropertyInfo(Variant::STRING, "interface/editor/main_font", PROPERTY_HINT_GLOBAL_FILE, "*.ttf,*.otf", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED);
+	_initial_set("interface/editor/code_font", "");
+	hints["interface/editor/code_font"] = PropertyInfo(Variant::STRING, "interface/editor/code_font", PROPERTY_HINT_GLOBAL_FILE, "*.ttf,*.otf", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED);
 	_initial_set("interface/editor/dim_editor_on_dialog_popup", true);
 	_initial_set("interface/editor/dim_amount", 0.6f);
 	hints["interface/editor/dim_amount"] = PropertyInfo(Variant::REAL, "interface/editor/dim_amount", PROPERTY_HINT_RANGE, "0,1,0.01", PROPERTY_USAGE_DEFAULT);
@@ -367,9 +377,9 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 	hints["text_editor/cursor/caret_blink_speed"] = PropertyInfo(Variant::REAL, "text_editor/cursor/caret_blink_speed", PROPERTY_HINT_RANGE, "0.1, 10, 0.1");
 	_initial_set("text_editor/cursor/right_click_moves_caret", true);
 
-	_initial_set("text_editor/theme/font", "");
-	hints["text_editor/theme/font"] = PropertyInfo(Variant::STRING, "text_editor/theme/font", PROPERTY_HINT_GLOBAL_FILE, "*.font,*.tres,*.res");
 	_initial_set("text_editor/completion/auto_brace_complete", false);
+	_initial_set("text_editor/completion/put_callhint_tooltip_below_current_line", true);
+	_initial_set("text_editor/completion/callhint_tooltip_offset", Vector2());
 	_initial_set("text_editor/files/restore_scripts_on_load", true);
 	_initial_set("text_editor/completion/complete_file_paths", true);
 	_initial_set("text_editor/files/maximum_recent_files", 20);
@@ -982,7 +992,7 @@ void EditorSettings::raise_order(const String &p_setting) {
 	props[p_setting].order = ++last_order;
 }
 
-void EditorSettings::set_initial_value(const StringName &p_setting, const Variant &p_value) {
+void EditorSettings::set_initial_value(const StringName &p_setting, const Variant &p_value, bool update_current) {
 
 	_THREAD_SAFE_METHOD_
 
@@ -990,6 +1000,9 @@ void EditorSettings::set_initial_value(const StringName &p_setting, const Varian
 		return;
 	props[p_setting].initial = p_value;
 	props[p_setting].has_default_value = true;
+	if (update_current) {
+		set(p_setting, p_value);
+	}
 }
 
 Variant _EDITOR_DEF(const String &p_setting, const Variant &p_default) {
@@ -1174,8 +1187,10 @@ void EditorSettings::list_text_editor_themes() {
 
 void EditorSettings::load_text_editor_theme() {
 	if (get("text_editor/theme/color_theme") == "Default" || get("text_editor/theme/color_theme") == "Adaptive" || get("text_editor/theme/color_theme") == "Custom") {
-		_load_default_text_editor_theme(); // sorry for "Settings changed" console spam
-		return;
+		if (get("text_editor/theme/color_theme") == "Default") {
+			_load_default_text_editor_theme();
+		}
+		return; // sorry for "Settings changed" console spam
 	}
 
 	String theme_path = get_text_editor_themes_dir().plus_file((String)get("text_editor/theme/color_theme") + ".tet");

@@ -1053,6 +1053,8 @@ void ScriptEditorDebugger::_notification(int p_what) {
 				break;
 			};
 
+			const uint64_t until = OS::get_singleton()->get_ticks_msec() + 20;
+
 			while (ppeer->get_available_packet_count() > 0) {
 
 				if (pending_in_queue) {
@@ -1117,6 +1119,9 @@ void ScriptEditorDebugger::_notification(int p_what) {
 						break;
 					}
 				}
+
+				if (OS::get_singleton()->get_ticks_msec() > until)
+					break;
 			}
 
 		} break;
@@ -1166,6 +1171,7 @@ void ScriptEditorDebugger::start() {
 	}
 
 	set_process(true);
+	breaked = false;
 }
 
 void ScriptEditorDebugger::pause() {
@@ -1177,6 +1183,7 @@ void ScriptEditorDebugger::unpause() {
 void ScriptEditorDebugger::stop() {
 
 	set_process(false);
+	breaked = false;
 
 	server->stop();
 
