@@ -1025,6 +1025,21 @@ void TextEdit::_notification(int p_what) {
 
 							const Color *col = keywords.custom_getptr(range, hash);
 
+							if (!col) {
+								col = member_keywords.custom_getptr(range, hash);
+
+								if (col) {
+									for (int k = j - 1; k >= 0; k--) {
+										if (str[k] == '.') {
+											col = NULL; //member indexing not allowed
+											break;
+										} else if (str[k] > 32) {
+											break;
+										}
+									}
+								}
+							}
+
 							if (col) {
 
 								in_keyword = true;
@@ -4047,9 +4062,19 @@ void TextEdit::set_wrap(bool p_wrap) {
 	wrap = p_wrap;
 }
 
+bool TextEdit::is_wrapping() const {
+
+	return wrap;
+}
+
 void TextEdit::set_max_chars(int p_max_chars) {
 
 	max_chars = p_max_chars;
+}
+
+int TextEdit::get_max_chars() const {
+
+	return max_chars;
 }
 
 void TextEdit::_reset_caret_blink_timer() {
@@ -4125,6 +4150,16 @@ void TextEdit::add_color_region(const String &p_begin_key, const String &p_end_k
 
 	color_regions.push_back(ColorRegion(p_begin_key, p_end_key, p_color, p_line_only));
 	text.clear_caches();
+	update();
+}
+
+void TextEdit::add_member_keyword(const String &p_keyword, const Color &p_color) {
+	member_keywords[p_keyword] = p_color;
+	update();
+}
+
+void TextEdit::clear_member_keywords() {
+	member_keywords.clear();
 	update();
 }
 
@@ -5543,7 +5578,9 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_readonly"), &TextEdit::is_readonly);
 
 	ClassDB::bind_method(D_METHOD("set_wrap", "enable"), &TextEdit::set_wrap);
-	ClassDB::bind_method(D_METHOD("set_max_chars", "amount"), &TextEdit::set_max_chars);
+	ClassDB::bind_method(D_METHOD("is_wrapping"), &TextEdit::is_wrapping);
+	// ClassDB::bind_method(D_METHOD("set_max_chars", "amount"), &TextEdit::set_max_chars);
+	// ClassDB::bind_method(D_METHOD("get_max_char"), &TextEdit::get_max_chars);
 	ClassDB::bind_method(D_METHOD("set_context_menu_enabled", "enable"), &TextEdit::set_context_menu_enabled);
 	ClassDB::bind_method(D_METHOD("is_context_menu_enabled"), &TextEdit::is_context_menu_enabled);
 
@@ -5617,6 +5654,8 @@ void TextEdit::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "smooth_scrolling"), "set_smooth_scroll_enable", "is_smooth_scroll_enabled");
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "v_scroll_speed"), "set_v_scroll_speed", "get_v_scroll_speed");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "hiding_enabled"), "set_hiding_enabled", "is_hiding_enabled");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "wrap_lines"), "set_wrap", "is_wrapping");
+	// ADD_PROPERTY(PropertyInfo(Variant::BOOL, "max_chars"), "set_max_chars", "get_max_chars");
 
 	ADD_GROUP("Caret", "caret_");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "caret_block_mode"), "cursor_set_block_mode", "cursor_is_block_mode");

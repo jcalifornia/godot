@@ -1357,24 +1357,32 @@ float Control::_a2s(float p_val, float p_anchor, float p_range) const {
 }
 
 void Control::set_anchor(Margin p_margin, float p_anchor, bool p_keep_margin, bool p_push_opposite_anchor) {
-	bool pushed = false;
+	float parent_range = _get_parent_range((p_margin == MARGIN_LEFT || p_margin == MARGIN_RIGHT) ? 0 : 1);
+	float previous_margin_pos = data.margin[p_margin] + data.anchor[p_margin] * parent_range;
+	float previous_opposite_margin_pos = data.margin[(p_margin + 2) % 4] + data.anchor[(p_margin + 2) % 4] * parent_range;
+
 	data.anchor[p_margin] = CLAMP(p_anchor, 0.0, 1.0);
 
 	if (((p_margin == MARGIN_LEFT || p_margin == MARGIN_TOP) && data.anchor[p_margin] > data.anchor[(p_margin + 2) % 4]) ||
 			((p_margin == MARGIN_RIGHT || p_margin == MARGIN_BOTTOM) && data.anchor[p_margin] < data.anchor[(p_margin + 2) % 4])) {
 		if (p_push_opposite_anchor) {
 			data.anchor[(p_margin + 2) % 4] = data.anchor[p_margin];
-			pushed = true;
 		} else {
 			data.anchor[p_margin] = data.anchor[(p_margin + 2) % 4];
 		}
 	}
 
-	if (is_inside_tree()) {
-		if (p_keep_margin) {
-			_size_changed();
+	if (!p_keep_margin) {
+		data.margin[p_margin] = _s2a(previous_margin_pos, data.anchor[p_margin], parent_range);
+		if (p_push_opposite_anchor) {
+			data.margin[(p_margin + 2) % 4] = _s2a(previous_opposite_margin_pos, data.anchor[(p_margin + 2) % 4], parent_range);
 		}
 	}
+
+	if (is_inside_tree()) {
+		_size_changed();
+	}
+
 	update();
 	_change_notify();
 }
@@ -2832,6 +2840,7 @@ void Control::_bind_methods() {
 
 	ADD_GROUP("Rect", "rect_");
 	ADD_PROPERTYNZ(PropertyInfo(Variant::VECTOR2, "rect_position", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR), "set_position", "get_position");
+	ADD_PROPERTYNZ(PropertyInfo(Variant::VECTOR2, "rect_global_position", PROPERTY_HINT_NONE, "", 0), "set_global_position", "get_global_position");
 	ADD_PROPERTYNZ(PropertyInfo(Variant::VECTOR2, "rect_size", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR), "set_size", "get_size");
 	ADD_PROPERTYNZ(PropertyInfo(Variant::VECTOR2, "rect_min_size"), "set_custom_minimum_size", "get_custom_minimum_size");
 	ADD_PROPERTYNZ(PropertyInfo(Variant::REAL, "rect_rotation", PROPERTY_HINT_RANGE, "-1080,1080,0.01"), "set_rotation_degrees", "get_rotation_degrees");
@@ -2849,9 +2858,11 @@ void Control::_bind_methods() {
 	ADD_PROPERTYINZ(PropertyInfo(Variant::NODE_PATH, "focus_neighbour_bottom"), "set_focus_neighbour", "get_focus_neighbour", MARGIN_BOTTOM);
 	ADD_PROPERTYNZ(PropertyInfo(Variant::NODE_PATH, "focus_next"), "set_focus_next", "get_focus_next");
 	ADD_PROPERTYNZ(PropertyInfo(Variant::NODE_PATH, "focus_previous"), "set_focus_previous", "get_focus_previous");
+	ADD_PROPERTYNZ(PropertyInfo(Variant::INT, "focus_mode", PROPERTY_HINT_ENUM, "None,Click,All"), "set_focus_mode", "get_focus_mode");
 
 	ADD_GROUP("Mouse", "mouse_");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "mouse_filter", PROPERTY_HINT_ENUM, "Stop,Pass,Ignore"), "set_mouse_filter", "get_mouse_filter");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "mouse_default_cursor_shape", PROPERTY_HINT_ENUM, "Arrow,Ibeam,Pointing hand,Cross,Wait,Busy,Drag,Can drop,Forbidden,Vertical resize,Horizontal resize,Secondary diagonal resize,Main diagonal resize,Move,Vertial split,Horizontal split,Help"), "set_default_cursor_shape", "get_default_cursor_shape");
 
 	ADD_GROUP("Size Flags", "size_flags_");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "size_flags_horizontal", PROPERTY_HINT_FLAGS, "Fill,Expand,Shrink Center,Shrink End"), "set_h_size_flags", "get_h_size_flags");
