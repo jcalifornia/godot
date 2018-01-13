@@ -1,6 +1,7 @@
 #include "talkingtree_storage_loader.h"
 #include "treecursion.h"
 
+
 ResourceFormatTalkingTreeStorage::ResourceFormatTalkingTreeStorage() {
 }
 RES ResourceFormatTalkingTreeStorage::load(const String &p_path, const String &p_original_path, Error *r_error) {
