@@ -686,6 +686,9 @@ Vector<String> String::split_spaces() const {
 	int from = 0;
 	int i = 0;
 	int len = length();
+	if (len == 0)
+		return ret;
+
 	bool inside = false;
 
 	while (true) {
@@ -1098,9 +1101,8 @@ String String::num(double p_num, int p_decimals) {
 String String::num_int64(int64_t p_num, int base, bool capitalize_hex) {
 
 	bool sign = p_num < 0;
-	int64_t num = ABS(p_num);
 
-	int64_t n = num;
+	int64_t n = p_num;
 
 	int chars = 0;
 	do {
@@ -1114,9 +1116,9 @@ String String::num_int64(int64_t p_num, int base, bool capitalize_hex) {
 	s.resize(chars + 1);
 	CharType *c = s.ptrw();
 	c[chars] = 0;
-	n = num;
+	n = p_num;
 	do {
-		int mod = n % base;
+		int mod = ABS(n % base);
 		if (mod >= 10) {
 			char a = (capitalize_hex ? 'A' : 'a');
 			c[--chars] = a + (mod - 10);

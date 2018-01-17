@@ -398,6 +398,11 @@ Variant NativeScript::_new(const Variant **p_args, int p_argcount, Variant::Call
 		owner = memnew(Reference);
 	}
 
+	if (!owner) {
+		r_error.error = Variant::CallError::CALL_ERROR_INSTANCE_IS_NULL;
+		return Variant();
+	}
+
 	Reference *r = Object::cast_to<Reference>(owner);
 	if (r) {
 		ref = REF(r);
@@ -793,7 +798,7 @@ NativeScriptLanguage *NativeScriptLanguage::singleton;
 void NativeScriptLanguage::_unload_stuff(bool p_reload) {
 	for (Map<String, Map<StringName, NativeScriptDesc> >::Element *L = library_classes.front(); L; L = L->next()) {
 
-		if (p_reload && !library_gdnatives[L->key()]->get_library()->is_reloadable()) {
+		if (p_reload && library_gdnatives[L->key()].is_valid() && !library_gdnatives[L->key()]->get_library()->is_reloadable()) {
 			continue;
 		}
 
@@ -835,11 +840,13 @@ NativeScriptLanguage::~NativeScriptLanguage() {
 
 	for (Map<String, Ref<GDNative> >::Element *L = NSL->library_gdnatives.front(); L; L = L->next()) {
 
-		L->get()->terminate();
-		NSL->library_classes.clear();
-		NSL->library_gdnatives.clear();
-		NSL->library_script_users.clear();
+		if (L->get().is_valid())
+			L->get()->terminate();
 	}
+
+	NSL->library_classes.clear();
+	NSL->library_gdnatives.clear();
+	NSL->library_script_users.clear();
 
 #ifndef NO_THREADS
 	memdelete(mutex);
