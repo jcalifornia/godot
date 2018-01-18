@@ -6,8 +6,8 @@
 #include "ogg/ogg.h"
 
 
-class TalkingTreeStorageWriter : public Object {
-    GDCLASS(TalkingTreeStorageWriter, Object);
+class TreecursionWriter : public Object {
+    GDCLASS(TreecursionWriter, Object);
 
 private:
 	FileAccess *_fout;
@@ -21,7 +21,7 @@ protected:
     static void _bind_methods();
 
 public:
-    TalkingTreeStorageWriter();
-    ~TalkingTreeStorageWriter();
+    TreecursionWriter();
+    ~TreecursionWriter();
 	
 };

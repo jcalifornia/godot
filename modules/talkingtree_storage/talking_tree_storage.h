@@ -14,7 +14,7 @@
 #include "ustring.h"
 
 #include "ogg/ogg.h"
-
+#include "treecursion_writer.h"
 
 
 #include <opus.h>
@@ -53,7 +53,7 @@ private:
 
     };
     OpusMSEncoder *opusEncoder;
-
+    TreecursionWriter *_talk_write;
 
 
 };

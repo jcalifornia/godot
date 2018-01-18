@@ -33,10 +33,6 @@ void TalkingTreeStorage::unlock() {
 
 
 Error TalkingTreeStorage::init(){
-
-
-
-
 	_thread_exited = false;
 	_mutex = Mutex::create();
 	_thread = Thread::create(TalkingTreeStorage::thread_func, this);

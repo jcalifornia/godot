@@ -1,13 +1,15 @@
-#include "talkingtree_storage_writer.h"
+#include "treecursion_writer.h"
 
 #include "os/os.h"
 #include "ogg_routines.h"
 
-void TalkingTreeStorageWriter::_bind_methods() {
+void TreecursionWriter::_bind_methods() {
 
 }
 
-TalkingTreeStorageWriter::TalkingTreeStorageWriter(){
+
+
+TreecursionWriter::TreecursionWriter(){
 		serialno=0;
 	ogg_stream_init(&os, serialno);
 	//create a file using unix time as file name by default
@@ -18,7 +20,7 @@ TalkingTreeStorageWriter::TalkingTreeStorageWriter(){
 	_fout = FileAccess::open(_outfile_name, FileAccess::WRITE);
 }
 
-TalkingTreeStorageWriter::~TalkingTreeStorageWriter(){
+TreecursionWriter::~TreecursionWriter(){
 	//
 	ogg_stream_flush( &os, &og);
 	htogg_write_page(&og, _fout);
