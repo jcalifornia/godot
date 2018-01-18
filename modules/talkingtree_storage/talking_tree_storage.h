@@ -14,7 +14,7 @@
 #include "ustring.h"
 
 #include "ogg/ogg.h"
-#include <kate/oggkate.h>
+
 
 
 #include <opus.h>
@@ -25,7 +25,6 @@ class TalkingTreeStorage : public Object {
 
     static TalkingTreeStorage *_singleton;
 	static void thread_func(void *p_udata);
-    static int oe_write_page(ogg_page *page, FileAccess *fa);
 public:
     static TalkingTreeStorage *get_singleton();
     void set_singleton();
@@ -44,7 +43,6 @@ protected:
     static void _bind_methods();
 
 public:
-    
     TalkingTreeStorage();
     ~TalkingTreeStorage();
 
@@ -55,12 +53,7 @@ private:
 
     };
     OpusMSEncoder *opusEncoder;
-    FileAccess *_fout;
-    String _outfile_name;
-    ogg_stream_state os;
-    ogg_packet op;
-    ogg_page og; /* one Ogg bitstream page. */
-    int serialno;
+
 
 
 };
