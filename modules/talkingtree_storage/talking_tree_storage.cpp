@@ -47,6 +47,9 @@ void TalkingTreeStorage::thread_func(void *p_udata){
 
 	uint64_t usdelay = 16000;
 	while(!ac -> _exit_thread){
+		if(ac->treecursion != NULL){
+			
+		}
 		OS::get_singleton()->delay_usec(usdelay);
 	}
 }

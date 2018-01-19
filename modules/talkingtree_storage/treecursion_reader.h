@@ -12,10 +12,10 @@ class TreecursionReader : public Resource{
     
 public:   
     Error set_file(const String &p_file);
-    void print_fishbone();
+    void print_fishhead();
 
     TreecursionReader();
-    
+
 private:
     String file;
     FileAccess *_file;

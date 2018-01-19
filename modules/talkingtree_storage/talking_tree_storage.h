@@ -53,7 +53,7 @@ private:
 
     };
     OpusMSEncoder *opusEncoder;
-    TreecursionWriter *_talk_write;
+    TreecursionWriter *treecursion;
 
 
 };
