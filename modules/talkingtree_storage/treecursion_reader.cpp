@@ -1,10 +1,10 @@
-#include "treecursion.h"
+#include "treecursion_reader.h"
 
 
 //https://bluishcoder.co.nz/2009/06/24/reading-ogg-files-using-libogg.html
 
 
-Error Treecursion::set_file(const String &p_file) {
+Error TreecursionReader::set_file(const String &p_file) {
     file = p_file;
 	Error err;
 	_file = FileAccess::open(file, FileAccess::READ, &err);
@@ -16,6 +16,6 @@ Error Treecursion::set_file(const String &p_file) {
 	return OK;
 }
 
-Treecursion::Treecursion() {
+TreecursionReader::TreecursionReader() {
     
 }

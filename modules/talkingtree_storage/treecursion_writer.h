@@ -6,6 +6,9 @@
 #include "ogg/ogg.h"
 
 
+
+
+
 class TreecursionWriter : public Object {
     GDCLASS(TreecursionWriter, Object);
 
@@ -21,6 +24,7 @@ protected:
     static void _bind_methods();
 
 public:
+    void write_header();
     TreecursionWriter();
     ~TreecursionWriter();
 	

@@ -7,11 +7,11 @@
 #include "os/file_access.h"
 #include <ogg/ogg.h>
 
-class Treecursion : public Resource{
-    GDCLASS(Treecursion, Resource);
+class TreecursionReader : public Resource{
+    GDCLASS(TreecursionReader, Resource);
     
 public:
-    Treecursion();
+    TreecursionReader();
     Error set_file(const String &p_file);
 private:
     String file;
