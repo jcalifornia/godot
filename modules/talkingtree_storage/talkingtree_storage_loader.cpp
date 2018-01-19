@@ -20,10 +20,10 @@ void ResourceFormatTalkingTreeStorage::get_recognized_extensions(List<String> *p
 String ResourceFormatTalkingTreeStorage::get_resource_type(const String &p_path) const {
 
 	if (p_path.get_extension().to_lower() == "htogg")
-		return "TreecursionReader";
+		return "Treecursion";
 	return "";
 }
 
 bool ResourceFormatTalkingTreeStorage::handles_type(const String &p_type) const {
-	return (p_type == "TreecursionReader");
+	return (p_type == "Treecursion");
 }
