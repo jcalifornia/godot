@@ -21,7 +21,7 @@ void TreecursionWriter::write_header(){
 	ogg_stream_packetin(&os, &op);
 	ogg_stream_flush(&os, &og);
 
-	
+
 	htogg_write_page(&og, _fout);
 	//cleanup
 	ogg_packet_clear(&op);
@@ -33,8 +33,6 @@ TreecursionWriter::TreecursionWriter(){
 	ogg_stream_init(&os, serialno);
 	//create a file using unix time as file name by default
 	int current_time = OS::get_singleton()->get_unix_time();
-
-
 	_outfile_name = itos(current_time) + ".htogg";
 	_fout = FileAccess::open(_outfile_name, FileAccess::WRITE);
 }

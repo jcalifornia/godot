@@ -9,3 +9,9 @@ int htogg_write_page(ogg_page *page, FileAccess *fa){
 	return page->header_len + page->body_len;
 }
 
+int ogg_buffer(FileAccess *fa, ogg_sync_state *oy){
+  uint8_t * buffer  = (uint8_t *) ogg_sync_buffer (oy, 4096);
+  int bytes = fa->get_buffer(buffer, 4096);
+  ogg_sync_wrote (oy,bytes);
+  return (bytes);
+}

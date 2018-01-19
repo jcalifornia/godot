@@ -10,9 +10,12 @@
 class TreecursionReader : public Resource{
     GDCLASS(TreecursionReader, Resource);
     
-public:
-    TreecursionReader();
+public:   
     Error set_file(const String &p_file);
+    void print_fishbone();
+
+    TreecursionReader();
+    
 private:
     String file;
     FileAccess *_file;

@@ -1,5 +1,6 @@
 #include "treecursion_reader.h"
 
+#include <skeleton/skeleton.h>
 
 //https://bluishcoder.co.nz/2009/06/24/reading-ogg-files-using-libogg.html
 
@@ -14,6 +15,13 @@ Error TreecursionReader::set_file(const String &p_file) {
 	int ret = ogg_sync_init(&state);
 	
 	return OK;
+}
+void TreecursionReader::print_fishbone(){
+	ogg_page og;
+	ogg_packet op;
+	OggSkeleton *skeleton = oggskel_new();
+	
+
 }
 
 TreecursionReader::TreecursionReader() {
