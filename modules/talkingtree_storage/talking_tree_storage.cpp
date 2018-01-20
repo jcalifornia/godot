@@ -6,7 +6,9 @@
 
 
 void TalkingTreeStorage::_bind_methods() {
-
+	ClassDB::bind_method(D_METHOD("close_file"), &TalkingTreeStorage::close_file);
+	ClassDB::bind_method(D_METHOD("write_header"), &TalkingTreeStorage::write_header);
+	ClassDB::bind_method(D_METHOD("create_file"), &TalkingTreeStorage::new_file);
 }
 //https://xiph.org/ogg/doc/rfc5334.txt
 
@@ -17,7 +19,16 @@ TalkingTreeStorage *TalkingTreeStorage::get_singleton() {
 void TalkingTreeStorage::set_singleton() {
 	_singleton = this;
 }
-
+void TalkingTreeStorage::new_file(){
+	treecursion = memnew(TreecursionWriter);
+}
+void TalkingTreeStorage::write_header(){
+	treecursion->write_header();
+}
+void TalkingTreeStorage::close_file(){
+	memdelete(treecursion);
+	treecursion = NULL;
+}
 void TalkingTreeStorage::lock() {
 	if (!_thread || !_mutex)
 		return;
@@ -69,6 +80,7 @@ void TalkingTreeStorage::finish() {
 		memdelete(_mutex);
 	_thread = NULL;
 }
+
 
 TalkingTreeStorage::TalkingTreeStorage() {
 	//opusEncoder = opus_multistream_encoder_create();

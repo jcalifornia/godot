@@ -43,6 +43,9 @@ protected:
     static void _bind_methods();
 
 public:
+    void new_file();
+    void write_header();
+    void close_file();
     TalkingTreeStorage();
     ~TalkingTreeStorage();
 

@@ -15,6 +15,7 @@ void register_talkingtree_storage_types(){
 	talking_tree_storage_writer = memnew(TalkingTreeStorage);
 	talking_tree_storage_writer->init();
 	talking_tree_storage_writer->set_singleton();
+	ClassDB::register_class<TalkingTreeStorage>();
 }
 void unregister_talkingtree_storage_types(){
 	talking_tree_storage_writer->finish();
