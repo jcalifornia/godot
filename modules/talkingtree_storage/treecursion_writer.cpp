@@ -7,7 +7,8 @@
 #include <skeleton/skeleton_query.h>
 
 void TreecursionWriter::_bind_methods() {
-
+	ClassDB::bind_method(D_METHOD("write_header"), &TreecursionWriter::write_header);
+	ClassDB::bind_method(D_METHOD("close"), &TreecursionWriter::write_header);
 }
 
 void TreecursionWriter::write_header(){
@@ -25,9 +26,13 @@ void TreecursionWriter::write_header(){
 	htogg_write_page(&og, _fout);
 	//cleanup
 	ogg_packet_clear(&op);
-
+	oggskel_destroy(header);
 }
-
+void TreecursionWriter::close(){
+	ogg_stream_flush( &os, &og);
+	htogg_write_page(&og, _fout);
+	_fout->close();
+}
 TreecursionWriter::TreecursionWriter(){
 		serialno=0;
 	ogg_stream_init(&os, serialno);
@@ -38,9 +43,5 @@ TreecursionWriter::TreecursionWriter(){
 }
 
 TreecursionWriter::~TreecursionWriter(){
-	//
-	ogg_stream_flush( &os, &og);
-	htogg_write_page(&og, _fout);
-	_fout->close();
-	//
+	
 }

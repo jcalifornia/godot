@@ -4,7 +4,9 @@
 #include <skeleton/skeleton.h>
 //https://bluishcoder.co.nz/2009/06/24/reading-ogg-files-using-libogg.html
 
-
+void TreecursionReader::_bind_methods(){
+	ClassDB::bind_method(D_METHOD("print_fishhead"), &TreecursionReader::print_fishhead);
+}
 Error TreecursionReader::set_file(const String &p_file) {
     file = p_file;
 	Error err;

@@ -25,6 +25,7 @@ protected:
 
 public:
     void write_header();
+    void close();
     TreecursionWriter();
     ~TreecursionWriter();
 	

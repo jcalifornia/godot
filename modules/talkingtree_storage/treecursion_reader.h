@@ -16,6 +16,9 @@ public:
 
     TreecursionReader();
 
+protected:
+    static void _bind_methods();
+
 private:
     String file;
     FileAccess *_file;
