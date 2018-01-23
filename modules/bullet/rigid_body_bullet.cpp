@@ -690,7 +690,7 @@ void RigidBodyBullet::set_continuous_collision_detection(bool p_enable) {
 		/// Calculate using the rule writte below the CCD swept sphere radius
 		///     CCD works on an embedded sphere of radius, make sure this radius
 		///     is embedded inside the convex objects, preferably smaller:
-		///     for an object of dimentions 1 meter, try 0.2
+		///     for an object of dimensions 1 meter, try 0.2
 		btVector3 center;
 		btScalar radius;
 		btBody->getCollisionShape()->getBoundingSphere(center, radius);
@@ -955,7 +955,8 @@ void RigidBodyBullet::_internal_set_mass(real_t p_mass) {
 	const bool isDynamic = p_mass != 0.f;
 	if (isDynamic) {
 
-		ERR_FAIL_COND(PhysicsServer::BODY_MODE_RIGID != mode && PhysicsServer::BODY_MODE_CHARACTER != mode);
+		if (PhysicsServer::BODY_MODE_RIGID != mode && PhysicsServer::BODY_MODE_CHARACTER != mode)
+			return;
 
 		m_isStatic = false;
 		compoundShape->calculateLocalInertia(p_mass, localInertia);
@@ -975,7 +976,8 @@ void RigidBodyBullet::_internal_set_mass(real_t p_mass) {
 		}
 	} else {
 
-		ERR_FAIL_COND(PhysicsServer::BODY_MODE_STATIC != mode && PhysicsServer::BODY_MODE_KINEMATIC != mode);
+		if (PhysicsServer::BODY_MODE_STATIC != mode && PhysicsServer::BODY_MODE_KINEMATIC != mode)
+			return;
 
 		m_isStatic = true;
 		if (PhysicsServer::BODY_MODE_STATIC == mode) {
