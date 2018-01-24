@@ -13,3 +13,16 @@ void ConcordantBoard::change_instrument(){
 ConcordantBoard::ConcordantBoard(){
 
 }
+
+int ConcordantBoard::load_board(){
+    return(0);
+}
+
+void ConcordantBoard::draw(Point2 coord){
+
+}
+
+
+void ConcordantBoard::to_svg(String filename){
+
+}
