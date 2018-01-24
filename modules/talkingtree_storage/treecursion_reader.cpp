@@ -38,7 +38,11 @@ void TreecursionReader::print_fishhead(){
 		if((sk_headers = oggskel_decode_header (skeleton, &op)) > 0){
 			char **msg_header;
 			oggskel_get_msg_header(skeleton, 0, msg_header);
+			int64_t ptime;
+			oggskel_get_ptime_num(skeleton, &ptime);
 			String message(*msg_header);
+			print_line("ptime: " + itos(ptime));
+			print_line("attempting to print message");
 			print_line(message);
 		}else{
 			print_line("not skeleton header");

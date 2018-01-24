@@ -16,7 +16,6 @@ private:
 	FileAccess *_fout;
     String _outfile_name;
     ogg_stream_state os;
-    ogg_packet op;
     ogg_page og; /* one Ogg bitstream page. */
     int serialno;
 
