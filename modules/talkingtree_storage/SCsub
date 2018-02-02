@@ -1,0 +1,36 @@
+#!/usr/bin/env python
+
+# SCsub
+Import('env')
+
+env_talking_tree_storage = env.Clone()
+
+thirdparty_libskeleton_srcs = [
+	"skeleton.c",
+	"skeleton_query.c",
+	"skeleton_vector.c"
+]
+
+thirdparty_libskeleton_dir = "#thirdparty/libskeleton/"
+thirdparty_libskeleton_sources = [thirdparty_libskeleton_dir + "src/" + f for f in thirdparty_libskeleton_srcs]
+env_talking_tree_storage.Append(CPPPATH=[thirdparty_libskeleton_dir + "include" ])
+env_talking_tree_storage.add_source_files(env.modules_sources, thirdparty_libskeleton_sources)
+
+if env['builtin_opus']:
+	thirdparty_dir = "#thirdparty/opus/"
+
+	thirdparty_include_paths = [
+		"",
+		"celt",
+		"opus",
+		"silk",
+		"silk/fixed",
+		"silk/float",
+	]
+	env_talking_tree_storage.Append(CPPPATH=[thirdparty_dir + "/" + dir for dir in thirdparty_include_paths])
+	# also requires libogg
+	if env['builtin_libogg']:
+		env_talking_tree_storage.Append(CPPPATH=["#thirdparty/libogg"])
+
+env_talking_tree_storage.add_source_files(env.modules_sources,"*.cpp")
+env_talking_tree_storage.Append(CXXFLAGS=['-O2', '-std=c++14'])
