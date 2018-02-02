@@ -1,10 +1,11 @@
 #include "core/variant.h"
+#include "reference.h"
+
+enum AUDIO_CODEC { OPUS, RAW };
 
 
-enum AUDIO_CODEC { OPUS };
-
-
-class TreecusionWriteTask {
+class TreecusionWriteTask : Reference {
+	GDCLASS(TreecusionWriteTask, Reference);
 	uint64_t time;
 	uint64_t user_id;
 };
