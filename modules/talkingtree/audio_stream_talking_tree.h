@@ -63,6 +63,9 @@ private:
 public:
 	AudioStreamTalkingTree();
 	~AudioStreamTalkingTree();
+	virtual Ref<AudioStreamPlayback> instance_playback();
+	virtual String get_stream_name() const;
+	virtual float get_length() const { return 0; }
 	int get_available_bytes() const;
 	int get_16();
 	Error append_data(const uint8_t * pcm_data, int p_bytes);
@@ -70,8 +73,6 @@ public:
 	void set_mix_rate(float rate);
 	void clear();
 	Format get_format() const;
-	virtual Ref<AudioStreamPlayback> instance_playback();
-	virtual String get_stream_name() const;
 	void set_pid(int id);
 	void lock();
 	void unlock();
