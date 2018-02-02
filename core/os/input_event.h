@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #ifndef INPUT_EVENT_H
 #define INPUT_EVENT_H
 
@@ -109,8 +110,8 @@ enum JoystickList {
 	JOY_WII_C = JOY_BUTTON_5,
 	JOY_WII_Z = JOY_BUTTON_6,
 
-	JOY_WII_MINUS = JOY_BUTTON_9,
-	JOY_WII_PLUS = JOY_BUTTON_10,
+	JOY_WII_MINUS = JOY_BUTTON_10,
+	JOY_WII_PLUS = JOY_BUTTON_11,
 
 	// end of history
 
@@ -144,16 +145,12 @@ enum JoystickList {
 class InputEvent : public Resource {
 	GDCLASS(InputEvent, Resource)
 
-	uint32_t id;
 	int device;
 
 protected:
 	static void _bind_methods();
 
 public:
-	void set_id(uint32_t p_id);
-	uint32_t get_id() const;
-
 	void set_device(int p_device);
 	int get_device() const;
 

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "node.h"
 
 #include "core/core_string_names.h"
@@ -177,13 +178,13 @@ void Node::_propagate_ready() {
 	}
 	data.blocked--;
 	if (data.ready_first) {
-		notification(NOTIFICATION_READY);
 		data.ready_first = false;
+		notification(NOTIFICATION_READY);
 	}
 }
 
 void Node::_propagate_enter_tree() {
-	// this needs to happen to all childs before any enter_tree
+	// this needs to happen to all children before any enter_tree
 
 	if (data.parent) {
 		data.tree = data.parent->data.tree;
@@ -274,7 +275,7 @@ void Node::_propagate_exit_tree() {
 
 		get_script_instance()->call_multilevel(SceneStringNames::get_singleton()->_exit_tree, NULL, 0);
 	}
-	emit_signal(SceneStringNames::get_singleton()->tree_exited);
+	emit_signal(SceneStringNames::get_singleton()->tree_exiting);
 
 	notification(NOTIFICATION_EXIT_TREE, true);
 	if (data.tree)
@@ -296,6 +297,8 @@ void Node::_propagate_exit_tree() {
 	data.ready_notified = false;
 	data.tree = NULL;
 	data.depth = -1;
+
+	emit_signal(SceneStringNames::get_singleton()->tree_exited);
 }
 
 void Node::move_child(Node *p_child, int p_pos) {
@@ -340,7 +343,8 @@ void Node::move_child(Node *p_child, int p_pos) {
 		data.children[i]->notification(NOTIFICATION_MOVED_IN_PARENT);
 	}
 	for (const Map<StringName, GroupData>::Element *E = p_child->data.grouped.front(); E; E = E->next()) {
-		E->get().group->changed = true;
+		if (E->get().group)
+			E->get().group->changed = true;
 	}
 
 	data.blocked--;
@@ -1198,13 +1202,13 @@ void Node::_validate_child_name(Node *p_child, bool p_force_human_readable) {
 			unique = false;
 		} else {
 			//check if exists
-			Node **childs = data.children.ptrw();
+			Node **children = data.children.ptrw();
 			int cc = data.children.size();
 
 			for (int i = 0; i < cc; i++) {
-				if (childs[i] == p_child)
+				if (children[i] == p_child)
 					continue;
-				if (childs[i]->data.name == p_child->data.name) {
+				if (children[i]->data.name == p_child->data.name) {
 					unique = false;
 					break;
 				}
@@ -1307,7 +1311,7 @@ void Node::_add_child_nocheck(Node *p_child, const StringName &p_name) {
 	}
 
 	/* Notify */
-	//recognize childs created in this node constructor
+	//recognize children created in this node constructor
 	p_child->data.parent_owned = data.in_constructor;
 	add_child_notify(p_child);
 }
@@ -2110,6 +2114,7 @@ Node *Node::_duplicate(int p_flags, Map<const Node *, Node *> *r_duplimap) const
 
 	StringName script_property_name = CoreStringNames::get_singleton()->_script;
 
+	List<const Node *> hidden_roots;
 	List<const Node *> node_tree;
 	node_tree.push_front(this);
 
@@ -2120,11 +2125,16 @@ Node *Node::_duplicate(int p_flags, Map<const Node *, Node *> *r_duplimap) const
 		for (List<const Node *>::Element *N = node_tree.front(); N; N = N->next()) {
 			for (int i = 0; i < N->get()->get_child_count(); ++i) {
 
+				Node *descendant = N->get()->get_child(i);
 				// Skip nodes not really belonging to the instanced hierarchy; they'll be processed normally later
-				if (get_child(i)->data.owner != this)
+				// but remember non-instanced nodes that are hidden below instanced ones
+				if (descendant->data.owner != this) {
+					if (descendant->get_parent() && descendant->get_parent() != this && descendant->get_parent()->data.owner == this)
+						hidden_roots.push_back(descendant);
 					continue;
+				}
 
-				node_tree.push_back(N->get()->get_child(i));
+				node_tree.push_back(descendant);
 			}
 		}
 	}
@@ -2156,12 +2166,21 @@ Node *Node::_duplicate(int p_flags, Map<const Node *, Node *> *r_duplimap) const
 			Variant value = N->get()->get(name);
 			// Duplicate dictionaries and arrays, mainly needed for __meta__
 			if (value.get_type() == Variant::DICTIONARY) {
-				value = Dictionary(value).copy();
+				value = Dictionary(value).duplicate();
 			} else if (value.get_type() == Variant::ARRAY) {
 				value = Array(value).duplicate();
 			}
 
-			current_node->set(name, value);
+			if (E->get().usage & PROPERTY_USAGE_DO_NOT_SHARE_ON_DUPLICATE) {
+
+				Resource *res = Object::cast_to<Resource>(value);
+				if (res) // Duplicate only if it's a resource
+					current_node->set(name, res->duplicate());
+
+			} else {
+
+				current_node->set(name, value);
+			}
 		}
 	}
 
@@ -2201,6 +2220,34 @@ Node *Node::_duplicate(int p_flags, Map<const Node *, Node *> *r_duplimap) const
 		}
 
 		node->add_child(dup);
+		if (i < node->get_child_count() - 1) {
+			node->move_child(dup, i);
+		}
+	}
+
+	for (List<const Node *>::Element *E = hidden_roots.front(); E; E = E->next()) {
+
+		Node *parent = node->get_node(get_path_to(E->get()->data.parent));
+		if (!parent) {
+
+			memdelete(node);
+			return NULL;
+		}
+
+		Node *dup = E->get()->_duplicate(p_flags, r_duplimap);
+		if (!dup) {
+
+			memdelete(node);
+			return NULL;
+		}
+
+		parent->add_child(dup);
+		int pos = E->get()->get_position_in_parent();
+
+		if (pos < parent->get_child_count() - 1) {
+
+			parent->move_child(dup, pos);
+		}
 	}
 
 	return node;
@@ -2269,7 +2316,7 @@ void Node::_duplicate_and_reown(Node *p_new_parent, const Map<Node *, Node *> &p
 		Variant value = get(name);
 		// Duplicate dictionaries and arrays, mainly needed for __meta__
 		if (value.get_type() == Variant::DICTIONARY) {
-			value = Dictionary(value).copy();
+			value = Dictionary(value).duplicate();
 		} else if (value.get_type() == Variant::ARRAY) {
 			value = Array(value).duplicate();
 		}
@@ -2845,7 +2892,7 @@ void Node::_bind_methods() {
 #ifdef TOOLS_ENABLED
 	ClassDB::bind_method(D_METHOD("_set_import_path", "import_path"), &Node::set_import_path);
 	ClassDB::bind_method(D_METHOD("_get_import_path"), &Node::get_import_path);
-	ADD_PROPERTYNZ(PropertyInfo(Variant::NODE_PATH, "_import_path", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR), "_set_import_path", "_get_import_path");
+	ADD_PROPERTYNZ(PropertyInfo(Variant::NODE_PATH, "_import_path", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR | PROPERTY_USAGE_INTERNAL), "_set_import_path", "_get_import_path");
 
 #endif
 
@@ -2907,6 +2954,7 @@ void Node::_bind_methods() {
 
 	ADD_SIGNAL(MethodInfo("renamed"));
 	ADD_SIGNAL(MethodInfo("tree_entered"));
+	ADD_SIGNAL(MethodInfo("tree_exiting"));
 	ADD_SIGNAL(MethodInfo("tree_exited"));
 
 	//ADD_PROPERTYNZ( PropertyInfo( Variant::BOOL, "process/process" ),"set_process","is_processing") ;
@@ -2915,7 +2963,10 @@ void Node::_bind_methods() {
 	//ADD_PROPERTYNZ( PropertyInfo( Variant::BOOL, "process/unhandled_input" ), "set_process_unhandled_input","is_processing_unhandled_input" ) ;
 	ADD_GROUP("Pause", "pause_");
 	ADD_PROPERTYNZ(PropertyInfo(Variant::INT, "pause_mode", PROPERTY_HINT_ENUM, "Inherit,Stop,Process"), "set_pause_mode", "get_pause_mode");
-	ADD_PROPERTYNZ(PropertyInfo(Variant::BOOL, "editor/display_folded", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR), "set_display_folded", "is_displayed_folded");
+	ADD_PROPERTYNZ(PropertyInfo(Variant::BOOL, "editor/display_folded", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR | PROPERTY_USAGE_INTERNAL), "set_display_folded", "is_displayed_folded");
+	ADD_PROPERTYNZ(PropertyInfo(Variant::STRING, "name", PROPERTY_HINT_NONE, "", 0), "set_name", "get_name");
+	ADD_PROPERTYNZ(PropertyInfo(Variant::STRING, "filename", PROPERTY_HINT_NONE, "", 0), "set_filename", "get_filename");
+	ADD_PROPERTYNZ(PropertyInfo(Variant::OBJECT, "owner", PROPERTY_HINT_RESOURCE_TYPE, "Node", 0), "set_owner", "get_owner");
 
 	BIND_VMETHOD(MethodInfo("_process", PropertyInfo(Variant::REAL, "delta")));
 	BIND_VMETHOD(MethodInfo("_physics_process", PropertyInfo(Variant::REAL, "delta")));

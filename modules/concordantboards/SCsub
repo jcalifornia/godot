@@ -1,0 +1,9 @@
+Import('env')
+
+import os.path
+
+env_concordant_boards = env.Clone()
+sources = Glob("*.cpp")
+
+env_concordant_boards.add_source_files(env.modules_sources, sources )
+env_concordant_boards.Append(CXXFLAGS=['-O2', '-std=c++11'])

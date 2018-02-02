@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "audio_rb_resampler.h"
 #include "core/math/math_funcs.h"
 #include "os/os.h"
@@ -40,7 +41,7 @@ int AudioRBResampler::get_channel_count() const {
 	return channels;
 }
 
-// Linear interpolation based sample rate convertion (low quality)
+// Linear interpolation based sample rate conversion (low quality)
 // Note that AudioStreamPlaybackResampled::mix has better algorithm,
 // but it wasn't obvious to integrate that with VideoPlayer
 template <int C>

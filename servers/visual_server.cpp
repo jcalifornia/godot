@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "visual_server.h"
 
 #include "method_bind_ext.gen.inc"
@@ -440,9 +441,9 @@ Error VisualServer::_surface_set_data(Array p_arrays, uint32_t p_format, uint32_
 					for (int i = 0; i < p_vertex_array_len; i++) {
 
 						int8_t vector[4] = {
-							CLAMP(src[i].x * 127, -128, 127),
-							CLAMP(src[i].y * 127, -128, 127),
-							CLAMP(src[i].z * 127, -128, 127),
+							(int8_t)CLAMP(src[i].x * 127, -128, 127),
+							(int8_t)CLAMP(src[i].y * 127, -128, 127),
+							(int8_t)CLAMP(src[i].z * 127, -128, 127),
 							0,
 						};
 
@@ -475,10 +476,10 @@ Error VisualServer::_surface_set_data(Array p_arrays, uint32_t p_format, uint32_
 					for (int i = 0; i < p_vertex_array_len; i++) {
 
 						uint8_t xyzw[4] = {
-							CLAMP(src[i * 4 + 0] * 127, -128, 127),
-							CLAMP(src[i * 4 + 1] * 127, -128, 127),
-							CLAMP(src[i * 4 + 2] * 127, -128, 127),
-							CLAMP(src[i * 4 + 3] * 127, -128, 127)
+							(uint8_t)CLAMP(src[i * 4 + 0] * 127, -128, 127),
+							(uint8_t)CLAMP(src[i * 4 + 1] * 127, -128, 127),
+							(uint8_t)CLAMP(src[i * 4 + 2] * 127, -128, 127),
+							(uint8_t)CLAMP(src[i * 4 + 3] * 127, -128, 127)
 						};
 
 						copymem(&vw[p_offsets[ai] + i * p_stride], xyzw, 4);
@@ -677,7 +678,7 @@ Error VisualServer::_surface_set_data(Array p_arrays, uint32_t p_format, uint32_
 				ERR_FAIL_COND_V(indices.size() == 0, ERR_INVALID_PARAMETER);
 				ERR_FAIL_COND_V(indices.size() != p_index_array_len, ERR_INVALID_PARAMETER);
 
-				/* determine wether using 16 or 32 bits indices */
+				/* determine whether using 16 or 32 bits indices */
 
 				PoolVector<int>::Read read = indices.read();
 				const int *src = read.ptr();
@@ -711,7 +712,7 @@ Error VisualServer::_surface_set_data(Array p_arrays, uint32_t p_format, uint32_
 
 		if (first) {
 			for (int i = 0; i < total_bones; i++) {
-				r_bone_aabb[i].size == Vector3(-1, -1, -1); //negative means unused
+				r_bone_aabb[i].size = Vector3(-1, -1, -1); //negative means unused
 			}
 		}
 
@@ -942,7 +943,7 @@ void VisualServer::mesh_add_surface_from_arrays(RID p_mesh, PrimitiveType p_prim
 					ERR_PRINT("index_array_len==NO_INDEX_ARRAY");
 					break;
 				}
-				/* determine wether using 16 or 32 bits indices */
+				/* determine whether using 16 or 32 bits indices */
 				if (array_len >= (1 << 16)) {
 
 					elem_size = 4;
@@ -1110,7 +1111,7 @@ Array VisualServer::_get_array_from_surface(uint32_t p_format, PoolVector<uint8_
 					ERR_PRINT("index_array_len==NO_INDEX_ARRAY");
 					break;
 				}
-				/* determine wether using 16 or 32 bits indices */
+				/* determine whether using 16 or 32 bits indices */
 				if (p_vertex_len >= (1 << 16)) {
 
 					elem_size = 4;
@@ -1396,7 +1397,7 @@ Array VisualServer::_get_array_from_surface(uint32_t p_format, PoolVector<uint8_
 
 			} break;
 			case VS::ARRAY_INDEX: {
-				/* determine wether using 16 or 32 bits indices */
+				/* determine whether using 16 or 32 bits indices */
 
 				PoolVector<uint8_t>::Read ir = p_index_data.read();
 
@@ -1611,7 +1612,7 @@ void VisualServer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("canvas_item_add_set_transform", "item", "transform"), &VisualServer::canvas_item_add_set_transform);
 	ClassDB::bind_method(D_METHOD("canvas_item_add_clip_ignore", "item", "ignore"), &VisualServer::canvas_item_add_clip_ignore);
 	ClassDB::bind_method(D_METHOD("canvas_item_set_sort_children_by_y", "item", "enabled"), &VisualServer::canvas_item_set_sort_children_by_y);
-	ClassDB::bind_method(D_METHOD("canvas_item_set_z", "item", "z"), &VisualServer::canvas_item_set_z);
+	ClassDB::bind_method(D_METHOD("canvas_item_set_z_index", "item", "z_index"), &VisualServer::canvas_item_set_z_index);
 	ClassDB::bind_method(D_METHOD("canvas_item_set_z_as_relative_to_parent", "item", "enabled"), &VisualServer::canvas_item_set_z_as_relative_to_parent);
 	ClassDB::bind_method(D_METHOD("canvas_item_set_copy_to_backbuffer", "item", "enabled", "rect"), &VisualServer::canvas_item_set_copy_to_backbuffer);
 	ClassDB::bind_method(D_METHOD("canvas_item_clear", "item"), &VisualServer::canvas_item_clear);
@@ -1655,7 +1656,7 @@ void VisualServer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("black_bars_set_margins", "left", "top", "right", "bottom"), &VisualServer::black_bars_set_margins);
 	ClassDB::bind_method(D_METHOD("black_bars_set_images", "left", "top", "right", "bottom"), &VisualServer::black_bars_set_images);
 
-	ClassDB::bind_method(D_METHOD("free", "rid"), &VisualServer::free);
+	ClassDB::bind_method(D_METHOD("free_rid", "rid"), &VisualServer::free); // shouldn't conflict with Object::free()
 
 	ClassDB::bind_method(D_METHOD("request_frame_drawn_callback", "where", "method", "userdata"), &VisualServer::request_frame_drawn_callback);
 	ClassDB::bind_method(D_METHOD("draw", "swap_buffers"), &VisualServer::draw, DEFVAL(true));
@@ -1820,6 +1821,7 @@ void VisualServer::_bind_methods() {
 	BIND_ENUM_CONSTANT(INSTANCE_LIGHT);
 	BIND_ENUM_CONSTANT(INSTANCE_REFLECTION_PROBE);
 	BIND_ENUM_CONSTANT(INSTANCE_GI_PROBE);
+	BIND_ENUM_CONSTANT(INSTANCE_LIGHTMAP_CAPTURE);
 	BIND_ENUM_CONSTANT(INSTANCE_MAX);
 	BIND_ENUM_CONSTANT(INSTANCE_GEOMETRY_MASK);
 
@@ -1921,6 +1923,7 @@ VisualServer::VisualServer() {
 
 	//ERR_FAIL_COND(singleton);
 	singleton = this;
+
 	GLOBAL_DEF("rendering/vram_compression/import_s3tc", true);
 	GLOBAL_DEF("rendering/vram_compression/import_etc", false);
 	GLOBAL_DEF("rendering/vram_compression/import_etc2", true);

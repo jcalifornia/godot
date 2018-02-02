@@ -1,13 +1,12 @@
 /*************************************************************************/
 /*  cone_twist_joint_bullet.cpp                                          */
-/*  Author: AndreaCatania                                                */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
-/*                    http://www.godotengine.org                         */
+/*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -30,18 +29,34 @@
 /*************************************************************************/
 
 #include "cone_twist_joint_bullet.h"
-#include "BulletDynamics/ConstraintSolver/btConeTwistConstraint.h"
+
 #include "bullet_types_converter.h"
 #include "bullet_utilities.h"
 #include "rigid_body_bullet.h"
 
-ConeTwistJointBullet::ConeTwistJointBullet(RigidBodyBullet *rbA, RigidBodyBullet *rbB, const Transform &rbAFrame, const Transform &rbBFrame)
-	: JointBullet() {
+#include <BulletDynamics/ConstraintSolver/btConeTwistConstraint.h>
+
+/**
+	@author AndreaCatania
+*/
+
+ConeTwistJointBullet::ConeTwistJointBullet(RigidBodyBullet *rbA, RigidBodyBullet *rbB, const Transform &rbAFrame, const Transform &rbBFrame) :
+		JointBullet() {
+
+	Transform scaled_AFrame(rbAFrame.scaled(rbA->get_body_scale()));
+	scaled_AFrame.basis.rotref_posscale_decomposition(scaled_AFrame.basis);
+
 	btTransform btFrameA;
-	G_TO_B(rbAFrame, btFrameA);
+	G_TO_B(scaled_AFrame, btFrameA);
+
 	if (rbB) {
+
+		Transform scaled_BFrame(rbBFrame.scaled(rbB->get_body_scale()));
+		scaled_BFrame.basis.rotref_posscale_decomposition(scaled_BFrame.basis);
+
 		btTransform btFrameB;
-		G_TO_B(rbBFrame, btFrameB);
+		G_TO_B(scaled_BFrame, btFrameB);
+
 		coneConstraint = bulletnew(btConeTwistConstraint(*rbA->get_bt_rigid_body(), *rbB->get_bt_rigid_body(), btFrameA, btFrameB));
 	} else {
 		coneConstraint = bulletnew(btConeTwistConstraint(*rbA->get_bt_rigid_body(), btFrameA));

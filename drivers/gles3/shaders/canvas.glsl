@@ -42,7 +42,7 @@ uniform highp mat4 modelview_matrix;
 uniform highp mat4 extra_matrix;
 
 
-out mediump vec2 uv_interp;
+out highp vec2 uv_interp;
 out mediump vec4 color_interp;
 
 #ifdef USE_NINEPATCH
@@ -171,7 +171,7 @@ VERTEX_SHADER_CODE
 
 #ifdef USE_PIXEL_SNAP
 
-	outvec.xy=floor(outvec+0.5);
+	outvec.xy=floor(outvec+0.5).xy;
 #endif
 
 
@@ -207,7 +207,7 @@ uniform mediump sampler2D color_texture; // texunit:0
 uniform highp vec2 color_texpixel_size;
 uniform mediump sampler2D normal_texture; // texunit:1
 
-in mediump vec2 uv_interp;
+in highp vec2 uv_interp;
 in mediump vec4 color_interp;
 
 
@@ -285,7 +285,7 @@ MATERIAL_UNIFORMS
 
 FRAGMENT_SHADER_GLOBALS
 
-void light_compute(inout vec3 light,vec3 light_vec,float light_height,vec4 light_color,vec2 light_uv,vec4 shadow,vec3 normal,vec2 uv,vec2 screen_uv,vec4 color) {
+void light_compute(inout vec4 light,vec2 light_vec,float light_height,vec4 light_color,vec2 light_uv,vec4 shadow,vec3 normal,vec2 uv,vec2 screen_uv,vec4 color) {
 
 #if defined(USE_LIGHT_SHADER_CODE)
 

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #ifndef GODOTSHARP_EDITOR_H
 #define GODOTSHARP_EDITOR_H
 
@@ -43,6 +44,8 @@ class GodotSharpEditor : public Node {
 	PopupMenu *menu_popup;
 
 	AcceptDialog *error_dialog;
+	AcceptDialog *about_dialog;
+	CheckBox *about_dialog_checkbox;
 
 	ToolButton *bottom_panel_btn;
 
@@ -53,17 +56,21 @@ class GodotSharpEditor : public Node {
 	bool _create_project_solution();
 
 	void _remove_create_sln_menu_option();
+	void _show_about_dialog();
+	void _toggle_about_dialog_on_start(bool p_enabled);
 
 	void _menu_option_pressed(int p_id);
 
 	static GodotSharpEditor *singleton;
 
 protected:
+	void _notification(int p_notification);
 	static void _bind_methods();
 
 public:
 	enum MenuOptions {
-		MENU_CREATE_SLN
+		MENU_CREATE_SLN,
+		MENU_ABOUT_CSHARP,
 	};
 
 	enum ExternalEditor {

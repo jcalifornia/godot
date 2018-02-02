@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "editor_import_collada.h"
 
 #include "editor/collada/collada.h"
@@ -1550,7 +1551,7 @@ void ColladaImport::create_animations(bool p_make_tracks_in_all_bones, bool p_im
 
 				node = node_name_map[at.target];
 			} else {
-				print_line("Couldnt find node: " + at.target);
+				print_line("Couldn't find node: " + at.target);
 				continue;
 			}
 		} else {
@@ -1735,7 +1736,7 @@ void ColladaImport::create_animation(int p_clip, bool p_make_tracks_in_all_bones
 				}
 
 				if (xform_idx == -1) {
-					print_line("couldnt find matching node " + at.target + " xform for track " + at.param);
+					print_line("couldn't find matching node " + at.target + " xform for track " + at.param);
 					continue;
 				}
 
@@ -1913,8 +1914,6 @@ void ColladaImport::create_animation(int p_clip, bool p_make_tracks_in_all_bones
 /*************************************** SCENE ***********************************/
 /*********************************************************************************/
 
-#define DEBUG_ANIMATION
-
 uint32_t EditorSceneImporterCollada::get_import_flags() const {
 
 	return IMPORT_SCENE | IMPORT_ANIMATION;
@@ -1981,7 +1980,7 @@ Node *EditorSceneImporterCollada::import_scene(const String &p_path, uint32_t p_
 	return state.scene;
 }
 
-Ref<Animation> EditorSceneImporterCollada::import_animation(const String &p_path, uint32_t p_flags) {
+Ref<Animation> EditorSceneImporterCollada::import_animation(const String &p_path, uint32_t p_flags, int p_bake_fps) {
 
 	ColladaImport state;
 

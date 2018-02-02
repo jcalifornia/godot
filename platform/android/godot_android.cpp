@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #ifdef ANDROID_NATIVE_ACTIVITY
 
 #include "engine.h"
@@ -927,7 +928,6 @@ JNIEXPORT void JNICALL Java_org_godotengine_godot_Godot_registerMethod(JNIEnv *e
 
 	int stringCount = env->GetArrayLength(args);
 
-	print_line("Singl:  " + singname + " Method: " + mname + " RetVal: " + retval);
 	for (int i = 0; i < stringCount; i++) {
 
 		jstring string = (jstring)env->GetObjectArrayElement(args, i);
@@ -939,7 +939,6 @@ JNIEXPORT void JNICALL Java_org_godotengine_godot_Godot_registerMethod(JNIEnv *e
 	cs += ")";
 	cs += get_jni_sig(retval);
 	jclass cls = env->GetObjectClass(s->get_instance());
-	print_line("METHOD: " + mname + " sig: " + cs);
 	jmethodID mid = env->GetMethodID(cls, mname.ascii().get_data(), cs.ascii().get_data());
 	if (!mid) {
 

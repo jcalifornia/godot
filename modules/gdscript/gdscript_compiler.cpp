@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "gdscript_compiler.h"
 
 #include "gdscript.h"
@@ -35,6 +36,9 @@ bool GDScriptCompiler::_is_class_member_property(CodeGen &codegen, const StringN
 
 	if (!codegen.function_node || codegen.function_node->_static)
 		return false;
+
+	if (codegen.stack_identifiers.has(p_name))
+		return false; //shadowed
 
 	return _is_class_member_property(codegen.script, p_name);
 }
@@ -183,6 +187,14 @@ int GDScriptCompiler::_parse_expression(CodeGen &codegen, const GDScriptParser::
 
 			StringName identifier = in->name;
 
+			// TRY STACK!
+			if (!p_initializer && codegen.stack_identifiers.has(identifier)) {
+
+				int pos = codegen.stack_identifiers[identifier];
+				return pos | (GDScriptFunction::ADDR_TYPE_STACK_VARIABLE << GDScriptFunction::ADDR_BITS);
+			}
+
+			// TRY CLASS MEMBER
 			if (_is_class_member_property(codegen, identifier)) {
 				//get property
 				codegen.opcodes.push_back(GDScriptFunction::OPCODE_GET_MEMBER); // perform operator
@@ -193,12 +205,6 @@ int GDScriptCompiler::_parse_expression(CodeGen &codegen, const GDScriptParser::
 				return dst_addr;
 			}
 
-			// TRY STACK!
-			if (!p_initializer && codegen.stack_identifiers.has(identifier)) {
-
-				int pos = codegen.stack_identifiers[identifier];
-				return pos | (GDScriptFunction::ADDR_TYPE_STACK_VARIABLE << GDScriptFunction::ADDR_BITS);
-			}
 			//TRY MEMBERS!
 			if (!codegen.function_node || !codegen.function_node->_static) {
 
@@ -806,8 +812,8 @@ int GDScriptCompiler::_parse_expression(CodeGen &codegen, const GDScriptParser::
 					ERR_FAIL_COND_V(on->arguments.size() != 2, -1);
 
 					if (on->arguments[0]->type == GDScriptParser::Node::TYPE_OPERATOR && (static_cast<GDScriptParser::OperatorNode *>(on->arguments[0])->op == GDScriptParser::OperatorNode::OP_INDEX || static_cast<GDScriptParser::OperatorNode *>(on->arguments[0])->op == GDScriptParser::OperatorNode::OP_INDEX_NAMED)) {
-//SET (chained) MODE!!
 
+					// SET (chained) MODE!
 #ifdef DEBUG_ENABLED
 						if (static_cast<GDScriptParser::OperatorNode *>(on->arguments[0])->op == GDScriptParser::OperatorNode::OP_INDEX_NAMED) {
 							const GDScriptParser::OperatorNode *inon = static_cast<GDScriptParser::OperatorNode *>(on->arguments[0]);
@@ -1335,10 +1341,12 @@ Error GDScriptCompiler::_parse_block(CodeGen &codegen, const GDScriptParser::Blo
 
 				const GDScriptParser::LocalVarNode *lv = static_cast<const GDScriptParser::LocalVarNode *>(s);
 
-				if (_is_class_member_property(codegen, lv->name)) {
-					_set_error("Name for local variable '" + String(lv->name) + "' can't shadow class property of the same name.", lv);
-					return ERR_ALREADY_EXISTS;
-				}
+				// since we are using properties now for most class access, allow shadowing of class members to make user's life easier.
+				//
+				//if (_is_class_member_property(codegen, lv->name)) {
+				//	_set_error("Name for local variable '" + String(lv->name) + "' can't shadow class property of the same name.", lv);
+				//	return ERR_ALREADY_EXISTS;
+				//}
 
 				codegen.add_stack_identifier(lv->name, p_stack_level++);
 				codegen.alloc_stack(p_stack_level);
@@ -1375,10 +1383,13 @@ Error GDScriptCompiler::_parse_function(GDScript *p_script, const GDScriptParser
 
 	if (p_func) {
 		for (int i = 0; i < p_func->arguments.size(); i++) {
-			if (_is_class_member_property(p_script, p_func->arguments[i])) {
-				_set_error("Name for argument '" + String(p_func->arguments[i]) + "' can't shadow class property of the same name.", p_func);
-				return ERR_ALREADY_EXISTS;
-			}
+			// since we are using properties now for most class access, allow shadowing of class members to make user's life easier.
+			//
+			//if (_is_class_member_property(p_script, p_func->arguments[i])) {
+			//	_set_error("Name for argument '" + String(p_func->arguments[i]) + "' can't shadow class property of the same name.", p_func);
+			//	return ERR_ALREADY_EXISTS;
+			//}
+
 			codegen.add_stack_identifier(p_func->arguments[i], i);
 #ifdef TOOLS_ENABLED
 			argnames.push_back(p_func->arguments[i]);

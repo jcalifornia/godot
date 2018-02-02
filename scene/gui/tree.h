@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #ifndef TREE_H
 #define TREE_H
 
@@ -143,13 +144,13 @@ private:
 
 	Vector<Cell> cells;
 
-	bool collapsed; // wont show childs
+	bool collapsed; // won't show children
 	bool disable_folding;
 	int custom_min_height;
 
 	TreeItem *parent; // parent item
 	TreeItem *next; // next in list
-	TreeItem *childs; //child items
+	TreeItem *children; //child items
 	Tree *tree; //tree (for reference)
 
 	TreeItem(Tree *p_tree);
@@ -359,7 +360,7 @@ private:
 	LineEdit *text_editor;
 	HSlider *value_editor;
 	bool updating_value_editor;
-	uint32_t focus_in_id;
+	int64_t focus_in_id;
 	PopupMenu *popup_menu;
 
 	Vector<ColumnInfo> columns;
@@ -511,8 +512,8 @@ protected:
 	static void _bind_methods();
 
 	//bind helpers
-	Object *_create_item(Object *p_parent) {
-		return create_item(Object::cast_to<TreeItem>(p_parent));
+	Object *_create_item(Object *p_parent, int p_idx = -1) {
+		return create_item(Object::cast_to<TreeItem>(p_parent), p_idx);
 	}
 
 	TreeItem *_get_next_selected(Object *p_item) {
@@ -532,7 +533,7 @@ public:
 
 	void clear();
 
-	TreeItem *create_item(TreeItem *p_parent = 0);
+	TreeItem *create_item(TreeItem *p_parent = 0, int p_idx = -1);
 	TreeItem *get_root();
 	TreeItem *get_last_item();
 
@@ -541,11 +542,13 @@ public:
 	int get_column_width(int p_column) const;
 
 	void set_hide_root(bool p_enabled);
+	bool is_root_hidden() const;
 	TreeItem *get_next_selected(TreeItem *p_item);
 	TreeItem *get_selected() const;
 	int get_selected_column() const;
 	int get_pressed_button() const;
 	void set_select_mode(SelectMode p_mode);
+	SelectMode get_select_mode() const;
 	void deselect_all();
 	bool is_anything_selected();
 

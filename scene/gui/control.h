@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #ifndef CONTROL_H
 #define CONTROL_H
 
@@ -164,6 +165,8 @@ private:
 		float expand;
 		bool pending_min_size_update;
 		Point2 custom_minimum_size;
+
+		bool pass_on_modal_close_click;
 
 		MouseFilter mouse_filter;
 
@@ -314,11 +317,11 @@ public:
 
 	/* POSITIONING */
 
-	void set_anchors_preset(LayoutPreset p_preset, bool p_keep_margin = false);
+	void set_anchors_preset(LayoutPreset p_preset, bool p_keep_margin = true);
 	void set_margins_preset(LayoutPreset p_preset, LayoutPresetMode p_resize_mode = PRESET_MODE_MINSIZE, int p_margin = 0);
 	void set_anchors_and_margins_preset(LayoutPreset p_preset, LayoutPresetMode p_resize_mode = PRESET_MODE_MINSIZE, int p_margin = 0);
 
-	void set_anchor(Margin p_margin, float p_anchor, bool p_keep_margin = false, bool p_push_opposite_anchor = true);
+	void set_anchor(Margin p_margin, float p_anchor, bool p_keep_margin = true, bool p_push_opposite_anchor = true);
 	float get_anchor(Margin p_margin) const;
 
 	void set_margin(Margin p_margin, float p_value);
@@ -400,6 +403,9 @@ public:
 
 	void set_mouse_filter(MouseFilter p_filter);
 	MouseFilter get_mouse_filter() const;
+
+	void set_pass_on_modal_close_click(bool p_pass_on);
+	bool pass_on_modal_close_click() const;
 
 	/* SKINNING */
 

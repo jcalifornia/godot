@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "material.h"
 
 #include "scene/scene_string_names.h"
@@ -102,24 +103,18 @@ Material::~Material() {
 
 bool ShaderMaterial::_set(const StringName &p_name, const Variant &p_value) {
 
-	if (p_name == SceneStringNames::get_singleton()->shader) {
-		set_shader(p_value);
-		return true;
-	} else {
+	if (shader.is_valid()) {
 
-		if (shader.is_valid()) {
-
-			StringName pr = shader->remap_param(p_name);
-			if (!pr) {
-				String n = p_name;
-				if (n.find("param/") == 0) { //backwards compatibility
-					pr = n.substr(6, n.length());
-				}
+		StringName pr = shader->remap_param(p_name);
+		if (!pr) {
+			String n = p_name;
+			if (n.find("param/") == 0) { //backwards compatibility
+				pr = n.substr(6, n.length());
 			}
-			if (pr) {
-				VisualServer::get_singleton()->material_set_param(_get_material(), pr, p_value);
-				return true;
-			}
+		}
+		if (pr) {
+			VisualServer::get_singleton()->material_set_param(_get_material(), pr, p_value);
+			return true;
 		}
 	}
 
@@ -128,20 +123,12 @@ bool ShaderMaterial::_set(const StringName &p_name, const Variant &p_value) {
 
 bool ShaderMaterial::_get(const StringName &p_name, Variant &r_ret) const {
 
-	if (p_name == SceneStringNames::get_singleton()->shader) {
+	if (shader.is_valid()) {
 
-		r_ret = get_shader();
-		return true;
-
-	} else {
-
-		if (shader.is_valid()) {
-
-			StringName pr = shader->remap_param(p_name);
-			if (pr) {
-				r_ret = VisualServer::get_singleton()->material_get_param(_get_material(), pr);
-				return true;
-			}
+		StringName pr = shader->remap_param(p_name);
+		if (pr) {
+			r_ret = VisualServer::get_singleton()->material_get_param(_get_material(), pr);
+			return true;
 		}
 	}
 
@@ -149,8 +136,6 @@ bool ShaderMaterial::_get(const StringName &p_name, Variant &r_ret) const {
 }
 
 void ShaderMaterial::_get_property_list(List<PropertyInfo> *p_list) const {
-
-	p_list->push_back(PropertyInfo(Variant::OBJECT, "shader", PROPERTY_HINT_RESOURCE_TYPE, "Shader,ShaderGraph"));
 
 	if (!shader.is_null()) {
 
@@ -192,6 +177,8 @@ void ShaderMaterial::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_shader"), &ShaderMaterial::get_shader);
 	ClassDB::bind_method(D_METHOD("set_shader_param", "param", "value"), &ShaderMaterial::set_shader_param);
 	ClassDB::bind_method(D_METHOD("get_shader_param", "param"), &ShaderMaterial::get_shader_param);
+
+	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "shader", PROPERTY_HINT_RESOURCE_TYPE, "Shader"), "set_shader", "get_shader");
 }
 
 void ShaderMaterial::get_argument_options(const StringName &p_function, int p_idx, List<String> *r_options) const {
@@ -213,6 +200,13 @@ void ShaderMaterial::get_argument_options(const StringName &p_function, int p_id
 bool ShaderMaterial::_can_do_next_pass() const {
 
 	return shader.is_valid() && shader->get_mode() == Shader::MODE_SPATIAL;
+}
+
+Shader::Mode ShaderMaterial::get_shader_mode() const {
+	if (shader.is_valid())
+		return shader->get_mode();
+	else
+		return Shader::MODE_SPATIAL;
 }
 
 ShaderMaterial::ShaderMaterial() {
@@ -638,7 +632,7 @@ void SpatialMaterial::_update_shader() {
 		code += "\tvec2 base_uv = UV;\n";
 	}
 
-	if ((features[FEATURE_DETAIL] && detail_uv == DETAIL_UV_2) || (features[FEATURE_AMBIENT_OCCLUSION] && flags[FLAG_AO_ON_UV2])) {
+	if ((features[FEATURE_DETAIL] && detail_uv == DETAIL_UV_2) || (features[FEATURE_AMBIENT_OCCLUSION] && flags[FLAG_AO_ON_UV2]) || (features[FEATURE_EMISSION] && flags[FLAG_EMISSION_ON_UV2])) {
 		code += "\tvec2 base_uv2 = UV2;\n";
 	}
 
@@ -689,6 +683,10 @@ void SpatialMaterial::_update_shader() {
 		}
 	}
 
+	if (flags[FLAG_ALBEDO_TEXTURE_FORCE_SRGB]) {
+		code += "\talbedo_tex.rgb = mix(pow((albedo_tex.rgb + vec3(0.055)) * (1.0 / (1.0 + 0.055)),vec3(2.4)),albedo_tex.rgb.rgb * (1.0 / 12.92),lessThan(albedo_tex.rgb,vec3(0.04045)));\n";
+	}
+
 	if (flags[FLAG_ALBEDO_FROM_VERTEX_COLOR]) {
 		code += "\talbedo_tex *= COLOR;\n";
 	}
@@ -718,11 +716,20 @@ void SpatialMaterial::_update_shader() {
 	}
 
 	if (features[FEATURE_EMISSION]) {
-		if (flags[FLAG_UV1_USE_TRIPLANAR]) {
-			code += "\tvec3 emission_tex = triplanar_texture(texture_emission,uv1_power_normal,uv1_triplanar_pos).rgb;\n";
+		if (flags[FLAG_EMISSION_ON_UV2]) {
+			if (flags[FLAG_UV2_USE_TRIPLANAR]) {
+				code += "\tvec3 emission_tex = triplanar_texture(texture_emission,uv2_power_normal,uv2_triplanar_pos).rgb;\n";
+			} else {
+				code += "\tvec3 emission_tex = texture(texture_emission,base_uv2).rgb;\n";
+			}
 		} else {
-			code += "\tvec3 emission_tex = texture(texture_emission,base_uv).rgb;\n";
+			if (flags[FLAG_UV1_USE_TRIPLANAR]) {
+				code += "\tvec3 emission_tex = triplanar_texture(texture_emission,uv1_power_normal,uv1_triplanar_pos).rgb;\n";
+			} else {
+				code += "\tvec3 emission_tex = texture(texture_emission,base_uv).rgb;\n";
+			}
 		}
+
 		if (emission_op == EMISSION_OP_ADD) {
 			code += "\tEMISSION = (emission.rgb+emission_tex)*emission_energy;\n";
 		} else {
@@ -733,7 +740,7 @@ void SpatialMaterial::_update_shader() {
 	if (features[FEATURE_REFRACTION] && !flags[FLAG_UV1_USE_TRIPLANAR]) { //refraction not supported with triplanar
 
 		if (features[FEATURE_NORMAL_MAPPING]) {
-			code += "\tvec3 ref_normal = normalize( mix(NORMAL,TANGENT * NORMALMAP.x + BINORMAL * NORMALMAP.y + NORMAL * NORMALMAP.z,NORMALMAP_DEPTH) ) * SIDE;\n";
+			code += "\tvec3 ref_normal = normalize( mix(NORMAL,TANGENT * NORMALMAP.x + BINORMAL * NORMALMAP.y + NORMAL * NORMALMAP.z,NORMALMAP_DEPTH) );\n";
 		} else {
 			code += "\tvec3 ref_normal = NORMAL;\n";
 		}
@@ -1658,6 +1665,11 @@ RID SpatialMaterial::get_shader_rid() const {
 	return shader_map[current_key].shader;
 }
 
+Shader::Mode SpatialMaterial::get_shader_mode() const {
+
+	return Shader::MODE_SPATIAL;
+}
+
 void SpatialMaterial::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("set_albedo", "albedo"), &SpatialMaterial::set_albedo);
@@ -1833,6 +1845,7 @@ void SpatialMaterial::_bind_methods() {
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "flags_use_point_size"), "set_flag", "get_flag", FLAG_USE_POINT_SIZE);
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "flags_world_triplanar"), "set_flag", "get_flag", FLAG_TRIPLANAR_USE_WORLD);
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "flags_fixed_size"), "set_flag", "get_flag", FLAG_FIXED_SIZE);
+	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "flags_albedo_tex_force_srgb"), "set_flag", "get_flag", FLAG_ALBEDO_TEXTURE_FORCE_SRGB);
 	ADD_GROUP("Vertex Color", "vertex_color");
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "vertex_color_use_as_albedo"), "set_flag", "get_flag", FLAG_ALBEDO_FROM_VERTEX_COLOR);
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "vertex_color_is_srgb"), "set_flag", "get_flag", FLAG_SRGB_VERTEX_COLOR);
@@ -1875,6 +1888,7 @@ void SpatialMaterial::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::COLOR, "emission", PROPERTY_HINT_COLOR_NO_ALPHA), "set_emission", "get_emission");
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "emission_energy", PROPERTY_HINT_RANGE, "0,16,0.01"), "set_emission_energy", "get_emission_energy");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "emission_operator", PROPERTY_HINT_ENUM, "Add,Multiply"), "set_emission_operator", "get_emission_operator");
+	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "emission_on_uv2"), "set_flag", "get_flag", FLAG_EMISSION_ON_UV2);
 	ADD_PROPERTYI(PropertyInfo(Variant::OBJECT, "emission_texture", PROPERTY_HINT_RESOURCE_TYPE, "Texture"), "set_texture", "get_texture", TEXTURE_EMISSION);
 
 	ADD_GROUP("NormalMap", "normal_");
@@ -2017,8 +2031,10 @@ void SpatialMaterial::_bind_methods() {
 	BIND_ENUM_CONSTANT(FLAG_UV1_USE_TRIPLANAR);
 	BIND_ENUM_CONSTANT(FLAG_UV2_USE_TRIPLANAR);
 	BIND_ENUM_CONSTANT(FLAG_AO_ON_UV2);
+	BIND_ENUM_CONSTANT(FLAG_EMISSION_ON_UV2);
 	BIND_ENUM_CONSTANT(FLAG_USE_ALPHA_SCISSOR);
 	BIND_ENUM_CONSTANT(FLAG_TRIPLANAR_USE_WORLD);
+	BIND_ENUM_CONSTANT(FLAG_ALBEDO_TEXTURE_FORCE_SRGB);
 	BIND_ENUM_CONSTANT(FLAG_MAX);
 
 	BIND_ENUM_CONSTANT(DIFFUSE_BURLEY);
@@ -2048,8 +2064,8 @@ void SpatialMaterial::_bind_methods() {
 	BIND_ENUM_CONSTANT(EMISSION_OP_MULTIPLY);
 }
 
-SpatialMaterial::SpatialMaterial()
-	: element(this) {
+SpatialMaterial::SpatialMaterial() :
+		element(this) {
 
 	//initialize to right values
 	set_albedo(Color(1.0, 1.0, 1.0, 1.0));
@@ -2111,7 +2127,7 @@ SpatialMaterial::SpatialMaterial()
 	for (int i = 0; i < FLAG_MAX; i++) {
 		flags[i] = 0;
 	}
-	diffuse_mode = DIFFUSE_LAMBERT;
+	diffuse_mode = DIFFUSE_BURLEY;
 	specular_mode = SPECULAR_SCHLICK_GGX;
 
 	for (int i = 0; i < FEATURE_MAX; i++) {

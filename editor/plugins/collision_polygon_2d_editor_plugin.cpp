@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "collision_polygon_2d_editor_plugin.h"
 
 Node2D *CollisionPolygon2DEditor::_get_node() const {
@@ -39,10 +40,10 @@ void CollisionPolygon2DEditor::_set_node(Node *p_polygon) {
 	node = Object::cast_to<CollisionPolygon2D>(p_polygon);
 }
 
-CollisionPolygon2DEditor::CollisionPolygon2DEditor(EditorNode *p_editor)
-	: AbstractPolygon2DEditor(p_editor) {
+CollisionPolygon2DEditor::CollisionPolygon2DEditor(EditorNode *p_editor) :
+		AbstractPolygon2DEditor(p_editor) {
 }
 
-CollisionPolygon2DEditorPlugin::CollisionPolygon2DEditorPlugin(EditorNode *p_node)
-	: AbstractPolygon2DEditorPlugin(p_node, memnew(CollisionPolygon2DEditor(p_node)), "CollisionPolygon2D") {
+CollisionPolygon2DEditorPlugin::CollisionPolygon2DEditorPlugin(EditorNode *p_node) :
+		AbstractPolygon2DEditorPlugin(p_node, memnew(CollisionPolygon2DEditor(p_node)), "CollisionPolygon2D") {
 }

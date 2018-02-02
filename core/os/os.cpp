@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "os.h"
 
 #include "dir_access.h"
@@ -536,12 +537,21 @@ String OS::get_joy_guid(int p_device) const {
 
 void OS::set_context(int p_context) {
 }
+
+OS::SwitchVSyncCallbackInThread OS::switch_vsync_function = NULL;
+
 void OS::set_use_vsync(bool p_enable) {
+	_use_vsync = p_enable;
+	if (switch_vsync_function) { //if a function was set, use function
+		switch_vsync_function(p_enable);
+	} else { //otherwise just call here
+		_set_use_vsync(p_enable);
+	}
 }
 
 bool OS::is_vsync_enabled() const {
 
-	return true;
+	return _use_vsync;
 }
 
 OS::PowerState OS::get_power_state() {
@@ -604,10 +614,6 @@ bool OS::has_feature(const String &p_feature) {
 		return true;
 
 	return false;
-}
-
-void *OS::get_stack_bottom() const {
-	return _stack_bottom;
 }
 
 OS::OS() {

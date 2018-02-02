@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #ifndef OS_WINDOWS_H
 #define OS_WINDOWS_H
 #include "context_gl_win.h"
@@ -113,10 +114,12 @@ class OS_Windows : public OS {
 	bool window_has_focus;
 	uint32_t last_button_state;
 
+	HCURSOR cursors[CURSOR_MAX] = { NULL };
 	CursorShape cursor_shape;
 
 	InputDefault *input;
 	JoypadWindows *joypad;
+	Map<int, Vector2> touch_state;
 
 	PowerWindows *power_manager;
 
@@ -132,8 +135,8 @@ class OS_Windows : public OS {
 
 	CrashHandler crash_handler;
 
-	void _drag_event(int p_x, int p_y, int idx);
-	void _touch_event(bool p_pressed, int p_x, int p_y, int idx);
+	void _drag_event(float p_x, float p_y, int idx);
+	void _touch_event(bool p_pressed, float p_x, float p_y, int idx);
 
 	void _update_window_style(bool repaint = true);
 
@@ -146,7 +149,7 @@ protected:
 	virtual const char *get_audio_driver_name(int p_driver) const;
 
 	virtual void initialize_core();
-	virtual void initialize(const VideoMode &p_desired, int p_video_driver, int p_audio_driver);
+	virtual Error initialize(const VideoMode &p_desired, int p_video_driver, int p_audio_driver);
 
 	virtual void set_main_loop(MainLoop *p_main_loop);
 	virtual void delete_main_loop();
@@ -209,10 +212,10 @@ public:
 	virtual bool is_window_maximized() const;
 	virtual void request_attention();
 
-	virtual void set_borderless_window(int p_borderless);
+	virtual void set_borderless_window(bool p_borderless);
 	virtual bool get_borderless_window();
 
-	virtual Error open_dynamic_library(const String p_path, void *&p_library_handle);
+	virtual Error open_dynamic_library(const String p_path, void *&p_library_handle, bool p_also_set_library_path = false);
 	virtual Error close_dynamic_library(void *p_library_handle);
 	virtual Error get_dynamic_library_symbol_handle(void *p_library_handle, const String p_name, void *&p_symbol_handle, bool p_optional = false);
 
@@ -243,11 +246,16 @@ public:
 	virtual String get_clipboard() const;
 
 	void set_cursor_shape(CursorShape p_shape);
+	virtual void set_custom_mouse_cursor(const RES &p_cursor, CursorShape p_shape, const Vector2 &p_hotspot);
+	void GetMaskBitmaps(HBITMAP hSourceBitmap, COLORREF clrTransparent, OUT HBITMAP &hAndMaskBitmap, OUT HBITMAP &hXorMaskBitmap);
 	void set_icon(const Ref<Image> &p_icon);
 
 	virtual String get_executable_path() const;
 
 	virtual String get_locale() const;
+
+	virtual int get_processor_count() const;
+
 	virtual LatinKeyboardVariant get_latin_keyboard_variant() const;
 
 	virtual void enable_for_stealing_focus(ProcessID pid);
@@ -274,8 +282,8 @@ public:
 	virtual bool is_joy_known(int p_device);
 	virtual String get_joy_guid(int p_device) const;
 
-	virtual void set_use_vsync(bool p_enable);
-	virtual bool is_vsync_enabled() const;
+	virtual void _set_use_vsync(bool p_enable);
+	//virtual bool is_vsync_enabled() const;
 
 	virtual OS::PowerState get_power_state();
 	virtual int get_power_seconds_left();
@@ -285,6 +293,8 @@ public:
 
 	void disable_crash_handler();
 	bool is_disable_crash_handler() const;
+
+	void force_process_input();
 
 	virtual Error move_to_trash(const String &p_path);
 

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "editor/editor_node.h"
 #include "editor_export.h"
 #include "io/zip_io.h"
@@ -57,7 +58,7 @@ public:
 	virtual Ref<Texture> get_logo() const;
 
 	virtual bool can_export(const Ref<EditorExportPreset> &p_preset, String &r_error, bool &r_missing_templates) const;
-	virtual String get_binary_extension() const;
+	virtual String get_binary_extension(const Ref<EditorExportPreset> &p_preset) const;
 	virtual Error export_project(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, int p_flags = 0);
 
 	virtual bool poll_devices();
@@ -70,7 +71,7 @@ public:
 	virtual void get_platform_features(List<String> *r_features) {
 
 		r_features->push_back("web");
-		r_features->push_back("JavaScript");
+		r_features->push_back(get_os_name());
 	}
 
 	EditorExportPlatformJavaScript();
@@ -113,9 +114,9 @@ void EditorExportPlatformJavaScript::get_preset_features(const Ref<EditorExportP
 
 void EditorExportPlatformJavaScript::get_export_options(List<ExportOption> *r_options) {
 
-	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "texture_format/s3tc"), false));
-	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "texture_format/etc"), true));
-	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "texture_format/etc2"), false));
+	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "texture_format/s3tc"), true));
+	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "texture_format/etc"), false));
+	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "texture_format/etc2"), true));
 	r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "html/custom_html_shell", PROPERTY_HINT_GLOBAL_FILE, "html"), ""));
 	r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "html/head_include", PROPERTY_HINT_MULTILINE_TEXT), ""));
 	r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "custom_template/release", PROPERTY_HINT_GLOBAL_FILE, "zip"), ""));
@@ -129,7 +130,7 @@ String EditorExportPlatformJavaScript::get_name() const {
 
 String EditorExportPlatformJavaScript::get_os_name() const {
 
-	return "JavaScript";
+	return "HTML5";
 }
 
 Ref<Texture> EditorExportPlatformJavaScript::get_logo() const {
@@ -149,7 +150,7 @@ bool EditorExportPlatformJavaScript::can_export(const Ref<EditorExportPreset> &p
 	return !r_missing_templates;
 }
 
-String EditorExportPlatformJavaScript::get_binary_extension() const {
+String EditorExportPlatformJavaScript::get_binary_extension(const Ref<EditorExportPreset> &p_preset) const {
 
 	return "html";
 }
@@ -174,14 +175,14 @@ Error EditorExportPlatformJavaScript::export_project(const Ref<EditorExportPrese
 	}
 
 	if (template_path != String() && !FileAccess::exists(template_path)) {
-		EditorNode::get_singleton()->show_warning(TTR("Template file not found:\n") + template_path);
+		EditorNode::get_singleton()->show_warning(TTR("Template file not found:") + "\n" + template_path);
 		return ERR_FILE_NOT_FOUND;
 	}
 
 	String pck_path = p_path.get_basename() + ".pck";
 	Error error = save_pack(p_preset, pck_path);
 	if (error != OK) {
-		EditorNode::get_singleton()->show_warning(TTR("Could not write file:\n") + pck_path);
+		EditorNode::get_singleton()->show_warning(TTR("Could not write file:") + "\n" + pck_path);
 		return error;
 	}
 
@@ -191,12 +192,12 @@ Error EditorExportPlatformJavaScript::export_project(const Ref<EditorExportPrese
 
 	if (!pkg) {
 
-		EditorNode::get_singleton()->show_warning(TTR("Could not open template for export:\n") + template_path);
+		EditorNode::get_singleton()->show_warning(TTR("Could not open template for export:") + "\n" + template_path);
 		return ERR_FILE_NOT_FOUND;
 	}
 
 	if (unzGoToFirstFile(pkg) != UNZ_OK) {
-		EditorNode::get_singleton()->show_warning(TTR("Invalid export template:\n") + template_path);
+		EditorNode::get_singleton()->show_warning(TTR("Invalid export template:") + "\n" + template_path);
 		unzClose(pkg);
 		return ERR_FILE_CORRUPT;
 	}
@@ -238,7 +239,7 @@ Error EditorExportPlatformJavaScript::export_project(const Ref<EditorExportPrese
 		String dst = p_path.get_base_dir().plus_file(file);
 		FileAccess *f = FileAccess::open(dst, FileAccess::WRITE);
 		if (!f) {
-			EditorNode::get_singleton()->show_warning(TTR("Could not write file:\n") + dst);
+			EditorNode::get_singleton()->show_warning(TTR("Could not write file:") + "\n" + dst);
 			unzClose(pkg);
 			return ERR_FILE_CANT_WRITE;
 		}
@@ -252,7 +253,7 @@ Error EditorExportPlatformJavaScript::export_project(const Ref<EditorExportPrese
 
 		FileAccess *f = FileAccess::open(custom_html, FileAccess::READ);
 		if (!f) {
-			EditorNode::get_singleton()->show_warning(TTR("Could not read custom HTML shell:\n") + custom_html);
+			EditorNode::get_singleton()->show_warning(TTR("Could not read custom HTML shell:") + "\n" + custom_html);
 			return ERR_FILE_CANT_READ;
 		}
 		Vector<uint8_t> buf;
@@ -263,7 +264,7 @@ Error EditorExportPlatformJavaScript::export_project(const Ref<EditorExportPrese
 
 		f = FileAccess::open(p_path, FileAccess::WRITE);
 		if (!f) {
-			EditorNode::get_singleton()->show_warning(TTR("Could not write file:\n") + p_path);
+			EditorNode::get_singleton()->show_warning(TTR("Could not write file:") + "\n" + p_path);
 			return ERR_FILE_CANT_WRITE;
 		}
 		f->store_buffer(buf.ptr(), buf.size());
@@ -277,7 +278,7 @@ Error EditorExportPlatformJavaScript::export_project(const Ref<EditorExportPrese
 		splash.instance();
 		Error err = splash->load(splash_path);
 		if (err) {
-			EditorNode::get_singleton()->show_warning(TTR("Could not read boot splash image file:\n") + splash_path + "\nUsing default boot splash image");
+			EditorNode::get_singleton()->show_warning(TTR("Could not read boot splash image file:") + "\n" + splash_path + "\n" + TTR("Using default boot splash image."));
 			splash.unref();
 		}
 	}
@@ -286,7 +287,7 @@ Error EditorExportPlatformJavaScript::export_project(const Ref<EditorExportPrese
 	}
 	String png_path = p_path.get_base_dir().plus_file(p_path.get_file().get_basename() + ".png");
 	if (splash->save_png(png_path) != OK) {
-		EditorNode::get_singleton()->show_warning(TTR("Could not write file:\n") + png_path);
+		EditorNode::get_singleton()->show_warning(TTR("Could not write file:") + "\n" + png_path);
 		return ERR_FILE_CANT_WRITE;
 	}
 	return OK;

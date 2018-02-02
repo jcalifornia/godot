@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "godotsharp_builds.h"
 
 #include "main/main.h"
@@ -238,12 +239,12 @@ bool GodotSharpBuilds::make_api_sln(GodotSharpBuilds::APIType p_api_type) {
 #error "How am I supposed to generate the bindings?"
 #endif
 
-		BindingsGenerator &gen = BindingsGenerator::get_singleton();
+		BindingsGenerator *gen = BindingsGenerator::get_singleton();
 		bool gen_verbose = OS::get_singleton()->is_stdout_verbose();
 
 		Error err = p_api_type == API_CORE ?
-							gen.generate_cs_core_project(api_sln_dir, gen_verbose) :
-							gen.generate_cs_editor_project(api_sln_dir, core_api_assembly, gen_verbose);
+							gen->generate_cs_core_project(api_sln_dir, gen_verbose) :
+							gen->generate_cs_editor_project(api_sln_dir, core_api_assembly, gen_verbose);
 
 		if (err != OK) {
 			show_build_error_dialog("Failed to generate " + api_name + " solution. Error: " + itos(err));
@@ -313,7 +314,7 @@ GodotSharpBuilds *GodotSharpBuilds::singleton = NULL;
 void GodotSharpBuilds::build_exit_callback(const MonoBuildInfo &p_build_info, int p_exit_code) {
 
 	BuildProcess *match = builds.getptr(p_build_info);
-	ERR_FAIL_COND(!match);
+	ERR_FAIL_NULL(match);
 
 	BuildProcess &bp = *match;
 	bp.on_exit(p_exit_code);
@@ -446,7 +447,7 @@ void GodotSharpBuilds::BuildProcess::start(bool p_blocking) {
 
 	GDMonoClass *klass = GDMono::get_singleton()->get_editor_tools_assembly()->get_class("GodotSharpTools.Build", "BuildInstance");
 
-	MonoObject *mono_object = mono_object_new(mono_domain_get(), klass->get_raw());
+	MonoObject *mono_object = mono_object_new(mono_domain_get(), klass->get_mono_ptr());
 
 	// Construct
 

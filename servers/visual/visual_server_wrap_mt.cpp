@@ -5,7 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -26,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "visual_server_wrap_mt.h"
 #include "os/os.h"
 #include "project_settings.h"
@@ -158,8 +160,18 @@ void VisualServerWrapMT::finish() {
 	canvas_occluder_polygon_free_cached_ids();
 }
 
-VisualServerWrapMT::VisualServerWrapMT(VisualServer *p_contained, bool p_create_thread)
-	: command_queue(p_create_thread) {
+void VisualServerWrapMT::set_use_vsync_callback(bool p_enable) {
+
+	singleton_mt->call_set_use_vsync(p_enable);
+}
+
+VisualServerWrapMT *VisualServerWrapMT::singleton_mt = NULL;
+
+VisualServerWrapMT::VisualServerWrapMT(VisualServer *p_contained, bool p_create_thread) :
+		command_queue(p_create_thread) {
+
+	singleton_mt = this;
+	OS::switch_vsync_function = set_use_vsync_callback; //as this goes to another thread, make sure it goes properly
 
 	visual_server = p_contained;
 	create_thread = p_create_thread;

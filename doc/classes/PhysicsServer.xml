@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="PhysicsServer" inherits="Object" category="Core" version="3.0-beta">
+<class name="PhysicsServer" inherits="Object" category="Core" version="3.0-stable">
 	<brief_description>
 		Server interface for low level physics access.
 	</brief_description>
@@ -351,15 +351,6 @@
 				Creates a physics body. The first parameter can be any value from constants BODY_MODE*, for the type of body created. Additionally, the body can be created in sleeping state to save processing time.
 			</description>
 		</method>
-		<method name="body_get_axis_lock" qualifiers="const">
-			<return type="int" enum="PhysicsServer.BodyAxisLock">
-			</return>
-			<argument index="0" name="body" type="RID">
-			</argument>
-			<description>
-				Gets the information, which Axis is locked if any. The can be any calue from the constants BODY_AXIS_LOCK*
-			</description>
-		</method>
 		<method name="body_get_collision_layer" qualifiers="const">
 			<return type="int">
 			</return>
@@ -485,6 +476,16 @@
 				Returns a body state.
 			</description>
 		</method>
+		<method name="body_is_axis_locked" qualifiers="const">
+			<return type="bool">
+			</return>
+			<argument index="0" name="body" type="RID">
+			</argument>
+			<argument index="1" name="axis" type="int" enum="PhysicsServer.BodyAxis">
+			</argument>
+			<description>
+			</description>
+		</method>
 		<method name="body_is_continuous_collision_detection_enabled" qualifiers="const">
 			<return type="bool">
 			</return>
@@ -540,10 +541,11 @@
 			</return>
 			<argument index="0" name="body" type="RID">
 			</argument>
-			<argument index="1" name="axis" type="int" enum="PhysicsServer.BodyAxisLock">
+			<argument index="1" name="axis" type="int" enum="PhysicsServer.BodyAxis">
+			</argument>
+			<argument index="2" name="lock" type="bool">
 			</argument>
 			<description>
-				Locks velocity along one axis to 0 and only allows rotation along this axis, can also be set to disabled which disables this functionality.
 			</description>
 		</method>
 		<method name="body_set_axis_velocity">
@@ -1197,7 +1199,7 @@
 			If above 0, this value is the maximum value for an impulse that this Joint puts on it's ends.
 		</constant>
 		<constant name="HINGE_JOINT_BIAS" value="0" enum="HingeJointParam">
-			The speed with wich the two bodies get pulled together when they move in different directions.
+			The speed with which the two bodies get pulled together when they move in different directions.
 		</constant>
 		<constant name="HINGE_JOINT_LIMIT_UPPER" value="1" enum="HingeJointParam">
 			The maximum rotation across the Hinge.
@@ -1232,7 +1234,7 @@
 			The minimum difference between the pivot points on their x-axis before damping happens.
 		</constant>
 		<constant name="SLIDER_JOINT_LINEAR_LIMIT_SOFTNESS" value="2" enum="SliderJointParam">
-			A factor applied to the movement accross the slider axis once the limits get surpassed. The lower, the slower the movement.
+			A factor applied to the movement across the slider axis once the limits get surpassed. The lower, the slower the movement.
 		</constant>
 		<constant name="SLIDER_JOINT_LINEAR_LIMIT_RESTITUTION" value="3" enum="SliderJointParam">
 			The amount of restitution once the limits are surpassed. The lower, the more velocityenergy gets lost.
@@ -1241,7 +1243,7 @@
 			The amount of damping once the slider limits are surpassed.
 		</constant>
 		<constant name="SLIDER_JOINT_LINEAR_MOTION_SOFTNESS" value="5" enum="SliderJointParam">
-			A factor applied to the movement accross the slider axis as long as the slider is in the limits. The lower, the slower the movement.
+			A factor applied to the movement across the slider axis as long as the slider is in the limits. The lower, the slower the movement.
 		</constant>
 		<constant name="SLIDER_JOINT_LINEAR_MOTION_RESTITUTION" value="6" enum="SliderJointParam">
 			The amount of restitution inside the slider limits.
@@ -1250,13 +1252,13 @@
 			The amount of damping inside the slider limits.
 		</constant>
 		<constant name="SLIDER_JOINT_LINEAR_ORTHOGONAL_SOFTNESS" value="8" enum="SliderJointParam">
-			A factor applied to the movement accross axes orthogonal to the slider.
+			A factor applied to the movement across axes orthogonal to the slider.
 		</constant>
 		<constant name="SLIDER_JOINT_LINEAR_ORTHOGONAL_RESTITUTION" value="9" enum="SliderJointParam">
-			The amount of restitution when movement is accross axes orthogonal to the slider.
+			The amount of restitution when movement is across axes orthogonal to the slider.
 		</constant>
 		<constant name="SLIDER_JOINT_LINEAR_ORTHOGONAL_DAMPING" value="10" enum="SliderJointParam">
-			The amount of damping when movement is accross axes orthogonal to the slider.
+			The amount of damping when movement is across axes orthogonal to the slider.
 		</constant>
 		<constant name="SLIDER_JOINT_ANGULAR_LIMIT_UPPER" value="11" enum="SliderJointParam">
 			The upper limit of rotation in the slider.
@@ -1321,7 +1323,7 @@
 			The maximum difference between the pivot points' axes.
 		</constant>
 		<constant name="G6DOF_JOINT_LINEAR_LIMIT_SOFTNESS" value="2" enum="G6DOFJointAxisParam">
-			A factor that gets applied to the movement accross the axes. The lower, the slower the movement.
+			A factor that gets applied to the movement across the axes. The lower, the slower the movement.
 		</constant>
 		<constant name="G6DOF_JOINT_LINEAR_RESTITUTION" value="3" enum="G6DOFJointAxisParam">
 			The amount of restitution on the axes movement. The lower, the more velocity-energy gets lost.
@@ -1330,25 +1332,25 @@
 			The amount of damping that happens at the linear motion across the axes.
 		</constant>
 		<constant name="G6DOF_JOINT_ANGULAR_LOWER_LIMIT" value="5" enum="G6DOFJointAxisParam">
-			The minimum rotation in negative direction to break loose and rotate arround the axes.
+			The minimum rotation in negative direction to break loose and rotate around the axes.
 		</constant>
 		<constant name="G6DOF_JOINT_ANGULAR_UPPER_LIMIT" value="6" enum="G6DOFJointAxisParam">
-			The minimum rotation in positive direction to break loose and rotate arround the axes.
+			The minimum rotation in positive direction to break loose and rotate around the axes.
 		</constant>
 		<constant name="G6DOF_JOINT_ANGULAR_LIMIT_SOFTNESS" value="7" enum="G6DOFJointAxisParam">
-			A factor that gets multiplied onto all rotations accross the axes.
+			A factor that gets multiplied onto all rotations across the axes.
 		</constant>
 		<constant name="G6DOF_JOINT_ANGULAR_DAMPING" value="8" enum="G6DOFJointAxisParam">
-			The amount of rotational damping accross the axes. The lower, the more dampening occurs.
+			The amount of rotational damping across the axes. The lower, the more dampening occurs.
 		</constant>
 		<constant name="G6DOF_JOINT_ANGULAR_RESTITUTION" value="9" enum="G6DOFJointAxisParam">
-			The amount of rotational restitution accross the axes. The lower, the more restitution occurs.
+			The amount of rotational restitution across the axes. The lower, the more restitution occurs.
 		</constant>
 		<constant name="G6DOF_JOINT_ANGULAR_FORCE_LIMIT" value="10" enum="G6DOFJointAxisParam">
-			The maximum amount of force that can occur, when rotating arround the axes.
+			The maximum amount of force that can occur, when rotating around the axes.
 		</constant>
 		<constant name="G6DOF_JOINT_ANGULAR_ERP" value="11" enum="G6DOFJointAxisParam">
-			When correcting the crossing of limits in rotation accross the axes, this error tolerance factor defines how much the correction gets slowed down. The lower, the slower.
+			When correcting the crossing of limits in rotation across the axes, this error tolerance factor defines how much the correction gets slowed down. The lower, the slower.
 		</constant>
 		<constant name="G6DOF_JOINT_ANGULAR_MOTOR_TARGET_VELOCITY" value="12" enum="G6DOFJointAxisParam">
 			Target speed for the motor at the axes.
@@ -1519,17 +1521,17 @@
 		<constant name="SPACE_PARAM_CONSTRAINT_DEFAULT_BIAS" value="7" enum="SpaceParameter">
 			Constant to set/get the default solver bias for all physics constraints. A solver bias is a factor controlling how much two objects "rebound", after violating a constraint, to avoid leaving them in that state because of numerical imprecision.
 		</constant>
-		<constant name="BODY_AXIS_LOCK_DISABLED" value="0" enum="BodyAxisLock">
-			The [Body] can rotate and move freely.
+		<constant name="BODY_AXIS_LINEAR_X" value="1" enum="BodyAxis">
 		</constant>
-		<constant name="BODY_AXIS_LOCK_X" value="1" enum="BodyAxisLock">
-			The [Body] cannot move across x axis can only rotate across x axis.
+		<constant name="BODY_AXIS_LINEAR_Y" value="2" enum="BodyAxis">
 		</constant>
-		<constant name="BODY_AXIS_LOCK_Y" value="2" enum="BodyAxisLock">
-			The [Body] cannot move across y axis can only rotate across y axis.
+		<constant name="BODY_AXIS_LINEAR_Z" value="4" enum="BodyAxis">
 		</constant>
-		<constant name="BODY_AXIS_LOCK_Z" value="3" enum="BodyAxisLock">
-			The [Body] cannot move across z axis can only rotate across z axis.
+		<constant name="BODY_AXIS_ANGULAR_X" value="8" enum="BodyAxis">
+		</constant>
+		<constant name="BODY_AXIS_ANGULAR_Y" value="16" enum="BodyAxis">
+		</constant>
+		<constant name="BODY_AXIS_ANGULAR_Z" value="32" enum="BodyAxis">
 		</constant>
 	</constants>
 </class>

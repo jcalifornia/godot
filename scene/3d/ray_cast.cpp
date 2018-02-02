@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "ray_cast.h"
 
 #include "collision_object.h"
@@ -119,6 +120,29 @@ bool RayCast::is_enabled() const {
 	return enabled;
 }
 
+void RayCast::set_exclude_parent_body(bool p_exclude_parent_body) {
+
+	if (exclude_parent_body == p_exclude_parent_body)
+		return;
+
+	exclude_parent_body = p_exclude_parent_body;
+
+	if (!is_inside_tree())
+		return;
+
+	if (Object::cast_to<CollisionObject>(get_parent())) {
+		if (exclude_parent_body)
+			exclude.insert(Object::cast_to<CollisionObject>(get_parent())->get_rid());
+		else
+			exclude.erase(Object::cast_to<CollisionObject>(get_parent())->get_rid());
+	}
+}
+
+bool RayCast::get_exclude_parent_body() const {
+
+	return exclude_parent_body;
+}
+
 void RayCast::_notification(int p_what) {
 
 	switch (p_what) {
@@ -132,6 +156,13 @@ void RayCast::_notification(int p_what) {
 					_update_debug_shape();
 			} else
 				set_physics_process(false);
+
+			if (Object::cast_to<CollisionObject>(get_parent())) {
+				if (exclude_parent_body)
+					exclude.insert(Object::cast_to<CollisionObject>(get_parent())->get_rid());
+				else
+					exclude.erase(Object::cast_to<CollisionObject>(get_parent())->get_rid());
+			}
 
 		} break;
 		case NOTIFICATION_EXIT_TREE: {
@@ -186,6 +217,8 @@ void RayCast::_update_raycast_state() {
 		against_shape = rr.shape;
 	} else {
 		collided = false;
+		against = 0;
+		against_shape = 0;
 	}
 }
 
@@ -256,7 +289,11 @@ void RayCast::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_collision_mask_bit", "bit", "value"), &RayCast::set_collision_mask_bit);
 	ClassDB::bind_method(D_METHOD("get_collision_mask_bit", "bit"), &RayCast::get_collision_mask_bit);
 
+	ClassDB::bind_method(D_METHOD("set_exclude_parent_body", "mask"), &RayCast::set_exclude_parent_body);
+	ClassDB::bind_method(D_METHOD("get_exclude_parent_body"), &RayCast::get_exclude_parent_body);
+
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "enabled"), "set_enabled", "is_enabled");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "exclude_parent"), "set_exclude_parent_body", "get_exclude_parent_body");
 	ADD_PROPERTY(PropertyInfo(Variant::VECTOR3, "cast_to"), "set_cast_to", "get_cast_to");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "collision_mask", PROPERTY_HINT_LAYERS_3D_PHYSICS), "set_collision_mask", "get_collision_mask");
 }
@@ -332,4 +369,5 @@ RayCast::RayCast() {
 	collision_mask = 1;
 	cast_to = Vector3(0, -1, 0);
 	debug_shape = NULL;
+	exclude_parent_body = true;
 }

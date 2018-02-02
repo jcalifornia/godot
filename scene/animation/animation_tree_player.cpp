@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "animation_tree_player.h"
 #include "animation_player.h"
 
@@ -386,8 +387,6 @@ bool AnimationTreePlayer::_get(const StringName &p_name, Variant &r_ret) const {
 
 void AnimationTreePlayer::_get_property_list(List<PropertyInfo> *p_list) const {
 
-	p_list->push_back(PropertyInfo(Variant::NODE_PATH, "base_path"));
-	p_list->push_back(PropertyInfo(Variant::NODE_PATH, "master_player"));
 	p_list->push_back(PropertyInfo(Variant::DICTIONARY, "data", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_STORAGE | PROPERTY_USAGE_NETWORK));
 }
 
@@ -558,7 +557,7 @@ float AnimationTreePlayer::_process_node(const StringName &p_node, AnimationNode
 				return _process_node(osn->inputs[0].node, r_prev_anim, p_time, p_seek, p_fallback_weight, p_weights);
 			}
 
-			float os_seek = p_seek;
+			bool os_seek = p_seek;
 
 			if (p_seek)
 				osn->time = p_time;
@@ -831,7 +830,7 @@ void AnimationTreePlayer::_process_animation(float p_delta) {
 			for (List<AnimationNode::TrackRef>::Element *E = anim_list->tref.front(); E; E = E->next()) {
 
 				AnimationNode::TrackRef &tr = E->get();
-				if (tr.track == NULL || tr.local_track < 0 || tr.weight < CMP_EPSILON)
+				if (tr.track == NULL || tr.local_track < 0 || tr.weight < CMP_EPSILON || !a->track_is_enabled(tr.local_track))
 					continue;
 
 				switch (a->track_get_type(tr.local_track)) {
@@ -1140,6 +1139,9 @@ void AnimationTreePlayer::transition_node_set_input_count(const StringName &p_no
 
 	n->inputs.resize(p_inputs);
 	n->input_data.resize(p_inputs);
+
+	_clear_cycle_test();
+
 	last_error = _cycle_test(out_name);
 }
 void AnimationTreePlayer::transition_node_set_input_auto_advance(const StringName &p_node, int p_input, bool p_auto_advance) {
@@ -1360,6 +1362,8 @@ void AnimationTreePlayer::remove_node(const StringName &p_node) {
 
 	node_map.erase(p_node);
 
+	_clear_cycle_test();
+
 	// compute last error again, just in case
 	last_error = _cycle_test(out_name);
 	dirty_caches = true;
@@ -1387,6 +1391,14 @@ AnimationTreePlayer::ConnectError AnimationTreePlayer::_cycle_test(const StringN
 	return CONNECT_OK;
 }
 
+// Use this function to not alter next complete _cycle_test().
+void AnimationTreePlayer::_clear_cycle_test() {
+	for (Map<StringName, NodeBase *>::Element *E = node_map.front(); E; E = E->next()) {
+		NodeBase *nb = E->get();
+		nb->cycletest = false;
+	}
+}
+
 Error AnimationTreePlayer::connect_nodes(const StringName &p_src_node, const StringName &p_dst_node, int p_dst_input) {
 
 	ERR_FAIL_COND_V(!node_map.has(p_src_node), ERR_INVALID_PARAMETER);
@@ -1411,11 +1423,7 @@ Error AnimationTreePlayer::connect_nodes(const StringName &p_src_node, const Str
 
 	dst->inputs[p_dst_input].node = p_src_node;
 
-	for (Map<StringName, NodeBase *>::Element *E = node_map.front(); E; E = E->next()) {
-
-		NodeBase *nb = E->get();
-		nb->cycletest = false;
-	}
+	_clear_cycle_test();
 
 	last_error = _cycle_test(out_name);
 	if (last_error) {
@@ -1795,6 +1803,10 @@ void AnimationTreePlayer::_bind_methods() {
 
 	ADD_GROUP("Playback", "playback_");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "playback_process_mode", PROPERTY_HINT_ENUM, "Physics,Idle"), "set_animation_process_mode", "get_animation_process_mode");
+
+	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "master_player"), "set_master_player", "get_master_player");
+	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "base_path"), "set_base_path", "get_base_path");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "active"), "set_active", "is_active");
 
 	BIND_ENUM_CONSTANT(NODE_OUTPUT);
 	BIND_ENUM_CONSTANT(NODE_ANIMATION);

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #ifndef CLASS_DB_H
 #define CLASS_DB_H
 
@@ -49,10 +50,10 @@ struct MethodDefinition {
 	StringName name;
 	Vector<StringName> args;
 	MethodDefinition() {}
-	MethodDefinition(const char *p_name)
-		: name(p_name) {}
-	MethodDefinition(const StringName &p_name)
-		: name(p_name) {}
+	MethodDefinition(const char *p_name) :
+			name(p_name) {}
+	MethodDefinition(const StringName &p_name) :
+			name(p_name) {}
 };
 
 MethodDefinition D_METHOD(const char *p_name);
@@ -348,8 +349,6 @@ public:
 #endif
 
 	static StringName get_category(const StringName &p_node);
-
-	static bool get_setter_and_type_for_property(const StringName &p_class, const StringName &p_prop, StringName &r_class, StringName &r_setter);
 
 	static void set_class_enabled(StringName p_class, bool p_enable);
 	static bool is_class_enabled(StringName p_class);

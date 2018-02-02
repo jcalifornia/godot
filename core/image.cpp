@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "image.h"
 
 #include "core/io/image_loader.h"
@@ -446,8 +447,6 @@ void Image::convert(Format p_new_format) {
 
 	Image new_img(width, height, 0, p_new_format);
 
-	//int len=data.size();
-
 	PoolVector<uint8_t>::Read r = data.read();
 	PoolVector<uint8_t>::Write w = new_img.data.write();
 
@@ -695,6 +694,11 @@ void Image::resize_to_po2(bool p_square) {
 
 void Image::resize(int p_width, int p_height, Interpolation p_interpolation) {
 
+	if (data.size() == 0) {
+		ERR_EXPLAIN("Cannot resize image before creating it, use create() or create_from_data() first.");
+		ERR_FAIL();
+	}
+
 	if (!_can_modify(format)) {
 		ERR_EXPLAIN("Cannot resize in indexed, compressed or custom image formats.");
 		ERR_FAIL();
@@ -771,7 +775,7 @@ void Image::crop_from_point(int p_x, int p_y, int p_width, int p_height) {
 	ERR_FAIL_COND(p_y + p_height > MAX_HEIGHT);
 
 	/* to save memory, cropping should be done in-place, however, since this function
-	   will most likely either not be used much, or in critical areas, for now it wont, because
+	   will most likely either not be used much, or in critical areas, for now it won't, because
 	   it's a waste of time. */
 
 	if (p_width == width && p_height == height && p_x == 0 && p_y == 0)
@@ -2287,6 +2291,9 @@ void Image::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_pixel", "x", "y", "color"), &Image::set_pixel);
 	ClassDB::bind_method(D_METHOD("get_pixel", "x", "y"), &Image::get_pixel);
 
+	ClassDB::bind_method(D_METHOD("load_png_from_buffer", "buffer"), &Image::load_png_from_buffer);
+	ClassDB::bind_method(D_METHOD("load_jpg_from_buffer", "buffer"), &Image::load_jpg_from_buffer);
+
 	ADD_PROPERTY(PropertyInfo(Variant::DICTIONARY, "data", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_STORAGE), "_set_data", "_get_data");
 
 	BIND_ENUM_CONSTANT(FORMAT_L8); //luminance
@@ -2503,6 +2510,40 @@ String Image::get_format_name(Format p_format) {
 
 	ERR_FAIL_INDEX_V(p_format, FORMAT_MAX, String());
 	return format_names[p_format];
+}
+
+Error Image::load_png_from_buffer(const PoolVector<uint8_t> &p_array) {
+
+	int buffer_size = p_array.size();
+
+	ERR_FAIL_COND_V(buffer_size == 0, ERR_INVALID_PARAMETER);
+	ERR_FAIL_COND_V(!_png_mem_loader_func, ERR_INVALID_PARAMETER);
+
+	PoolVector<uint8_t>::Read r = p_array.read();
+
+	Ref<Image> image = _png_mem_loader_func(r.ptr(), buffer_size);
+	ERR_FAIL_COND_V(!image.is_valid(), ERR_PARSE_ERROR);
+
+	copy_internals_from(image);
+
+	return OK;
+}
+
+Error Image::load_jpg_from_buffer(const PoolVector<uint8_t> &p_array) {
+
+	int buffer_size = p_array.size();
+
+	ERR_FAIL_COND_V(buffer_size == 0, ERR_INVALID_PARAMETER);
+	ERR_FAIL_COND_V(!_jpg_mem_loader_func, ERR_INVALID_PARAMETER);
+
+	PoolVector<uint8_t>::Read r = p_array.read();
+
+	Ref<Image> image = _jpg_mem_loader_func(r.ptr(), buffer_size);
+	ERR_FAIL_COND_V(!image.is_valid(), ERR_PARSE_ERROR);
+
+	copy_internals_from(image);
+
+	return OK;
 }
 
 Image::Image(const uint8_t *p_mem_png_jpg, int p_len) {

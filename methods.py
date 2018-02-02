@@ -1274,6 +1274,8 @@ def detect_modules():
     for x in files:
         if (not os.path.isdir(x)):
             continue
+        if (not os.path.exists(x + "/config.py")):
+            continue
         x = x.replace("modules/", "")  # rest of world
         x = x.replace("modules\\", "")  # win32
         module_list.append(x)
@@ -1475,7 +1477,7 @@ def use_windows_spawn_fix(self, platform=None):
     self['SPAWN'] = mySpawn
 
 
-def split_lib(self, libname):
+def split_lib(self, libname, src_list = None, env_lib = None):
     import string
     env = self
 
@@ -1485,7 +1487,13 @@ def split_lib(self, libname):
     list = []
     lib_list = []
 
-    for f in getattr(env, libname + "_sources"):
+    if src_list == None:
+        src_list = getattr(env, libname + "_sources")
+
+    if type(env_lib) == type(None):
+        env_lib = env
+
+    for f in src_list:
         fname = ""
         if type(f) == type(""):
             fname = env.File(f).path
@@ -1495,26 +1503,26 @@ def split_lib(self, libname):
         base = string.join(fname.split("/")[:2], "/")
         if base != cur_base and len(list) > max_src:
             if num > 0:
-                lib = env.add_library(libname + str(num), list)
+                lib = env_lib.add_library(libname + str(num), list)
                 lib_list.append(lib)
                 list = []
             num = num + 1
         cur_base = base
         list.append(f)
 
-    lib = env.add_library(libname + str(num), list)
+    lib = env_lib.add_library(libname + str(num), list)
     lib_list.append(lib)
 
     if len(lib_list) > 0:
         import os, sys
         if os.name == 'posix' and sys.platform == 'msys':
             env.Replace(ARFLAGS=['rcsT'])
-            lib = env.add_library(libname + "_collated", lib_list)
+            lib = env_lib.add_library(libname + "_collated", lib_list)
             lib_list = [lib]
 
     lib_base = []
-    env.add_source_files(lib_base, "*.cpp")
-    lib = env.add_library(libname, lib_base)
+    env_lib.add_source_files(lib_base, "*.cpp")
+    lib = env_lib.add_library(libname, lib_base)
     lib_list.insert(0, lib)
 
     env.Prepend(LIBS=lib_list)
@@ -1547,18 +1555,26 @@ def save_active_platforms(apnames, ap):
 
 def no_verbose(sys, env):
 
-    # If the output is not a terminal, do nothing
-    if not sys.stdout.isatty():
-        return
-
     colors = {}
-    colors['cyan'] = '\033[96m'
-    colors['purple'] = '\033[95m'
-    colors['blue'] = '\033[94m'
-    colors['green'] = '\033[92m'
-    colors['yellow'] = '\033[93m'
-    colors['red'] = '\033[91m'
-    colors['end'] = '\033[0m'
+
+    # Colors are disabled in non-TTY environments such as pipes. This means
+    # that if output is redirected to a file, it will not contain color codes
+    if sys.stdout.isatty():
+        colors['cyan'] = '\033[96m'
+        colors['purple'] = '\033[95m'
+        colors['blue'] = '\033[94m'
+        colors['green'] = '\033[92m'
+        colors['yellow'] = '\033[93m'
+        colors['red'] = '\033[91m'
+        colors['end'] = '\033[0m'
+    else:
+        colors['cyan'] = ''
+        colors['purple'] = ''
+        colors['blue'] = ''
+        colors['green'] = ''
+        colors['yellow'] = ''
+        colors['red'] = ''
+        colors['end'] = ''
 
     compile_source_message = '%sCompiling %s==> %s$SOURCE%s' % (colors['blue'], colors['purple'], colors['yellow'], colors['end'])
     java_compile_source_message = '%sCompiling %s==> %s$SOURCE%s' % (colors['blue'], colors['purple'], colors['yellow'], colors['end'])
@@ -1588,10 +1604,10 @@ def detect_visual_c_compiler_version(tools_env):
     # and not scons setup environment (env)... so make sure you call the right environment on it or it will fail to detect
     # the proper vc version that will be called
 
-    # These is no flag to give to visual c compilers to set the architecture, ie scons bits argument (32,64,ARM etc)
+    # There is no flag to give to visual c compilers to set the architecture, ie scons bits argument (32,64,ARM etc)
     # There are many different cl.exe files that are run, and each one compiles & links to a different architecture
     # As far as I know, the only way to figure out what compiler will be run when Scons calls cl.exe via Program()
-    # is to check the PATH varaible and figure out which one will be called first. Code bellow does that and returns:
+    # is to check the PATH variable and figure out which one will be called first. Code bellow does that and returns:
     # the following string values:
 
     # ""              Compiler not detected
@@ -1755,16 +1771,16 @@ def precious_program(env, program, sources, **args):
     return program
 
 def add_shared_library(env, name, sources, **args):
-	library = env.SharedLibrary(name, sources, **args)
-	env.NoCache(library)
-	return library
+    library = env.SharedLibrary(name, sources, **args)
+    env.NoCache(library)
+    return library
 
 def add_library(env, name, sources, **args):
-	library = env.Library(name, sources, **args)
-	env.NoCache(library)
-	return library
+    library = env.Library(name, sources, **args)
+    env.NoCache(library)
+    return library
 
 def add_program(env, name, sources, **args):
-	program = env.Program(name, sources, **args)
-	env.NoCache(program)
-	return program
+    program = env.Program(name, sources, **args)
+    env.NoCache(program)
+    return program

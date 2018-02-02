@@ -1,0 +1,43 @@
+# SCsub
+Import('env')
+
+
+motion_sense_env = env.Clone()
+#http://dlib.net/compile.html
+thirdparty_dlib_dir = "#thirdparty/dlib/"
+thirdparty_dlib_srcs = [
+	"dlib/all/source.cpp"
+]
+
+thirdparty_eigen_dir = "#thirdparty/eigen3/"
+thirdparty_ukf_dir = "#thirdparty/ukf/"
+
+
+thirdparty_dlib_sources = [ thirdparty_dlib_dir + dir for dir in thirdparty_dlib_srcs ]
+
+
+thirdparty_system_path = [
+	"/usr/lib/x86_64-linux-gnu/",
+	"/usr/lib/",
+	"/lib/",
+	"/lib64/"
+]
+
+sources = [
+	"data_models.cpp",
+	"utils.cpp",
+	"facial_landmark_loader.cpp",
+	"facial_landmark.cpp",
+	"register_types.cpp"
+]
+
+thirdparty_include = [thirdparty_dlib_dir, thirdparty_ukf_dir + '/include', thirdparty_eigen_dir,thirdparty_eigen_dir+'Eigen'] 
+#motion_sense_env.Append(CCFLAGS=["-DDLIB_NO_GUI_SUPPORT=1", "-DUSE_AVX_INSTRUCTIONS=1" ])
+motion_sense_env.Append(CCFLAGS=["-DUSE_AVX_INSTRUCTIONS=1" ])
+motion_sense_env.Append(CPPPATH=[thirdparty_include]) 
+
+motion_sense_env.add_source_files(env.modules_sources,sources+thirdparty_dlib_sources)
+motion_sense_env.Append(LIBPATH=thirdparty_system_path) 
+
+motion_sense_env.Append(CXXFLAGS=['-O3', '-mavx', '-std=c++14'])
+

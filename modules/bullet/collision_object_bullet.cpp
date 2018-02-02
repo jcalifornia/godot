@@ -1,13 +1,12 @@
 /*************************************************************************/
 /*  collision_object_bullet.cpp                                          */
-/*  Author: AndreaCatania                                                */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
-/*                    http://www.godotengine.org                         */
+/*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -30,13 +29,19 @@
 /*************************************************************************/
 
 #include "collision_object_bullet.h"
+
 #include "area_bullet.h"
-#include "btBulletCollisionCommon.h"
 #include "bullet_physics_server.h"
 #include "bullet_types_converter.h"
 #include "bullet_utilities.h"
 #include "shape_bullet.h"
 #include "space_bullet.h"
+
+#include <btBulletCollisionCommon.h>
+
+/**
+	@author AndreaCatania
+*/
 
 #define enableDynamicAabbTree true
 #define initialChildCapacity 1
@@ -44,14 +49,23 @@
 CollisionObjectBullet::ShapeWrapper::~ShapeWrapper() {}
 
 void CollisionObjectBullet::ShapeWrapper::set_transform(const Transform &p_transform) {
+	G_TO_B(p_transform.get_basis().get_scale(), scale);
 	G_TO_B(p_transform, transform);
+	UNSCALE_BT_BASIS(transform);
 }
 void CollisionObjectBullet::ShapeWrapper::set_transform(const btTransform &p_transform) {
 	transform = p_transform;
 }
 
-CollisionObjectBullet::CollisionObjectBullet(Type p_type)
-	: RIDBullet(), space(NULL), type(p_type), collisionsEnabled(true), m_isStatic(false), bt_collision_object(NULL), body_scale(1., 1., 1.) {}
+CollisionObjectBullet::CollisionObjectBullet(Type p_type) :
+		RIDBullet(),
+		space(NULL),
+		type(p_type),
+		collisionsEnabled(true),
+		m_isStatic(false),
+		bt_collision_object(NULL),
+		body_scale(1., 1., 1.),
+		force_shape_reset(false) {}
 
 CollisionObjectBullet::~CollisionObjectBullet() {
 	// Remove all overlapping
@@ -70,12 +84,19 @@ bool equal(real_t first, real_t second) {
 
 void CollisionObjectBullet::set_body_scale(const Vector3 &p_new_scale) {
 	if (!equal(p_new_scale[0], body_scale[0]) || !equal(p_new_scale[1], body_scale[1]) || !equal(p_new_scale[2], body_scale[2])) {
-		G_TO_B(p_new_scale, body_scale);
+		body_scale = p_new_scale;
 		on_body_scale_changed();
 	}
 }
 
+btVector3 CollisionObjectBullet::get_bt_body_scale() const {
+	btVector3 s;
+	G_TO_B(body_scale, s);
+	return s;
+}
+
 void CollisionObjectBullet::on_body_scale_changed() {
+	force_shape_reset = true;
 }
 
 void CollisionObjectBullet::destroyBulletCollisionObject() {
@@ -139,21 +160,19 @@ int CollisionObjectBullet::get_godot_object_flags() const {
 
 void CollisionObjectBullet::set_transform(const Transform &p_global_transform) {
 
-	btTransform btTrans;
-	Basis decomposed_basis;
+	set_body_scale(p_global_transform.basis.get_scale());
 
-	Vector3 decomposed_scale = p_global_transform.get_basis().rotref_posscale_decomposition(decomposed_basis);
+	btTransform bt_transform;
+	G_TO_B(p_global_transform, bt_transform);
+	UNSCALE_BT_BASIS(bt_transform);
 
-	G_TO_B(p_global_transform.get_origin(), btTrans.getOrigin());
-	G_TO_B(decomposed_basis, btTrans.getBasis());
-
-	set_body_scale(decomposed_scale);
-	set_transform__bullet(btTrans);
+	set_transform__bullet(bt_transform);
 }
 
 Transform CollisionObjectBullet::get_transform() const {
 	Transform t;
 	B_TO_G(get_transform__bullet(), t);
+	t.basis.scale(body_scale);
 	return t;
 }
 
@@ -165,8 +184,9 @@ const btTransform &CollisionObjectBullet::get_transform__bullet() const {
 	return bt_collision_object->getWorldTransform();
 }
 
-RigidCollisionObjectBullet::RigidCollisionObjectBullet(Type p_type)
-	: CollisionObjectBullet(p_type), compoundShape(bulletnew(btCompoundShape(enableDynamicAabbTree, initialChildCapacity))) {
+RigidCollisionObjectBullet::RigidCollisionObjectBullet(Type p_type) :
+		CollisionObjectBullet(p_type),
+		compoundShape(bulletnew(btCompoundShape(enableDynamicAabbTree, initialChildCapacity))) {
 }
 
 RigidCollisionObjectBullet::~RigidCollisionObjectBullet() {
@@ -214,7 +234,7 @@ void RigidCollisionObjectBullet::set_shape_transform(int p_index, const Transfor
 	ERR_FAIL_INDEX(p_index, get_shape_count());
 
 	shapes[p_index].set_transform(p_transform);
-	on_shapes_changed();
+	on_shape_changed(shapes[p_index].shape);
 }
 
 void RigidCollisionObjectBullet::remove_shape(ShapeBullet *p_shape) {
@@ -275,27 +295,41 @@ void RigidCollisionObjectBullet::on_shape_changed(const ShapeBullet *const p_sha
 
 void RigidCollisionObjectBullet::on_shapes_changed() {
 	int i;
+
 	// Remove all shapes, reverse order for performance reason (Array resize)
 	for (i = compoundShape->getNumChildShapes() - 1; 0 <= i; --i) {
 		compoundShape->removeChildShapeByIndex(i);
 	}
 
-	// Insert all shapes
 	ShapeWrapper *shpWrapper;
-	const int size = shapes.size();
-	for (i = 0; i < size; ++i) {
+	const int shapes_size = shapes.size();
+
+	// Reset shape if required
+	if (force_shape_reset) {
+		for (i = 0; i < shapes_size; ++i) {
+			shpWrapper = &shapes[i];
+			bulletdelete(shpWrapper->bt_shape);
+		}
+		force_shape_reset = false;
+	}
+
+	// Insert all shapes
+	btVector3 body_scale(get_bt_body_scale());
+	for (i = 0; i < shapes_size; ++i) {
 		shpWrapper = &shapes[i];
 		if (shpWrapper->active) {
 			if (!shpWrapper->bt_shape) {
-				shpWrapper->bt_shape = shpWrapper->shape->create_bt_shape();
+				shpWrapper->bt_shape = shpWrapper->shape->create_bt_shape(shpWrapper->scale * body_scale);
 			}
-			compoundShape->addChildShape(shpWrapper->transform, shpWrapper->bt_shape);
+
+			btTransform scaled_shape_transform(shpWrapper->transform);
+			scaled_shape_transform.getOrigin() *= body_scale;
+			compoundShape->addChildShape(scaled_shape_transform, shpWrapper->bt_shape);
 		} else {
-			compoundShape->addChildShape(shpWrapper->transform, BulletPhysicsServer::get_empty_shape());
+			compoundShape->addChildShape(btTransform(), BulletPhysicsServer::get_empty_shape());
 		}
 	}
 
-	compoundShape->setLocalScaling(body_scale);
 	compoundShape->recalculateLocalAabb();
 }
 

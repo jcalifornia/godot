@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #ifndef FILESYSTEM_DOCK_H
 #define FILESYSTEM_DOCK_H
 
@@ -70,6 +71,7 @@ private:
 		FILE_MOVE,
 		FILE_RENAME,
 		FILE_REMOVE,
+		FILE_DUPLICATE,
 		FILE_REIMPORT,
 		FILE_INFO,
 		FILE_NEW_FOLDER,
@@ -120,6 +122,8 @@ private:
 	EditorDirDialog *move_dialog;
 	ConfirmationDialog *rename_dialog;
 	LineEdit *rename_dialog_text;
+	ConfirmationDialog *duplicate_dialog;
+	LineEdit *duplicate_dialog_text;
 	ConfirmationDialog *make_dir_dialog;
 	LineEdit *make_dir_dialog_text;
 
@@ -128,12 +132,15 @@ private:
 		String path;
 		bool is_file;
 
-		FileOrFolder()
-			: path(""), is_file(false) {}
-		FileOrFolder(const String &p_path, bool p_is_file)
-			: path(p_path), is_file(p_is_file) {}
+		FileOrFolder() :
+				path(""),
+				is_file(false) {}
+		FileOrFolder(const String &p_path, bool p_is_file) :
+				path(p_path),
+				is_file(p_is_file) {}
 	};
 	FileOrFolder to_rename;
+	FileOrFolder to_duplicate;
 	Vector<FileOrFolder> to_move;
 
 	Vector<String> history;
@@ -170,10 +177,13 @@ private:
 	void _get_all_files_in_dir(EditorFileSystemDirectory *efsd, Vector<String> &files) const;
 	void _find_remaps(EditorFileSystemDirectory *efsd, const Map<String, String> &renames, Vector<String> &to_remaps) const;
 	void _try_move_item(const FileOrFolder &p_item, const String &p_new_path, Map<String, String> &p_renames) const;
+	void _try_duplicate_item(const FileOrFolder &p_item, const String &p_new_path) const;
 	void _update_dependencies_after_move(const Map<String, String> &p_renames) const;
+	void _update_resource_paths_after_move(const Map<String, String> &p_renames) const;
 
 	void _make_dir_confirm();
 	void _rename_operation_confirm();
+	void _duplicate_operation_confirm();
 	void _move_operation_confirm(const String &p_to_path);
 
 	void _file_option(int p_option);

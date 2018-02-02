@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #ifndef SCRIPT_EDITOR_PLUGIN_H
 #define SCRIPT_EDITOR_PLUGIN_H
 
@@ -137,6 +138,8 @@ class ScriptEditor : public PanelContainer {
 		CLOSE_ALL,
 		CLOSE_OTHER_TABS,
 		TOGGLE_SCRIPTS_PANEL,
+		SHOW_IN_FILE_SYSTEM,
+		FILE_COPY_PATH,
 		FILE_TOOL_RELOAD,
 		FILE_TOOL_RELOAD_SOFT,
 		DEBUG_NEXT,
@@ -255,6 +258,8 @@ class ScriptEditor : public PanelContainer {
 	void _close_other_tabs();
 	void _close_all_tabs();
 
+	void _copy_script_path();
+
 	void _ask_close_current_unsaved_tab(ScriptEditorBase *current);
 
 	bool grab_focus_block;
@@ -357,6 +362,7 @@ public:
 
 	void ensure_focus_current();
 	void apply_scripts() const;
+	void open_script_create_dialog(const String &p_base_name, const String &p_base_path);
 
 	void ensure_select_current();
 

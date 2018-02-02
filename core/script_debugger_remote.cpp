@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "script_debugger_remote.h"
 
 #include "engine.h"
@@ -67,17 +68,20 @@ Error ScriptDebuggerRemote::connect_to_host(const String &p_host, uint16_t p_por
 
 	int port = p_port;
 
-	int tries = 3;
+	const int tries = 6;
+	int waits[tries] = { 1, 10, 100, 1000, 1000, 1000 };
+
 	tcp_client->connect_to_host(ip, port);
 
-	while (tries--) {
+	for (int i = 0; i < tries; i++) {
 
 		if (tcp_client->get_status() == StreamPeerTCP::STATUS_CONNECTED) {
 			break;
 		} else {
 
-			OS::get_singleton()->delay_usec(1000000);
-			print_line("Remote Debugger: Connection failed with status: '" + String::num(tcp_client->get_status()) + "', retrying in 1 sec.");
+			const int ms = waits[i];
+			OS::get_singleton()->delay_usec(ms * 1000);
+			print_line("Remote Debugger: Connection failed with status: '" + String::num(tcp_client->get_status()) + "', retrying in " + String::num(ms) + " msec.");
 		};
 	};
 
@@ -126,15 +130,21 @@ static ObjectID safe_get_instance_id(const Variant &p_v) {
 void ScriptDebuggerRemote::_put_variable(const String &p_name, const Variant &p_variable) {
 
 	packet_peer_stream->put_var(p_name);
+
+	Variant var = p_variable;
+	if (p_variable.get_type() == Variant::OBJECT && !ObjectDB::instance_validate(p_variable)) {
+		var = Variant();
+	}
+
 	int len = 0;
-	Error err = encode_variant(p_variable, NULL, len);
+	Error err = encode_variant(var, NULL, len);
 	if (err != OK)
 		ERR_PRINT("Failed to encode variant");
 
 	if (len > packet_peer_stream->get_output_buffer_max_size()) { //limit to max size
 		packet_peer_stream->put_var(Variant());
 	} else {
-		packet_peer_stream->put_var(p_variable);
+		packet_peer_stream->put_var(var);
 	}
 }
 
@@ -345,6 +355,13 @@ void ScriptDebuggerRemote::_get_output() {
 		locking = false;
 	}
 
+	if (n_messages_dropped > 0) {
+		Message msg;
+		msg.message = "Too many messages! " + String::num_int64(n_messages_dropped) + " messages were dropped.";
+		messages.push_back(msg);
+		n_messages_dropped = 0;
+	}
+
 	while (messages.size()) {
 		locking = true;
 		packet_peer_stream->put_var("message:" + messages.front()->get().message);
@@ -354,6 +371,20 @@ void ScriptDebuggerRemote::_get_output() {
 		}
 		messages.pop_front();
 		locking = false;
+	}
+
+	if (n_errors_dropped > 0) {
+		OutputError oe;
+		oe.error = "TOO_MANY_ERRORS";
+		oe.error_descr = "Too many errors! " + String::num_int64(n_errors_dropped) + " errors were dropped.";
+		oe.warning = false;
+		uint64_t time = OS::get_singleton()->get_ticks_msec();
+		oe.hr = time / 3600000;
+		oe.min = (time / 60000) % 60;
+		oe.sec = (time / 1000) % 60;
+		oe.msec = time % 1000;
+		errors.push_back(oe);
+		n_errors_dropped = 0;
 	}
 
 	while (errors.size()) {
@@ -401,22 +432,6 @@ void ScriptDebuggerRemote::_err_handler(void *ud, const char *p_func, const char
 	if (p_type == ERR_HANDLER_SCRIPT)
 		return; //ignore script errors, those go through debugger
 
-	ScriptDebuggerRemote *sdr = (ScriptDebuggerRemote *)ud;
-
-	OutputError oe;
-	oe.error = p_err;
-	oe.error_descr = p_descr;
-	oe.source_file = p_file;
-	oe.source_line = p_line;
-	oe.source_func = p_func;
-	oe.warning = p_type == ERR_HANDLER_WARNING;
-	uint64_t time = OS::get_singleton()->get_ticks_msec();
-	oe.hr = time / 3600000;
-	oe.min = (time / 60000) % 60;
-	oe.sec = (time / 1000) % 60;
-	oe.msec = time % 1000;
-	Array cstack;
-
 	Vector<ScriptLanguage::StackInfo> si;
 
 	for (int i = 0; i < ScriptServer::get_language_count(); i++) {
@@ -425,28 +440,8 @@ void ScriptDebuggerRemote::_err_handler(void *ud, const char *p_func, const char
 			break;
 	}
 
-	cstack.resize(si.size() * 2);
-	for (int i = 0; i < si.size(); i++) {
-		String path;
-		int line = 0;
-		if (si[i].script.is_valid()) {
-			path = si[i].script->get_path();
-			line = si[i].line;
-		}
-		cstack[i * 2 + 0] = path;
-		cstack[i * 2 + 1] = line;
-	}
-
-	oe.callstack = cstack;
-
-	sdr->mutex->lock();
-
-	if (!sdr->locking && sdr->tcp_client->is_connected_to_host()) {
-
-		sdr->errors.push_back(oe);
-	}
-
-	sdr->mutex->unlock();
+	ScriptDebuggerRemote *sdr = (ScriptDebuggerRemote *)ud;
+	sdr->send_error(p_func, p_file, p_line, p_err, p_descr, p_type, si);
 }
 
 bool ScriptDebuggerRemote::_parse_live_edit(const Array &p_command) {
@@ -603,7 +598,13 @@ void ScriptDebuggerRemote::_send_object_id(ObjectID p_id) {
 	Array send_props;
 	for (int i = 0; i < properties.size(); i++) {
 		const PropertyInfo &pi = properties[i].first;
-		const Variant &var = properties[i].second;
+		Variant &var = properties[i].second;
+
+		WeakRef *ref = Object::cast_to<WeakRef>(var);
+		if (ref) {
+			var = ref->get_ref();
+		}
+
 		RES res = var;
 
 		Array prop;
@@ -881,11 +882,54 @@ void ScriptDebuggerRemote::send_message(const String &p_message, const Array &p_
 	mutex->lock();
 	if (!locking && tcp_client->is_connected_to_host()) {
 
-		Message msg;
-		msg.message = p_message;
-		msg.data = p_args;
-		messages.push_back(msg);
+		if (messages.size() >= max_messages_per_frame) {
+			n_messages_dropped++;
+		} else {
+			Message msg;
+			msg.message = p_message;
+			msg.data = p_args;
+			messages.push_back(msg);
+		}
 	}
+	mutex->unlock();
+}
+
+void ScriptDebuggerRemote::send_error(const String &p_func, const String &p_file, int p_line, const String &p_err, const String &p_descr, ErrorHandlerType p_type, const Vector<ScriptLanguage::StackInfo> &p_stack_info) {
+
+	OutputError oe;
+	oe.error = p_err;
+	oe.error_descr = p_descr;
+	oe.source_file = p_file;
+	oe.source_line = p_line;
+	oe.source_func = p_func;
+	oe.warning = p_type == ERR_HANDLER_WARNING;
+	uint64_t time = OS::get_singleton()->get_ticks_msec();
+	oe.hr = time / 3600000;
+	oe.min = (time / 60000) % 60;
+	oe.sec = (time / 1000) % 60;
+	oe.msec = time % 1000;
+	Array cstack;
+
+	cstack.resize(p_stack_info.size() * 3);
+	for (int i = 0; i < p_stack_info.size(); i++) {
+		cstack[i * 3 + 0] = p_stack_info[i].file;
+		cstack[i * 3 + 1] = p_stack_info[i].func;
+		cstack[i * 3 + 2] = p_stack_info[i].line;
+	}
+
+	oe.callstack = cstack;
+
+	mutex->lock();
+
+	if (!locking && tcp_client->is_connected_to_host()) {
+
+		if (errors.size() >= max_errors_per_frame) {
+			n_errors_dropped++;
+		} else {
+			errors.push_back(oe);
+		}
+	}
+
 	mutex->unlock();
 }
 
@@ -989,25 +1033,29 @@ void ScriptDebuggerRemote::profiling_set_frame_times(float p_frame_time, float p
 
 ScriptDebuggerRemote::ResourceUsageFunc ScriptDebuggerRemote::resource_usage_func = NULL;
 
-ScriptDebuggerRemote::ScriptDebuggerRemote()
-	: profiling(false),
-	  max_frame_functions(16),
-	  skip_profile_frame(false),
-	  reload_all_scripts(false),
-	  tcp_client(StreamPeerTCP::create_ref()),
-	  packet_peer_stream(Ref<PacketPeerStream>(memnew(PacketPeerStream))),
-	  last_perf_time(0),
-	  performance(Engine::get_singleton()->get_singleton_object("Performance")),
-	  requested_quit(false),
-	  mutex(Mutex::create()),
-	  max_cps(GLOBAL_GET("network/limits/debugger_stdout/max_chars_per_second")),
-	  char_count(0),
-	  last_msec(0),
-	  msec_count(0),
-	  locking(false),
-	  poll_every(0),
-	  request_scene_tree(NULL),
-	  live_edit_funcs(NULL) {
+ScriptDebuggerRemote::ScriptDebuggerRemote() :
+		profiling(false),
+		max_frame_functions(16),
+		skip_profile_frame(false),
+		reload_all_scripts(false),
+		tcp_client(StreamPeerTCP::create_ref()),
+		packet_peer_stream(Ref<PacketPeerStream>(memnew(PacketPeerStream))),
+		last_perf_time(0),
+		performance(Engine::get_singleton()->get_singleton_object("Performance")),
+		requested_quit(false),
+		mutex(Mutex::create()),
+		max_cps(GLOBAL_GET("network/limits/debugger_stdout/max_chars_per_second")),
+		max_messages_per_frame(GLOBAL_GET("network/limits/debugger_stdout/max_messages_per_frame")),
+		max_errors_per_frame(GLOBAL_GET("network/limits/debugger_stdout/max_errors_per_frame")),
+		char_count(0),
+		n_messages_dropped(0),
+		n_errors_dropped(0),
+		last_msec(0),
+		msec_count(0),
+		locking(false),
+		poll_every(0),
+		request_scene_tree(NULL),
+		live_edit_funcs(NULL) {
 
 	packet_peer_stream->set_stream_peer(tcp_client);
 	packet_peer_stream->set_output_buffer_max_size(1024 * 1024 * 8); //8mb should be way more than enough

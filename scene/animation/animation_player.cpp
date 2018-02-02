@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "animation_player.h"
 
 #include "engine.h"
@@ -48,24 +49,15 @@ bool AnimationPlayer::_set(const StringName &p_name, const Variant &p_value) {
 
 	String name = p_name;
 
-	if (p_name == SceneStringNames::get_singleton()->playback_speed || p_name == SceneStringNames::get_singleton()->speed) { //bw compatibility
-		set_speed_scale(p_value);
+	if (name.begins_with("playback/play")) { // bw compatibility
 
-	} else if (p_name == SceneStringNames::get_singleton()->playback_active) {
-		set_active(p_value);
-	} else if (name.begins_with("playback/play")) {
+		set_current_animation(p_value);
 
-		String which = p_value;
-
-		if (which == "[stop]")
-			stop();
-		else
-			play(which);
 	} else if (name.begins_with("anims/")) {
 
 		String which = name.get_slicec('/', 1);
-
 		add_animation(which, p_value);
+
 	} else if (name.begins_with("next/")) {
 
 		String which = name.get_slicec('/', 1);
@@ -86,9 +78,6 @@ bool AnimationPlayer::_set(const StringName &p_name, const Variant &p_value) {
 			set_blend_time(from, to, time);
 		}
 
-	} else if (p_name == SceneStringNames::get_singleton()->autoplay) {
-		autoplay = p_value;
-
 	} else
 		return false;
 
@@ -99,24 +88,15 @@ bool AnimationPlayer::_get(const StringName &p_name, Variant &r_ret) const {
 
 	String name = p_name;
 
-	if (name == "playback/speed") { //bw compatibility
+	if (name == "playback/play") { // bw compatibility
 
-		r_ret = speed_scale;
-	} else if (name == "playback/active") {
-
-		r_ret = is_active();
-	} else if (name == "playback/play") {
-
-		if (is_active() && is_playing())
-			r_ret = playback.assigned;
-		else
-			r_ret = "[stop]";
+		r_ret = get_current_animation();
 
 	} else if (name.begins_with("anims/")) {
 
 		String which = name.get_slicec('/', 1);
-
 		r_ret = get_animation(which).get_ref_ptr();
+
 	} else if (name.begins_with("next/")) {
 
 		String which = name.get_slicec('/', 1);
@@ -140,36 +120,20 @@ bool AnimationPlayer::_get(const StringName &p_name, Variant &r_ret) const {
 		}
 
 		r_ret = array;
-	} else if (name == "autoplay") {
-		r_ret = autoplay;
-
 	} else
 		return false;
 
 	return true;
 }
 
-void AnimationPlayer::_get_property_list(List<PropertyInfo> *p_list) const {
+void AnimationPlayer::_validate_property(PropertyInfo &property) const {
 
-	List<String> names;
+	if (property.name == "current_animation") {
+		List<String> names;
 
-	List<PropertyInfo> anim_names;
-
-	for (Map<StringName, AnimationData>::Element *E = animation_set.front(); E; E = E->next()) {
-
-		anim_names.push_back(PropertyInfo(Variant::OBJECT, "anims/" + String(E->key()), PROPERTY_HINT_RESOURCE_TYPE, "Animation", PROPERTY_USAGE_NOEDITOR));
-		if (E->get().next != StringName())
-			anim_names.push_back(PropertyInfo(Variant::STRING, "next/" + String(E->key()), PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR));
-		names.push_back(E->key());
-	}
-
-	anim_names.sort();
-
-	for (List<PropertyInfo>::Element *E = anim_names.front(); E; E = E->next()) {
-		p_list->push_back(E->get());
-	}
-
-	{
+		for (Map<StringName, AnimationData>::Element *E = animation_set.front(); E; E = E->next()) {
+			names.push_back(E->key());
+		}
 		names.sort();
 		names.push_front("[stop]");
 		String hint;
@@ -180,13 +144,28 @@ void AnimationPlayer::_get_property_list(List<PropertyInfo> *p_list) const {
 			hint += E->get();
 		}
 
-		p_list->push_back(PropertyInfo(Variant::STRING, "playback/play", PROPERTY_HINT_ENUM, hint, PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_ANIMATE_AS_TRIGGER));
-		p_list->push_back(PropertyInfo(Variant::BOOL, "playback/active", PROPERTY_HINT_NONE, ""));
-		p_list->push_back(PropertyInfo(Variant::REAL, "playback/speed", PROPERTY_HINT_RANGE, "-64,64,0.01"));
+		property.hint_string = hint;
+	}
+}
+
+void AnimationPlayer::_get_property_list(List<PropertyInfo> *p_list) const {
+
+	List<PropertyInfo> anim_names;
+
+	for (Map<StringName, AnimationData>::Element *E = animation_set.front(); E; E = E->next()) {
+
+		anim_names.push_back(PropertyInfo(Variant::OBJECT, "anims/" + String(E->key()), PROPERTY_HINT_RESOURCE_TYPE, "Animation", PROPERTY_USAGE_NOEDITOR | PROPERTY_USAGE_INTERNAL | PROPERTY_USAGE_DO_NOT_SHARE_ON_DUPLICATE));
+		if (E->get().next != StringName())
+			anim_names.push_back(PropertyInfo(Variant::STRING, "next/" + String(E->key()), PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR | PROPERTY_USAGE_INTERNAL));
 	}
 
-	p_list->push_back(PropertyInfo(Variant::ARRAY, "blend_times", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR));
-	p_list->push_back(PropertyInfo(Variant::STRING, "autoplay", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR));
+	anim_names.sort();
+
+	for (List<PropertyInfo>::Element *E = anim_names.front(); E; E = E->next()) {
+		p_list->push_back(E->get());
+	}
+
+	p_list->push_back(PropertyInfo(Variant::ARRAY, "blend_times", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR | PROPERTY_USAGE_INTERNAL));
 }
 
 void AnimationPlayer::advance(float p_time) {
@@ -233,7 +212,6 @@ void AnimationPlayer::_notification(int p_what) {
 		} break;
 		case NOTIFICATION_EXIT_TREE: {
 
-			//stop_all();
 			clear_caches();
 		} break;
 	}
@@ -276,8 +254,8 @@ void AnimationPlayer::_ensure_node_caches(AnimationData *p_anim) {
 		}
 
 		{
-			if (!child->is_connected("tree_exited", this, "_node_removed"))
-				child->connect("tree_exited", this, "_node_removed", make_binds(child), CONNECT_ONESHOT);
+			if (!child->is_connected("tree_exiting", this, "_node_removed"))
+				child->connect("tree_exiting", this, "_node_removed", make_binds(child), CONNECT_ONESHOT);
 		}
 
 		TrackNodeCacheKey key;
@@ -363,6 +341,9 @@ void AnimationPlayer::_animation_process_animation(AnimationData *p_anim, float 
 
 		if (!nc) // no node cache for this track, skip it
 			continue;
+
+		if (!a->track_is_enabled(i))
+			continue; // do nothing if the track is disabled
 
 		if (a->track_get_key_count(i) == 0)
 			continue; // do nothing if track is empty
@@ -545,12 +526,14 @@ void AnimationPlayer::_animation_process_data(PlaybackData &cd, float p_delta, f
 
 			if (!backwards && cd.pos <= len && next_pos == len /*&& playback.blend.empty()*/) {
 				//playback finished
-				end_notify = true;
+				end_reached = true;
+				end_notify = cd.pos < len; // Notify only if not already at the end
 			}
 
 			if (backwards && cd.pos >= 0 && next_pos == 0 /*&& playback.blend.empty()*/) {
 				//playback finished
-				end_notify = true;
+				end_reached = true;
+				end_notify = cd.pos > 0; // Notify only if not already at the beginning
 			}
 		}
 
@@ -677,24 +660,26 @@ void AnimationPlayer::_animation_process(float p_delta) {
 
 	if (playback.current.from) {
 
+		end_reached = false;
 		end_notify = false;
 		_animation_process2(p_delta);
 		_animation_update_transforms();
-		if (end_notify) {
+		if (end_reached) {
 			if (queued.size()) {
 				String old = playback.assigned;
 				play(queued.front()->get());
 				String new_name = playback.assigned;
 				queued.pop_front();
-				end_notify = false;
-				emit_signal(SceneStringNames::get_singleton()->animation_changed, old, new_name);
+				if (end_notify)
+					emit_signal(SceneStringNames::get_singleton()->animation_changed, old, new_name);
 			} else {
 				//stop();
 				playing = false;
 				_set_process(false);
-				end_notify = false;
-				emit_signal(SceneStringNames::get_singleton()->animation_finished, playback.assigned);
+				if (end_notify)
+					emit_signal(SceneStringNames::get_singleton()->animation_finished, playback.assigned);
 			}
+			end_reached = false;
 		}
 
 	} else {
@@ -735,7 +720,7 @@ void AnimationPlayer::remove_animation(const StringName &p_name) {
 
 	ERR_FAIL_COND(!animation_set.has(p_name));
 
-	stop_all();
+	stop();
 	_unref_anim(animation_set[p_name].animation);
 	animation_set.erase(p_name);
 
@@ -772,9 +757,7 @@ void AnimationPlayer::rename_animation(const StringName &p_name, const StringNam
 	ERR_FAIL_COND(String(p_new_name).find("/") != -1 || String(p_new_name).find(":") != -1);
 	ERR_FAIL_COND(animation_set.has(p_new_name));
 
-	//print_line("Rename anim: "+String(p_name)+" name: "+String(p_new_name));
-
-	stop_all();
+	stop();
 	AnimationData ad = animation_set[p_name];
 	ad.name = p_new_name;
 	animation_set.erase(p_name);
@@ -954,7 +937,7 @@ void AnimationPlayer::play(const StringName &p_name, float p_custom_blend, float
 	c.current.speed_scale = p_custom_scale;
 	c.assigned = p_name;
 
-	if (!end_notify)
+	if (!end_reached)
 		queued.clear();
 	_set_process(true); // always process when starting an animation
 	playing = true;
@@ -985,9 +968,26 @@ bool AnimationPlayer::is_playing() const {
 	};
 
 	return true;
-    */
+	*/
 }
+
 void AnimationPlayer::set_current_animation(const String &p_anim) {
+
+	if (p_anim == "[stop]" || p_anim == "") {
+		stop();
+	} else if (!is_playing() || playback.assigned != p_anim) {
+		play(p_anim);
+	} else {
+		// Same animation, do not replay from start
+	}
+}
+
+String AnimationPlayer::get_current_animation() const {
+
+	return (is_playing() ? playback.assigned : "");
+}
+
+void AnimationPlayer::set_assigned_animation(const String &p_anim) {
 
 	if (is_playing()) {
 		play(p_anim);
@@ -999,9 +999,9 @@ void AnimationPlayer::set_current_animation(const String &p_anim) {
 	}
 }
 
-String AnimationPlayer::get_current_animation() const {
+String AnimationPlayer::get_assigned_animation() const {
 
-	return (playback.assigned);
+	return playback.assigned;
 }
 
 void AnimationPlayer::stop(bool p_reset) {
@@ -1016,13 +1016,6 @@ void AnimationPlayer::stop(bool p_reset) {
 	playing = false;
 }
 
-void AnimationPlayer::stop_all() {
-
-	stop();
-
-	_set_process(false); // always process when starting an animation
-}
-
 void AnimationPlayer::set_speed_scale(float p_speed) {
 
 	speed_scale = p_speed;
@@ -1035,8 +1028,10 @@ float AnimationPlayer::get_speed_scale() const {
 void AnimationPlayer::seek(float p_time, bool p_update) {
 
 	if (!playback.current.from) {
-		if (playback.assigned)
-			set_current_animation(playback.assigned);
+		if (playback.assigned) {
+			ERR_FAIL_COND(!animation_set.has(playback.assigned));
+			playback.current.from = &animation_set[playback.assigned];
+		}
 		ERR_FAIL_COND(!playback.current.from);
 	}
 
@@ -1049,8 +1044,10 @@ void AnimationPlayer::seek(float p_time, bool p_update) {
 void AnimationPlayer::seek_delta(float p_time, float p_delta) {
 
 	if (!playback.current.from) {
-		if (playback.assigned)
-			set_current_animation(playback.assigned);
+		if (playback.assigned) {
+			ERR_FAIL_COND(!animation_set.has(playback.assigned));
+			playback.current.from = &animation_set[playback.assigned];
+		}
 		ERR_FAIL_COND(!playback.current.from);
 	}
 
@@ -1304,10 +1301,12 @@ void AnimationPlayer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("play", "name", "custom_blend", "custom_speed", "from_end"), &AnimationPlayer::play, DEFVAL(""), DEFVAL(-1), DEFVAL(1.0), DEFVAL(false));
 	ClassDB::bind_method(D_METHOD("play_backwards", "name", "custom_blend"), &AnimationPlayer::play_backwards, DEFVAL(""), DEFVAL(-1));
 	ClassDB::bind_method(D_METHOD("stop", "reset"), &AnimationPlayer::stop, DEFVAL(true));
-	ClassDB::bind_method(D_METHOD("stop_all"), &AnimationPlayer::stop_all);
 	ClassDB::bind_method(D_METHOD("is_playing"), &AnimationPlayer::is_playing);
+
 	ClassDB::bind_method(D_METHOD("set_current_animation", "anim"), &AnimationPlayer::set_current_animation);
 	ClassDB::bind_method(D_METHOD("get_current_animation"), &AnimationPlayer::get_current_animation);
+	ClassDB::bind_method(D_METHOD("set_assigned_animation", "anim"), &AnimationPlayer::set_assigned_animation);
+	ClassDB::bind_method(D_METHOD("get_assigned_animation"), &AnimationPlayer::get_assigned_animation);
 	ClassDB::bind_method(D_METHOD("queue", "name"), &AnimationPlayer::queue);
 	ClassDB::bind_method(D_METHOD("clear_queue"), &AnimationPlayer::clear_queue);
 
@@ -1323,9 +1322,6 @@ void AnimationPlayer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_root", "path"), &AnimationPlayer::set_root);
 	ClassDB::bind_method(D_METHOD("get_root"), &AnimationPlayer::get_root);
 
-	ClassDB::bind_method(D_METHOD("seek", "seconds", "update"), &AnimationPlayer::seek, DEFVAL(false));
-	ClassDB::bind_method(D_METHOD("get_position"), &AnimationPlayer::get_current_animation_position);
-
 	ClassDB::bind_method(D_METHOD("find_animation", "animation"), &AnimationPlayer::find_animation);
 
 	ClassDB::bind_method(D_METHOD("clear_caches"), &AnimationPlayer::clear_caches);
@@ -1336,16 +1332,25 @@ void AnimationPlayer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_current_animation_position"), &AnimationPlayer::get_current_animation_position);
 	ClassDB::bind_method(D_METHOD("get_current_animation_length"), &AnimationPlayer::get_current_animation_length);
 
+	ClassDB::bind_method(D_METHOD("seek", "seconds", "update"), &AnimationPlayer::seek, DEFVAL(false));
 	ClassDB::bind_method(D_METHOD("advance", "delta"), &AnimationPlayer::advance);
+
+	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "root_node"), "set_root", "get_root");
+	ADD_PROPERTY(PropertyInfo(Variant::STRING, "current_animation", PROPERTY_HINT_ENUM, "", PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_ANIMATE_AS_TRIGGER), "set_current_animation", "get_current_animation");
+	ADD_PROPERTY(PropertyInfo(Variant::STRING, "assigned_animation", PROPERTY_HINT_NONE, "", 0), "set_assigned_animation", "get_assigned_animation");
+	ADD_PROPERTY(PropertyInfo(Variant::STRING, "autoplay", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR), "set_autoplay", "get_autoplay");
+	ADD_PROPERTY(PropertyInfo(Variant::REAL, "current_animation_length", PROPERTY_HINT_NONE, "", 0), "", "get_current_animation_length");
+	ADD_PROPERTY(PropertyInfo(Variant::REAL, "current_animation_position", PROPERTY_HINT_NONE, "", 0), "", "get_current_animation_position");
 
 	ADD_GROUP("Playback Options", "playback_");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "playback_process_mode", PROPERTY_HINT_ENUM, "Physics,Idle"), "set_animation_process_mode", "get_animation_process_mode");
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "playback_default_blend_time", PROPERTY_HINT_RANGE, "0,4096,0.01"), "set_default_blend_time", "get_default_blend_time");
-	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "root_node"), "set_root", "get_root");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "playback_active", PROPERTY_HINT_NONE, "", 0), "set_active", "is_active");
+	ADD_PROPERTY(PropertyInfo(Variant::REAL, "playback_speed", PROPERTY_HINT_RANGE, "-64,64,0.01"), "set_speed_scale", "get_speed_scale");
 
-	ADD_SIGNAL(MethodInfo("animation_finished", PropertyInfo(Variant::STRING, "name")));
+	ADD_SIGNAL(MethodInfo("animation_finished", PropertyInfo(Variant::STRING, "anim_name")));
 	ADD_SIGNAL(MethodInfo("animation_changed", PropertyInfo(Variant::STRING, "old_name"), PropertyInfo(Variant::STRING, "new_name")));
-	ADD_SIGNAL(MethodInfo("animation_started", PropertyInfo(Variant::STRING, "name")));
+	ADD_SIGNAL(MethodInfo("animation_started", PropertyInfo(Variant::STRING, "anim_name")));
 
 	BIND_ENUM_CONSTANT(ANIMATION_PROCESS_PHYSICS);
 	BIND_ENUM_CONSTANT(ANIMATION_PROCESS_IDLE);
@@ -1357,6 +1362,7 @@ AnimationPlayer::AnimationPlayer() {
 	cache_update_size = 0;
 	cache_update_prop_size = 0;
 	speed_scale = 1;
+	end_reached = false;
 	end_notify = false;
 	animation_process_mode = ANIMATION_PROCESS_IDLE;
 	processing = false;

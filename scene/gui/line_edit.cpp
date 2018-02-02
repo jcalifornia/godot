@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "line_edit.h"
 #include "label.h"
 #include "os/keyboard.h"
@@ -85,7 +86,7 @@ void LineEdit::_gui_input(Ref<InputEvent> p_event) {
 
 				if ((cursor_pos < selection.begin) || (cursor_pos > selection.end) || !selection.enabled) {
 
-					selection_clear();
+					deselect();
 					selection.cursor_start = cursor_pos;
 					selection.creating = true;
 				} else if (selection.enabled) {
@@ -99,7 +100,7 @@ void LineEdit::_gui_input(Ref<InputEvent> p_event) {
 		} else {
 
 			if ((!selection.creating) && (!selection.doubleclick)) {
-				selection_clear();
+				deselect();
 			}
 			selection.creating = false;
 			selection.doubleclick = false;
@@ -175,7 +176,7 @@ void LineEdit::_gui_input(Ref<InputEvent> p_event) {
 
 					if (editable) {
 
-						selection_clear();
+						deselect();
 						text = text.substr(cursor_pos, text.length() - cursor_pos);
 
 						Ref<Font> font = get_font("font");
@@ -204,7 +205,7 @@ void LineEdit::_gui_input(Ref<InputEvent> p_event) {
 
 					if (editable) {
 
-						selection_clear();
+						deselect();
 						text = text.substr(0, cursor_pos);
 						_text_changed();
 					}
@@ -367,6 +368,18 @@ void LineEdit::_gui_input(Ref<InputEvent> p_event) {
 
 					shift_selection_check_post(k->get_shift());
 
+				} break;
+				case KEY_UP: {
+
+					shift_selection_check_pre(k->get_shift());
+					set_cursor_position(0);
+					shift_selection_check_post(k->get_shift());
+				} break;
+				case KEY_DOWN: {
+
+					shift_selection_check_pre(k->get_shift());
+					set_cursor_position(text.length());
+					shift_selection_check_post(k->get_shift());
 				} break;
 				case KEY_DELETE: {
 
@@ -827,7 +840,7 @@ void LineEdit::shift_selection_check_pre(bool p_shift) {
 		selection.cursor_start = cursor_pos;
 	}
 	if (!p_shift)
-		selection_clear();
+		deselect();
 }
 
 void LineEdit::shift_selection_check_post(bool p_shift) {
@@ -880,13 +893,6 @@ void LineEdit::set_cursor_at_pixel_pos(int p_x) {
 	}
 
 	set_cursor_position(ofs);
-
-	/*
-	int new_cursor_pos=p_x;
-	int charwidth=draw_area->get_font_char_width(' ',0);
-	new_cursor_pos=( ( (new_cursor_pos-2)+ (charwidth/2) ) /charwidth );
-	if (new_cursor_pos>(int)text.length()) new_cursor_pos=text.length();
-	set_cursor_position(window_pos+new_cursor_pos); */
 }
 
 bool LineEdit::cursor_get_blink_enabled() const {
@@ -940,11 +946,6 @@ void LineEdit::delete_char() {
 	text.erase(cursor_pos - 1, 1);
 
 	set_cursor_position(get_cursor_position() - 1);
-
-	if (cursor_pos == window_pos) {
-
-		//set_window_pos(cursor_pos-get_window_length());
-	}
 
 	_text_changed();
 }
@@ -1046,6 +1047,10 @@ void LineEdit::set_cursor_position(int p_pos) {
 	} else if (cursor_pos > window_pos) {
 		/* Adjust window if cursor goes too much to the right */
 		int window_width = get_size().width - style->get_minimum_size().width;
+		if (has_icon("right_icon")) {
+			Ref<Texture> r_icon = Control::get_icon("right_icon");
+			window_width -= r_icon->get_width();
+		}
 
 		if (window_width < 0)
 			return;
@@ -1139,7 +1144,7 @@ Size2 LineEdit::get_minimum_size() const {
 
 /* selection */
 
-void LineEdit::selection_clear() {
+void LineEdit::deselect() {
 
 	selection.begin = 0;
 	selection.end = 0;
@@ -1155,7 +1160,7 @@ void LineEdit::selection_delete() {
 	if (selection.enabled)
 		delete_text(selection.begin, selection.end);
 
-	selection_clear();
+	deselect();
 }
 
 void LineEdit::set_max_length(int p_max_length) {
@@ -1220,7 +1225,7 @@ bool LineEdit::is_secret() const {
 void LineEdit::select(int p_from, int p_to) {
 
 	if (p_from == 0 && p_to == 0) {
-		selection_clear();
+		deselect();
 		return;
 	}
 
@@ -1379,7 +1384,9 @@ void LineEdit::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("_gui_input"), &LineEdit::_gui_input);
 	ClassDB::bind_method(D_METHOD("clear"), &LineEdit::clear);
+	ClassDB::bind_method(D_METHOD("select", "from", "to"), &LineEdit::select, DEFVAL(0), DEFVAL(-1));
 	ClassDB::bind_method(D_METHOD("select_all"), &LineEdit::select_all);
+	ClassDB::bind_method(D_METHOD("deselect"), &LineEdit::deselect);
 	ClassDB::bind_method(D_METHOD("set_text", "text"), &LineEdit::set_text);
 	ClassDB::bind_method(D_METHOD("get_text"), &LineEdit::get_text);
 	ClassDB::bind_method(D_METHOD("set_placeholder", "text"), &LineEdit::set_placeholder);
@@ -1401,14 +1408,13 @@ void LineEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_editable"), &LineEdit::is_editable);
 	ClassDB::bind_method(D_METHOD("set_secret", "enabled"), &LineEdit::set_secret);
 	ClassDB::bind_method(D_METHOD("is_secret"), &LineEdit::is_secret);
-	ClassDB::bind_method(D_METHOD("select", "from", "to"), &LineEdit::select, DEFVAL(0), DEFVAL(-1));
 	ClassDB::bind_method(D_METHOD("menu_option", "option"), &LineEdit::menu_option);
 	ClassDB::bind_method(D_METHOD("get_menu"), &LineEdit::get_menu);
 	ClassDB::bind_method(D_METHOD("set_context_menu_enabled", "enable"), &LineEdit::set_context_menu_enabled);
 	ClassDB::bind_method(D_METHOD("is_context_menu_enabled"), &LineEdit::is_context_menu_enabled);
 
-	ADD_SIGNAL(MethodInfo("text_changed", PropertyInfo(Variant::STRING, "text")));
-	ADD_SIGNAL(MethodInfo("text_entered", PropertyInfo(Variant::STRING, "text")));
+	ADD_SIGNAL(MethodInfo("text_changed", PropertyInfo(Variant::STRING, "new_text")));
+	ADD_SIGNAL(MethodInfo("text_entered", PropertyInfo(Variant::STRING, "new_text")));
 
 	BIND_ENUM_CONSTANT(ALIGN_LEFT);
 	BIND_ENUM_CONSTANT(ALIGN_CENTER);
@@ -1431,13 +1437,14 @@ void LineEdit::_bind_methods() {
 	ADD_PROPERTYNZ(PropertyInfo(Variant::BOOL, "secret"), "set_secret", "is_secret");
 	ADD_PROPERTYNZ(PropertyInfo(Variant::BOOL, "expand_to_text_length"), "set_expand_to_text_length", "get_expand_to_text_length");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "focus_mode", PROPERTY_HINT_ENUM, "None,Click,All"), "set_focus_mode", "get_focus_mode");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "context_menu_enabled"), "set_context_menu_enabled", "is_context_menu_enabled");
 	ADD_GROUP("Placeholder", "placeholder_");
 	ADD_PROPERTYNZ(PropertyInfo(Variant::STRING, "placeholder_text"), "set_placeholder", "get_placeholder");
 	ADD_PROPERTYNZ(PropertyInfo(Variant::REAL, "placeholder_alpha", PROPERTY_HINT_RANGE, "0,1,0.001"), "set_placeholder_alpha", "get_placeholder_alpha");
 	ADD_GROUP("Caret", "caret_");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "caret_blink"), "cursor_set_blink_enabled", "cursor_get_blink_enabled");
 	ADD_PROPERTYNZ(PropertyInfo(Variant::REAL, "caret_blink_speed", PROPERTY_HINT_RANGE, "0.1,10,0.1"), "cursor_set_blink_speed", "cursor_get_blink_speed");
-	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "context_menu_enabled"), "set_context_menu_enabled", "is_context_menu_enabled");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "caret_position"), "set_cursor_position", "get_cursor_position");
 }
 
 LineEdit::LineEdit() {
@@ -1453,7 +1460,7 @@ LineEdit::LineEdit() {
 	pass = false;
 	placeholder_alpha = 0.6;
 
-	selection_clear();
+	deselect();
 	set_focus_mode(FOCUS_ALL);
 	editable = true;
 	set_default_cursor_shape(CURSOR_IBEAM);

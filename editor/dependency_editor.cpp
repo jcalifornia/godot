@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "dependency_editor.h"
 
 #include "editor_node.h"
@@ -514,7 +515,7 @@ void DependencyRemoveDialog::ok_pressed() {
 		print_line("Moving to trash: " + path);
 		Error err = OS::get_singleton()->move_to_trash(path);
 		if (err != OK) {
-			EditorNode::get_singleton()->add_io_error(TTR("Cannot remove:\n") + to_delete[i] + "\n");
+			EditorNode::get_singleton()->add_io_error(TTR("Cannot remove:") + "\n" + to_delete[i] + "\n");
 		}
 	}
 
@@ -594,6 +595,7 @@ DependencyErrorDialog::DependencyErrorDialog() {
 	files->set_hide_root(true);
 	vb->add_margin_child(TTR("Scene failed to load due to missing dependencies:"), files, true);
 	files->set_v_size_flags(SIZE_EXPAND_FILL);
+	files->set_custom_minimum_size(Size2(1, 200));
 	get_ok()->set_text(TTR("Open Anyway"));
 	get_cancel()->set_text(TTR("Close"));
 
@@ -625,7 +627,7 @@ bool OrphanResourcesDialog::_fill_owners(EditorFileSystemDirectory *efsd, HashMa
 	if (!efsd)
 		return false;
 
-	bool has_childs = false;
+	bool has_children = false;
 
 	for (int i = 0; i < efsd->get_subdir_count(); i++) {
 
@@ -641,7 +643,7 @@ bool OrphanResourcesDialog::_fill_owners(EditorFileSystemDirectory *efsd, HashMa
 			if (!children) {
 				memdelete(dir_item);
 			} else {
-				has_childs = true;
+				has_children = true;
 			}
 		}
 	}
@@ -678,15 +680,15 @@ bool OrphanResourcesDialog::_fill_owners(EditorFileSystemDirectory *efsd, HashMa
 				int ds = efsd->get_file_deps(i).size();
 				ti->set_text(1, itos(ds));
 				if (ds) {
-					ti->add_button(1, get_icon("Visible", "EditorIcons"));
+					ti->add_button(1, get_icon("GuiVisibilityVisible", "EditorIcons"));
 				}
 				ti->set_metadata(0, path);
-				has_childs = true;
+				has_children = true;
 			}
 		}
 	}
 
-	return has_childs;
+	return has_children;
 }
 
 void OrphanResourcesDialog::refresh() {

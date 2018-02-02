@@ -19,11 +19,12 @@ def can_build():
 
 
 def get_opts():
-    from SCons.Variables import EnumVariable
+    from SCons.Variables import BoolVariable, EnumVariable
 
     return [
         ('osxcross_sdk', 'OSXCross SDK version', 'darwin14'),
         EnumVariable('debug_symbols', 'Add debug symbols to release version', 'yes', ('yes', 'no', 'full')),
+        BoolVariable('separate_debug_symbols', 'Create a separate file with the debug symbols', False),
     ]
 
 
@@ -72,6 +73,16 @@ def configure(env):
         else: # 64-bit, default
             env.Append(CCFLAGS=['-arch', 'x86_64'])
             env.Append(LINKFLAGS=['-arch', 'x86_64'])
+        if (env["macports_clang"] != 'no'):
+            mpprefix = os.environ.get("MACPORTS_PREFIX", "/opt/local")
+            mpclangver = env["macports_clang"]
+            env["CC"] = mpprefix + "/libexec/llvm-" + mpclangver + "/bin/clang"
+            env["LINK"] = mpprefix + "/libexec/llvm-" + mpclangver + "/bin/clang++"
+            env["CXX"] = mpprefix + "/libexec/llvm-" + mpclangver + "/bin/clang++"
+            env['AR'] = mpprefix + "/libexec/llvm-" + mpclangver + "/bin/llvm-ar"
+            env['RANLIB'] = mpprefix + "/libexec/llvm-" + mpclangver + "/bin/llvm-ranlib"
+            env['AS'] = mpprefix + "/libexec/llvm-" + mpclangver + "/bin/llvm-as"
+            env.Append(CCFLAGS=['-D__MACPORTS__']) #hack to fix libvpx MM256_BROADCASTSI128_SI256 define
 
     else: # osxcross build
         root = os.environ.get("OSXCROSS_ROOT", 0)
@@ -100,7 +111,7 @@ def configure(env):
     if (env["CXX"] == "clang++"):
         env.Append(CPPFLAGS=['-DTYPED_METHOD_BIND'])
         env["CC"] = "clang"
-        env["LD"] = "clang++"
+        env["LINK"] = "clang++"
 
     ## Dependencies
 

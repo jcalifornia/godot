@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="@GDScript" category="Core" version="3.0-beta">
+<class name="@GDScript" category="Core" version="3.0-stable">
 	<brief_description>
 		Built-in GDScript functions.
 	</brief_description>
@@ -41,10 +41,12 @@
 			<argument index="1" name="alpha" type="float">
 			</argument>
 			<description>
-				Returns color [code]name[/code] with [code]alpha[/code] ranging from 0 to 1. Note: [code]name[/code] is defined in color_names.inc.
+				Returns a color according to the standardised [code]name[/code] with [code]alpha[/code] ranging from 0 to 1.
 				[codeblock]
-				red = ColorN('red')
+				red = ColorN("red", 1)
 				[/codeblock]
+				Supported color names:
+				"aliceblue", "antiquewhite", "aqua", "aquamarine", "azure", "beige", "bisque", "black", "blanchedalmond", "blue", "blueviolet", "brown", "burlywood", "cadetblue", "chartreuse", "chocolate", "coral", "cornflower", "cornsilk", "crimson", "cyan", "darkblue", "darkcyan", "darkgoldenrod", "darkgray", "darkgreen", "darkkhaki", "darkmagenta", "darkolivegreen", "darkorange", "darkorchid", "darkred", "darksalmon", "darkseagreen", "darkslateblue", "darkslategray", "darkturquoise", "darkviolet", "deeppink", "deepskyblue", "dimgray", "dodgerblue", "firebrick", "floralwhite", "forestgreen", "fuchsia", "gainsboro", "ghostwhite", "gold", "goldenrod", "gray", "webgray", "green", "webgreen", "greenyellow", "honeydew", "hotpink", "indianred", "indigo", "ivory", "khaki", "lavender", "lavenderblush", "lawngreen", "lemonchiffon", "lightblue", "lightcoral", "lightcyan", "lightgoldenrod", "lightgray", "lightgreen", "lightpink", "lightsalmon", "lightseagreen", "lightskyblue", "lightslategray", "lightsteelblue", "lightyellow", "lime", "limegreen", "linen", "magenta", "maroon", "webmaroon", "mediumaquamarine", "mediumblue", "mediumorchid", "mediumpurple", "mediumseagreen", "mediumslateblue", "mediumspringgreen", "mediumturquoise", "mediumvioletred", "midnightblue", "mintcream", "mistyrose", "moccasin", "navajowhite", "navyblue", "oldlace", "olive", "olivedrab", "orange", "orangered", "orchid", "palegoldenrod", "palegreen", "paleturquoise", "palevioletred", "papayawhip", "peachpuff", "peru", "pink", "plum", "powderblue", "purple", "webpurple", "rebeccapurple", "red", "rosybrown", "royalblue", "saddlebrown", "salmon", "sandybrown", "seagreen", "seashell", "sienna", "silver", "skyblue", "slateblue", "slategray", "snow", "springgreen", "steelblue", "tan", "teal", "thistle", "tomato", "turquoise", "violet", "wheat", "white", "whitesmoke", "yellow", "yellowgreen".
 			</description>
 		</method>
 		<method name="abs">
@@ -180,14 +182,14 @@
 		<method name="clamp">
 			<return type="float">
 			</return>
-			<argument index="0" name="val" type="float">
+			<argument index="0" name="value" type="float">
 			</argument>
 			<argument index="1" name="min" type="float">
 			</argument>
 			<argument index="2" name="max" type="float">
 			</argument>
 			<description>
-				Clamps [code]val[/code] and returns a value not less than [code]min[/code] and not more than [code]max[/code].
+				Clamps [code]value[/code] and returns a value not less than [code]min[/code] and not more than [code]max[/code].
 				[codeblock]
 				speed = 1000
 				# a is 20
@@ -464,7 +466,7 @@
 			</argument>
 			<argument index="1" name="to" type="float">
 			</argument>
-			<argument index="2" name="value" type="float">
+			<argument index="2" name="weight" type="float">
 			</argument>
 			<description>
 				Returns a normalized value considering the given range.
@@ -535,7 +537,7 @@
 			<argument index="0" name="path" type="String">
 			</argument>
 			<description>
-				Loads a resource from the filesystem located at 'path'. Note: resource paths can be obtained by right clicking on a resource in the Assets Panel and choosing "Copy Path".
+				Loads a resource from the filesystem located at [code]path[/code]. Note: resource paths can be obtained by right clicking on a resource in the Assets Panel and choosing "Copy Path".
 				[codeblock]
 				# load a scene called main located in the root of the project directory
 				var main = load("res://main.tscn")
@@ -587,10 +589,10 @@
 		<method name="nearest_po2">
 			<return type="int">
 			</return>
-			<argument index="0" name="val" type="int">
+			<argument index="0" name="value" type="int">
 			</argument>
 			<description>
-				Returns the nearest larger power of 2 for integer [code]val[/code].
+				Returns the nearest larger power of 2 for integer [code]value[/code].
 				[codeblock]
 				nearest_po2(3) # returns 4
 				nearest_po2(4) # returns 4
@@ -866,9 +868,10 @@
 			<argument index="0" name="s" type="float">
 			</argument>
 			<description>
-				Returns sign of [code]s[/code] -1 or 1.
+				Returns the sign of [code]s[/code]: -1 or 1. Returns 0 if [code]s[/code] is 0.
 				[codeblock]
 				sign(-6) # returns -1
+				sign(0)  # returns 0
 				sign(6)  # returns 1
 				[/codeblock]
 			</description>

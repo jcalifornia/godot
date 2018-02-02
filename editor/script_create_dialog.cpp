@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "script_create_dialog.h"
 
 #include "editor/editor_node.h"
@@ -232,7 +233,7 @@ void ScriptCreateDialog::_lang_changed(int l) {
 	String path = file_path->get_text();
 	String extension = "";
 	if (path != "") {
-		if (path.find(".") >= 0) {
+		if (path.find(".") != -1) {
 			extension = path.get_extension();
 		}
 
@@ -331,6 +332,12 @@ void ScriptCreateDialog::_file_selected(const String &p_file) {
 	} else {
 		file_path->set_text(p);
 		_path_changed(p);
+
+		String filename = p.get_file().get_basename();
+		int select_start = p.find_last(filename);
+		file_path->select(select_start, select_start + filename.length());
+		file_path->set_cursor_position(select_start + filename.length());
+		file_path->grab_focus();
 	}
 }
 
@@ -353,16 +360,14 @@ void ScriptCreateDialog::_path_changed(const String &p_path) {
 		return;
 	}
 
-	if (p.find("/") || p.find("\\")) {
-		DirAccess *d = DirAccess::create(DirAccess::ACCESS_RESOURCES);
-		if (d->change_dir(p.get_base_dir()) != OK) {
-			_msg_path_valid(false, TTR("Invalid base path"));
-			memdelete(d);
-			_update_dialog();
-			return;
-		}
+	DirAccess *d = DirAccess::create(DirAccess::ACCESS_RESOURCES);
+	if (d->change_dir(p.get_base_dir()) != OK) {
+		_msg_path_valid(false, TTR("Invalid base path"));
 		memdelete(d);
+		_update_dialog();
+		return;
 	}
+	memdelete(d);
 
 	/* Does file already exist */
 
@@ -425,6 +430,10 @@ void ScriptCreateDialog::_path_changed(const String &p_path) {
 	_update_dialog();
 }
 
+void ScriptCreateDialog::_path_entered(const String &p_path) {
+	ok_pressed();
+}
+
 void ScriptCreateDialog::_msg_script_valid(bool valid, const String &p_msg) {
 
 	error_label->set_text(TTR(p_msg));
@@ -459,7 +468,7 @@ void ScriptCreateDialog::_update_dialog() {
 			script_ok = false;
 		}
 	}
-	if (has_named_classes && (!is_class_name_valid)) {
+	if (has_named_classes && (is_new_script_created && !is_class_name_valid)) {
 		_msg_script_valid(false, TTR("Invalid class name"));
 		script_ok = false;
 	}
@@ -550,6 +559,7 @@ void ScriptCreateDialog::_bind_methods() {
 	ClassDB::bind_method("_browse_path", &ScriptCreateDialog::_browse_path);
 	ClassDB::bind_method("_file_selected", &ScriptCreateDialog::_file_selected);
 	ClassDB::bind_method("_path_changed", &ScriptCreateDialog::_path_changed);
+	ClassDB::bind_method("_path_entered", &ScriptCreateDialog::_path_entered);
 	ClassDB::bind_method("_template_changed", &ScriptCreateDialog::_template_changed);
 	ADD_SIGNAL(MethodInfo("script_created", PropertyInfo(Variant::OBJECT, "script", PROPERTY_HINT_RESOURCE_TYPE, "Script")));
 }
@@ -715,6 +725,7 @@ ScriptCreateDialog::ScriptCreateDialog() {
 	hb = memnew(HBoxContainer);
 	file_path = memnew(LineEdit);
 	file_path->connect("text_changed", this, "_path_changed");
+	file_path->connect("text_entered", this, "_path_entered");
 	file_path->set_h_size_flags(SIZE_EXPAND_FILL);
 	hb->add_child(file_path);
 	path_button = memnew(Button);

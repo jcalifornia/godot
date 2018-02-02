@@ -1,13 +1,12 @@
 /*************************************************************************/
 /*  bullet_physics_server.cpp                                            */
-/*  Author: AndreaCatania                                                */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
-/*                    http://www.godotengine.org                         */
+/*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -30,7 +29,7 @@
 /*************************************************************************/
 
 #include "bullet_physics_server.h"
-#include "LinearMath/btVector3.h"
+
 #include "bullet_utilities.h"
 #include "class_db.h"
 #include "cone_twist_joint_bullet.h"
@@ -41,7 +40,14 @@
 #include "pin_joint_bullet.h"
 #include "shape_bullet.h"
 #include "slider_joint_bullet.h"
+
+#include <LinearMath/btVector3.h>
+
 #include <assert.h>
+
+/**
+	@author AndreaCatania
+*/
 
 #define CreateThenReturnRID(owner, ridData) \
 	RID rid = owner.make_rid(ridData);      \
@@ -78,10 +84,10 @@ void BulletPhysicsServer::_bind_methods() {
 	//ClassDB::bind_method(D_METHOD("DoTest"), &BulletPhysicsServer::DoTest);
 }
 
-BulletPhysicsServer::BulletPhysicsServer()
-	: PhysicsServer(),
-	  active(true),
-	  active_spaces_count(0) {}
+BulletPhysicsServer::BulletPhysicsServer() :
+		PhysicsServer(),
+		active(true),
+		active_spaces_count(0) {}
 
 BulletPhysicsServer::~BulletPhysicsServer() {}
 
@@ -121,7 +127,7 @@ RID BulletPhysicsServer::shape_create(ShapeType p_shape) {
 			shape = bulletnew(RayShapeBullet);
 		} break;
 		case SHAPE_CUSTOM:
-		defaul:
+		default:
 			ERR_FAIL_V(RID());
 			break;
 	}
@@ -723,16 +729,16 @@ void BulletPhysicsServer::body_set_axis_velocity(RID p_body, const Vector3 &p_ax
 	body->set_linear_velocity(v);
 }
 
-void BulletPhysicsServer::body_set_axis_lock(RID p_body, PhysicsServer::BodyAxisLock p_lock) {
+void BulletPhysicsServer::body_set_axis_lock(RID p_body, BodyAxis p_axis, bool p_lock) {
 	RigidBodyBullet *body = rigid_body_owner.get(p_body);
 	ERR_FAIL_COND(!body);
-	body->set_axis_lock(p_lock);
+	body->set_axis_lock(p_axis, p_lock);
 }
 
-PhysicsServer::BodyAxisLock BulletPhysicsServer::body_get_axis_lock(RID p_body) const {
+bool BulletPhysicsServer::body_is_axis_locked(RID p_body, BodyAxis p_axis) const {
 	const RigidBodyBullet *body = rigid_body_owner.get(p_body);
-	ERR_FAIL_COND_V(!body, BODY_AXIS_LOCK_DISABLED);
-	return body->get_axis_lock();
+	ERR_FAIL_COND_V(!body, 0);
+	return body->is_axis_locked(p_axis);
 }
 
 void BulletPhysicsServer::body_add_collision_exception(RID p_body, RID p_body_b) {
@@ -798,7 +804,7 @@ bool BulletPhysicsServer::body_is_omitting_force_integration(RID p_body) const {
 void BulletPhysicsServer::body_set_force_integration_callback(RID p_body, Object *p_receiver, const StringName &p_method, const Variant &p_udata) {
 	RigidBodyBullet *body = rigid_body_owner.get(p_body);
 	ERR_FAIL_COND(!body);
-	body->set_force_integration_callback(p_receiver->get_instance_id(), p_method, p_udata);
+	body->set_force_integration_callback(p_receiver ? p_receiver->get_instance_id() : ObjectID(0), p_method, p_udata);
 }
 
 void BulletPhysicsServer::body_set_ray_pickable(RID p_body, bool p_enable) {

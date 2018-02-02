@@ -1,13 +1,12 @@
 /*************************************************************************/
 /*  generic_6dof_joint_bullet.h                                          */
-/*  Author: AndreaCatania                                                */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
-/*                    http://www.godotengine.org                         */
+/*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -34,10 +33,19 @@
 
 #include "joint_bullet.h"
 
+/**
+	@author AndreaCatania
+*/
+
 class RigidBodyBullet;
 
 class Generic6DOFJointBullet : public JointBullet {
 	class btGeneric6DofConstraint *sixDOFConstraint;
+
+	// First is linear second is angular
+	Vector3 limits_lower[2];
+	Vector3 limits_upper[2];
+	bool flags[3][PhysicsServer::G6DOF_JOINT_FLAG_MAX];
 
 public:
 	Generic6DOFJointBullet(RigidBodyBullet *rbA, RigidBodyBullet *rbB, const Transform &frameInA, const Transform &frameInB, bool useLinearReferenceFrameA);

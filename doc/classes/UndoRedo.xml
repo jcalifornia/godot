@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="UndoRedo" inherits="Object" category="Core" version="3.0-beta">
+<class name="UndoRedo" inherits="Object" category="Core" version="3.0-stable">
 	<brief_description>
 		Helper to manage UndoRedo in the editor or custom tools.
 	</brief_description>
@@ -108,12 +108,6 @@
 				Get the name of the current action.
 			</description>
 		</method>
-		<method name="get_max_steps" qualifiers="const">
-			<return type="int">
-			</return>
-			<description>
-			</description>
-		</method>
 		<method name="get_version" qualifiers="const">
 			<return type="int">
 			</return>
@@ -125,14 +119,6 @@
 		<method name="redo">
 			<return type="void">
 			</return>
-			<description>
-			</description>
-		</method>
-		<method name="set_max_steps">
-			<return type="void">
-			</return>
-			<argument index="0" name="max_steps" type="int">
-			</argument>
 			<description>
 			</description>
 		</method>

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "video_stream_webm.h"
 
 #include "OpusVorbisDecoder.hpp"
@@ -92,21 +93,27 @@ private:
 
 /**/
 
-VideoStreamPlaybackWebm::VideoStreamPlaybackWebm()
-	: audio_track(0),
-	  webm(NULL),
-	  video(NULL),
-	  audio(NULL),
-	  video_frames(NULL), audio_frame(NULL),
-	  video_frames_pos(0), video_frames_capacity(0),
-	  num_decoded_samples(0), samples_offset(-1),
-	  mix_callback(NULL),
-	  mix_udata(NULL),
-	  playing(false), paused(false),
-	  delay_compensation(0.0),
-	  time(0.0), video_frame_delay(0.0), video_pos(0.0),
-	  texture(memnew(ImageTexture)),
-	  pcm(NULL) {}
+VideoStreamPlaybackWebm::VideoStreamPlaybackWebm() :
+		audio_track(0),
+		webm(NULL),
+		video(NULL),
+		audio(NULL),
+		video_frames(NULL),
+		audio_frame(NULL),
+		video_frames_pos(0),
+		video_frames_capacity(0),
+		num_decoded_samples(0),
+		samples_offset(-1),
+		mix_callback(NULL),
+		mix_udata(NULL),
+		playing(false),
+		paused(false),
+		delay_compensation(0.0),
+		time(0.0),
+		video_frame_delay(0.0),
+		video_pos(0.0),
+		texture(memnew(ImageTexture)),
+		pcm(NULL) {}
 VideoStreamPlaybackWebm::~VideoStreamPlaybackWebm() {
 
 	delete_pointers();
@@ -403,8 +410,8 @@ void VideoStreamPlaybackWebm::delete_pointers() {
 
 /**/
 
-VideoStreamWebm::VideoStreamWebm()
-	: audio_track(0) {}
+VideoStreamWebm::VideoStreamWebm() :
+		audio_track(0) {}
 
 Ref<VideoStreamPlayback> VideoStreamWebm::instance_playback() {
 
@@ -429,7 +436,7 @@ void VideoStreamWebm::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_file", "file"), &VideoStreamWebm::set_file);
 	ClassDB::bind_method(D_METHOD("get_file"), &VideoStreamWebm::get_file);
 
-	ADD_PROPERTY(PropertyInfo(Variant::STRING, "file", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR), "set_file", "get_file");
+	ADD_PROPERTY(PropertyInfo(Variant::STRING, "file", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR | PROPERTY_USAGE_INTERNAL), "set_file", "get_file");
 }
 
 void VideoStreamWebm::set_audio_track(int p_track) {

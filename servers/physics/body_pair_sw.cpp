@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "body_pair_sw.h"
 
 #include "collision_solver_sw.h"
@@ -464,8 +465,8 @@ void BodyPairSW::solve(real_t p_step) {
 	}
 }
 
-BodyPairSW::BodyPairSW(BodySW *p_A, int p_shape_A, BodySW *p_B, int p_shape_B)
-	: ConstraintSW(_arr, 2) {
+BodyPairSW::BodyPairSW(BodySW *p_A, int p_shape_A, BodySW *p_B, int p_shape_B) :
+		ConstraintSW(_arr, 2) {
 
 	A = p_A;
 	B = p_B;

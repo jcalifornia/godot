@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "item_list.h"
 #include "os/os.h"
 #include "project_settings.h"
@@ -930,6 +931,9 @@ void ItemList::_notification(int p_what) {
 						scroll_bar->hide();
 					} else {
 						scroll_bar->show();
+
+						if (do_autoscroll_to_bottom)
+							scroll_bar->set_value(max);
 					}
 					break;
 				}
@@ -1313,6 +1317,11 @@ Size2 ItemList::get_minimum_size() const {
 	return Size2();
 }
 
+void ItemList::set_autoscroll_to_bottom(const bool p_enable) {
+
+	do_autoscroll_to_bottom = p_enable;
+}
+
 void ItemList::set_auto_height(bool p_enable) {
 
 	auto_height = p_enable;
@@ -1410,7 +1419,7 @@ void ItemList::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("_set_items"), &ItemList::_set_items);
 	ClassDB::bind_method(D_METHOD("_get_items"), &ItemList::_get_items);
 
-	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "items", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR), "_set_items", "_get_items");
+	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "items", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR | PROPERTY_USAGE_INTERNAL), "_set_items", "_get_items");
 
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "select_mode", PROPERTY_HINT_ENUM, "Single,Multi"), "set_select_mode", "get_select_mode");
 	ADD_PROPERTYNZ(PropertyInfo(Variant::BOOL, "allow_rmb_select"), "set_allow_rmb_select", "get_allow_rmb_select");
@@ -1423,6 +1432,7 @@ void ItemList::_bind_methods() {
 	ADD_GROUP("Icon", "");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "icon_mode", PROPERTY_HINT_ENUM, "Top,Left"), "set_icon_mode", "get_icon_mode");
 	ADD_PROPERTYNO(PropertyInfo(Variant::REAL, "icon_scale"), "set_icon_scale", "get_icon_scale");
+	ADD_PROPERTYNO(PropertyInfo(Variant::REAL, "fixed_icon_size"), "set_fixed_icon_size", "get_fixed_icon_size");
 
 	BIND_ENUM_CONSTANT(ICON_MODE_TOP);
 	BIND_ENUM_CONSTANT(ICON_MODE_LEFT);
@@ -1466,6 +1476,7 @@ ItemList::ItemList() {
 	ensure_selected_visible = false;
 	defer_select_single = -1;
 	allow_rmb_select = false;
+	do_autoscroll_to_bottom = false;
 
 	icon_scale = 1.0f;
 	set_clip_contents(true);

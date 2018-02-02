@@ -28,6 +28,11 @@ def get_flags():
     return [
         ('tools', False),
         ('module_theora_enabled', False),
+        # Disabling the OpenSSL module noticeably reduces file size.
+        # The module has little use due to the limited networking functionality
+        # in this platform. For the available networking methods, the browser
+        # manages TLS.
+        ('module_openssl_enabled', False),
     ]
 
 
@@ -49,8 +54,14 @@ def configure(env):
     ## Build type
 
     if (env["target"] == "release"):
-        env.Append(CCFLAGS=['-O3'])
-        env.Append(LINKFLAGS=['-O3'])
+        # Use -Os to prioritize optimizing for reduced file size. This is
+        # particularly valuable for the web platform because it directly
+        # decreases download time.
+        # -Os reduces file size by around 5 MiB over -O3. -Oz only saves about
+        # 100 KiB over -Os, which does not justify the negative impact on
+        # run-time performance.
+        env.Append(CCFLAGS=['-Os'])
+        env.Append(LINKFLAGS=['-Os'])
 
     elif (env["target"] == "release_debug"):
         env.Append(CCFLAGS=['-O2', '-DDEBUG_ENABLED'])

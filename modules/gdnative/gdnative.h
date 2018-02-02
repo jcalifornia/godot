@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #ifndef GDNATIVE_H
 #define GDNATIVE_H
 
@@ -59,6 +60,7 @@ class GDNativeLibrary : public Resource {
 	bool singleton;
 	bool load_once;
 	String symbol_prefix;
+	bool reloadable;
 
 public:
 	GDNativeLibrary();
@@ -86,6 +88,10 @@ public:
 		return symbol_prefix;
 	}
 
+	_FORCE_INLINE_ bool is_reloadable() const {
+		return reloadable;
+	}
+
 	_FORCE_INLINE_ void set_load_once(bool p_load_once) {
 		load_once = p_load_once;
 	}
@@ -94,6 +100,10 @@ public:
 	}
 	_FORCE_INLINE_ void set_symbol_prefix(String p_symbol_prefix) {
 		symbol_prefix = p_symbol_prefix;
+	}
+
+	_FORCE_INLINE_ void set_reloadable(bool p_reloadable) {
+		reloadable = p_reloadable;
 	}
 
 	static void _bind_methods();
@@ -106,8 +116,8 @@ struct GDNativeCallRegistry {
 		return singleton;
 	}
 
-	inline GDNativeCallRegistry()
-		: native_calls() {}
+	inline GDNativeCallRegistry() :
+			native_calls() {}
 
 	Map<StringName, native_call_cb> native_calls;
 

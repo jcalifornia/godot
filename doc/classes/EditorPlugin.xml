@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="EditorPlugin" inherits="Node" category="Core" version="3.0-beta">
+<class name="EditorPlugin" inherits="Node" category="Core" version="3.0-stable">
 	<brief_description>
 		Used by the editor to extend its functionality.
 	</brief_description>
@@ -7,6 +7,7 @@
 		Plugins are used by the editor to extend functionality. The most common types of plugins are those which edit a given node or resource type, import plugins and export plugins.
 	</description>
 	<tutorials>
+		http://docs.godotengine.org/en/3.0/development/plugins/index.html
 	</tutorials>
 	<demos>
 	</demos>
@@ -82,6 +83,14 @@
 			<description>
 			</description>
 		</method>
+		<method name="add_scene_import_plugin">
+			<return type="void">
+			</return>
+			<argument index="0" name="scene_importer" type="EditorSceneImporter">
+			</argument>
+			<description>
+			</description>
+		</method>
 		<method name="add_tool_submenu_item">
 			<return type="void">
 			</return>
@@ -128,9 +137,7 @@
 		<method name="forward_canvas_gui_input" qualifiers="virtual">
 			<return type="bool">
 			</return>
-			<argument index="0" name="canvas_xform" type="Transform2D">
-			</argument>
-			<argument index="1" name="event" type="InputEvent">
+			<argument index="0" name="event" type="InputEvent">
 			</argument>
 			<description>
 			</description>
@@ -172,6 +179,12 @@
 		</method>
 		<method name="get_editor_interface">
 			<return type="EditorInterface">
+			</return>
+			<description>
+			</description>
+		</method>
+		<method name="get_plugin_icon" qualifiers="virtual">
+			<return type="Object">
 			</return>
 			<description>
 			</description>
@@ -291,6 +304,14 @@
 			<return type="void">
 			</return>
 			<argument index="0" name="importer" type="EditorImportPlugin">
+			</argument>
+			<description>
+			</description>
+		</method>
+		<method name="remove_scene_import_plugin">
+			<return type="void">
+			</return>
+			<argument index="0" name="scene_importer" type="EditorSceneImporter">
 			</argument>
 			<description>
 			</description>

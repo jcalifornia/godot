@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #ifndef RASTERIZERSTORAGEGLES3_H
 #define RASTERIZERSTORAGEGLES3_H
 
@@ -242,6 +243,9 @@ public:
 
 	struct Texture : public RID_Data {
 
+		Texture *proxy;
+		Set<Texture *> proxy_owners;
+
 		String path;
 		uint32_t flags;
 		int width, height;
@@ -301,6 +305,15 @@ public:
 			detect_srgb_ud = NULL;
 			detect_normal = NULL;
 			detect_normal_ud = NULL;
+			proxy = NULL;
+		}
+
+		_ALWAYS_INLINE_ Texture *get_ptr() {
+			if (proxy) {
+				return proxy; //->get_ptr(); only one level of indirection, else not inlining possible.
+			} else {
+				return this;
+			}
 		}
 
 		~Texture() {
@@ -308,6 +321,14 @@ public:
 			if (tex_id != 0) {
 
 				glDeleteTextures(1, &tex_id);
+			}
+
+			for (Set<Texture *>::Element *E = proxy_owners.front(); E; E = E->next()) {
+				E->get()->proxy = NULL;
+			}
+
+			if (proxy) {
+				proxy->proxy_owners.erase(this);
 			}
 		}
 	};
@@ -342,6 +363,8 @@ public:
 	virtual void texture_set_detect_3d_callback(RID p_texture, VisualServer::TextureDetectCallback p_callback, void *p_userdata);
 	virtual void texture_set_detect_srgb_callback(RID p_texture, VisualServer::TextureDetectCallback p_callback, void *p_userdata);
 	virtual void texture_set_detect_normal_callback(RID p_texture, VisualServer::TextureDetectCallback p_callback, void *p_userdata);
+
+	virtual void texture_set_proxy(RID p_texture, RID p_proxy);
 
 	/* SKY API */
 
@@ -450,9 +473,11 @@ public:
 			bool uses_discard;
 			bool uses_sss;
 			bool uses_screen_texture;
+			bool uses_depth_texture;
 			bool uses_time;
 			bool writes_modelview_or_projection;
 			bool uses_vertex_lighting;
+			bool uses_world_coordinates;
 
 		} spatial;
 
@@ -463,8 +488,8 @@ public:
 		bool uses_vertex_time;
 		bool uses_fragment_time;
 
-		Shader()
-			: dirty_list(this) {
+		Shader() :
+				dirty_list(this) {
 
 			shader = NULL;
 			ubo_size = 0;
@@ -517,8 +542,9 @@ public:
 		bool can_cast_shadow_cache;
 		bool is_animated_cache;
 
-		Material()
-			: list(this), dirty_list(this) {
+		Material() :
+				list(this),
+				dirty_list(this) {
 			can_cast_shadow_cache = false;
 			is_animated_cache = false;
 			shader = NULL;
@@ -741,8 +767,9 @@ public:
 		bool dirty_aabb;
 		bool dirty_data;
 
-		MultiMesh()
-			: update_list(this), mesh_list(this) {
+		MultiMesh() :
+				update_list(this),
+				mesh_list(this) {
 			dirty_aabb = true;
 			dirty_data = true;
 			xform_floats = 0;
@@ -842,8 +869,8 @@ public:
 		SelfList<Skeleton> update_list;
 		Set<RasterizerScene::InstanceBase *> instances; //instances using skeleton
 
-		Skeleton()
-			: update_list(this) {
+		Skeleton() :
+				update_list(this) {
 			size = 0;
 
 			use_2d = false;
@@ -1044,6 +1071,38 @@ public:
 	virtual RID gi_probe_dynamic_data_create(int p_width, int p_height, int p_depth, GIProbeCompression p_compression);
 	virtual void gi_probe_dynamic_data_update(RID p_gi_probe_data, int p_depth_slice, int p_slice_count, int p_mipmap, const void *p_data);
 
+	/* LIGHTMAP CAPTURE */
+
+	virtual RID lightmap_capture_create();
+	virtual void lightmap_capture_set_bounds(RID p_capture, const AABB &p_bounds);
+	virtual AABB lightmap_capture_get_bounds(RID p_capture) const;
+	virtual void lightmap_capture_set_octree(RID p_capture, const PoolVector<uint8_t> &p_octree);
+	virtual PoolVector<uint8_t> lightmap_capture_get_octree(RID p_capture) const;
+	virtual void lightmap_capture_set_octree_cell_transform(RID p_capture, const Transform &p_xform);
+	virtual Transform lightmap_capture_get_octree_cell_transform(RID p_capture) const;
+	virtual void lightmap_capture_set_octree_cell_subdiv(RID p_capture, int p_subdiv);
+	virtual int lightmap_capture_get_octree_cell_subdiv(RID p_capture) const;
+
+	virtual void lightmap_capture_set_energy(RID p_capture, float p_energy);
+	virtual float lightmap_capture_get_energy(RID p_capture) const;
+
+	virtual const PoolVector<LightmapCaptureOctree> *lightmap_capture_get_octree_ptr(RID p_capture) const;
+
+	struct LightmapCapture : public Instantiable {
+
+		PoolVector<LightmapCaptureOctree> octree;
+		AABB bounds;
+		Transform cell_xform;
+		int cell_subdiv;
+		float energy;
+		LightmapCapture() {
+			energy = 1.0;
+			cell_subdiv = 1;
+		}
+	};
+
+	mutable RID_Owner<LightmapCapture> lightmap_capture_data_owner;
+
 	/* PARTICLES */
 
 	struct Particles : public GeometryOwner {
@@ -1093,8 +1152,8 @@ public:
 
 		Transform emission_transform;
 
-		Particles()
-			: particle_element(this) {
+		Particles() :
+				particle_element(this) {
 			cycle_number = 0;
 			emitting = false;
 			one_shot = false;
@@ -1123,7 +1182,7 @@ public:
 
 			clear = true;
 			inactive = true;
-			inactive_time = false;
+			inactive_time = 0.0;
 
 			glGenBuffers(2, particle_buffers);
 			glGenVertexArrays(2, particle_vaos);
@@ -1149,6 +1208,7 @@ public:
 	virtual RID particles_create();
 
 	virtual void particles_set_emitting(RID p_particles, bool p_emitting);
+	virtual bool particles_get_emitting(RID p_particles);
 	virtual void particles_set_amount(RID p_particles, int p_amount);
 	virtual void particles_set_lifetime(RID p_particles, float p_lifetime);
 	virtual void particles_set_one_shot(RID p_particles, bool p_one_shot);

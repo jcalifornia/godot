@@ -5,7 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -26,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #ifndef VISUAL_SERVER_WRAP_MT_H
 #define VISUAL_SERVER_WRAP_MT_H
 
@@ -62,7 +64,9 @@ class VisualServerWrapMT : public VisualServer {
 
 	int pool_max_size;
 
-//#define DEBUG_SYNC
+	//#define DEBUG_SYNC
+
+	static VisualServerWrapMT *singleton_mt;
 
 #ifdef DEBUG_SYNC
 #define SYNC_DEBUG print_line("sync on: " + String(__FUNCTION__));
@@ -99,6 +103,8 @@ public:
 	FUNC1(texture_debug_usage, List<TextureInfo> *)
 
 	FUNC1(textures_keep_original, bool)
+
+	FUNC2(texture_set_proxy, RID, RID)
 
 	/* SKY API */
 
@@ -292,11 +298,28 @@ public:
 	FUNC2(gi_probe_set_dynamic_data, RID, const PoolVector<int> &)
 	FUNC1RC(PoolVector<int>, gi_probe_get_dynamic_data, RID)
 
+	/* LIGHTMAP CAPTURE */
+
+	FUNCRID(lightmap_capture)
+
+	FUNC2(lightmap_capture_set_bounds, RID, const AABB &)
+	FUNC1RC(AABB, lightmap_capture_get_bounds, RID)
+
+	FUNC2(lightmap_capture_set_octree, RID, const PoolVector<uint8_t> &)
+	FUNC1RC(PoolVector<uint8_t>, lightmap_capture_get_octree, RID)
+	FUNC2(lightmap_capture_set_octree_cell_transform, RID, const Transform &)
+	FUNC1RC(Transform, lightmap_capture_get_octree_cell_transform, RID)
+	FUNC2(lightmap_capture_set_octree_cell_subdiv, RID, int)
+	FUNC1RC(int, lightmap_capture_get_octree_cell_subdiv, RID)
+	FUNC2(lightmap_capture_set_energy, RID, float)
+	FUNC1RC(float, lightmap_capture_get_energy, RID)
+
 	/* PARTICLES */
 
 	FUNCRID(particles)
 
 	FUNC2(particles_set_emitting, RID, bool)
+	FUNC1R(bool, particles_get_emitting, RID)
 	FUNC2(particles_set_amount, RID, int)
 	FUNC2(particles_set_lifetime, RID, float)
 	FUNC2(particles_set_one_shot, RID, bool)
@@ -371,7 +394,7 @@ public:
 	FUNC2(viewport_set_hdr, RID, bool)
 	FUNC2(viewport_set_usage, RID, ViewportUsage)
 
-	//this passes directly to avoid stalling, but it's pretty dangerous, so dont call after freeing a viewport
+	//this passes directly to avoid stalling, but it's pretty dangerous, so don't call after freeing a viewport
 	virtual int viewport_get_render_info(RID p_viewport, ViewportRenderInfo p_info) {
 		return visual_server->viewport_get_render_info(p_viewport, p_info);
 	}
@@ -423,6 +446,8 @@ public:
 	FUNC3(instance_set_blend_shape_weight, RID, int, float)
 	FUNC3(instance_set_surface_material, RID, int, RID)
 	FUNC2(instance_set_visible, RID, bool)
+	FUNC3(instance_set_use_lightmap, RID, RID, RID)
+
 	FUNC2(instance_set_custom_aabb, RID, AABB)
 
 	FUNC2(instance_attach_skeleton, RID, RID)
@@ -465,6 +490,7 @@ public:
 
 	FUNC6(canvas_item_add_line, RID, const Point2 &, const Point2 &, const Color &, float, bool)
 	FUNC5(canvas_item_add_polyline, RID, const Vector<Point2> &, const Vector<Color> &, float, bool)
+	FUNC5(canvas_item_add_multiline, RID, const Vector<Point2> &, const Vector<Color> &, float, bool)
 	FUNC3(canvas_item_add_rect, RID, const Rect2 &, const Color &)
 	FUNC4(canvas_item_add_circle, RID, const Point2 &, float, const Color &)
 	FUNC7(canvas_item_add_texture_rect, RID, const Rect2 &, RID, bool, const Color &, bool, RID)
@@ -479,7 +505,7 @@ public:
 	FUNC2(canvas_item_add_set_transform, RID, const Transform2D &)
 	FUNC2(canvas_item_add_clip_ignore, RID, bool)
 	FUNC2(canvas_item_set_sort_children_by_y, RID, bool)
-	FUNC2(canvas_item_set_z, RID, int)
+	FUNC2(canvas_item_set_z_index, RID, int)
 	FUNC2(canvas_item_set_z_as_relative_to_parent, RID, bool)
 	FUNC3(canvas_item_set_copy_to_backbuffer, RID, bool, const Rect2 &)
 
@@ -562,6 +588,10 @@ public:
 
 	virtual bool has_feature(Features p_feature) const { return visual_server->has_feature(p_feature); }
 	virtual bool has_os_feature(const String &p_feature) const { return visual_server->has_os_feature(p_feature); }
+
+	FUNC1(call_set_use_vsync, bool)
+
+	static void set_use_vsync_callback(bool p_enable);
 
 	VisualServerWrapMT(VisualServer *p_contained, bool p_create_thread);
 	~VisualServerWrapMT();

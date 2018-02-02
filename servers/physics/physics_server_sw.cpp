@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "physics_server_sw.h"
 
 #include "broad_phase_basic.h"
@@ -794,20 +795,20 @@ void PhysicsServerSW::body_set_axis_velocity(RID p_body, const Vector3 &p_axis_v
 	body->wakeup();
 };
 
-void PhysicsServerSW::body_set_axis_lock(RID p_body, BodyAxisLock p_lock) {
+void PhysicsServerSW::body_set_axis_lock(RID p_body, BodyAxis p_axis, bool lock) {
 
 	BodySW *body = body_owner.get(p_body);
 	ERR_FAIL_COND(!body);
 
-	body->set_axis_lock(p_lock);
+	body->set_axis_lock(p_axis, lock);
 	body->wakeup();
 }
 
-PhysicsServerSW::BodyAxisLock PhysicsServerSW::body_get_axis_lock(RID p_body) const {
+bool PhysicsServerSW::body_is_axis_locked(RID p_body, BodyAxis p_axis) const {
 
 	const BodySW *body = body_owner.get(p_body);
-	ERR_FAIL_COND_V(!body, BODY_AXIS_LOCK_DISABLED);
-	return body->get_axis_lock();
+	ERR_FAIL_COND_V(!body, 0);
+	return body->is_axis_locked(p_axis);
 }
 
 void PhysicsServerSW::body_add_collision_exception(RID p_body, RID p_body_b) {

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #ifndef CORE_BIND_H
 #define CORE_BIND_H
 
@@ -655,7 +656,7 @@ public:
 	int get_iterations_per_second() const;
 
 	void set_target_fps(int p_fps);
-	float get_target_fps() const;
+	int get_target_fps() const;
 
 	float get_frames_per_second() const;
 
@@ -719,7 +720,7 @@ protected:
 public:
 	static _JSON *get_singleton() { return singleton; }
 
-	String print(const Variant &p_value);
+	String print(const Variant &p_value, const String &p_indent = "", bool p_sort_keys = false);
 	Ref<JSONParseResult> parse(const String &p_json);
 
 	_JSON();

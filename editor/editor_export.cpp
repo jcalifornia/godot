@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "editor_export.h"
 
 #include "editor/editor_file_system.h"
@@ -39,10 +40,10 @@
 #include "io/zip_io.h"
 #include "os/file_access.h"
 #include "project_settings.h"
+#include "scene/resources/scene_format_text.h"
 #include "script_language.h"
-#include "version.h"
-
 #include "thirdparty/misc/md5.h"
+#include "version.h"
 
 static int _get_pad(int p_alignment, int p_n) {
 
@@ -740,7 +741,36 @@ Error EditorExportPlatform::export_project_files(const Ref<EditorExportPreset> &
 
 	ProjectSettings::CustomMap custom_map;
 	if (path_remaps.size()) {
-		custom_map["path_remap/remapped_paths"] = path_remaps;
+		if (1) { //new remap mode, use always as it's friendlier with multiple .pck exports
+			for (int i = 0; i < path_remaps.size(); i += 2) {
+				String from = path_remaps[i];
+				String to = path_remaps[i + 1];
+				String remap_file = "[remap]\n\npath=\"" + to.c_escape() + "\"\n";
+				CharString utf8 = remap_file.utf8();
+				Vector<uint8_t> new_file;
+				new_file.resize(utf8.length());
+				for (int j = 0; j < utf8.length(); j++) {
+					new_file[j] = utf8[j];
+				}
+
+				p_func(p_udata, from + ".remap", new_file, idx, total);
+			}
+		} else {
+			//old remap mode, will still work, but it's unused because it's not multiple pck export friendly
+			custom_map["path_remap/remapped_paths"] = path_remaps;
+		}
+	}
+
+	// Store icon and splash images directly, they need to bypass the import system and be loaded as images
+	String icon = ProjectSettings::get_singleton()->get("application/config/icon");
+	String splash = ProjectSettings::get_singleton()->get("application/boot_splash/image");
+	if (icon != String() && FileAccess::exists(icon)) {
+		Vector<uint8_t> array = FileAccess::get_file_as_array(icon);
+		p_func(p_udata, icon, array, idx, total);
+	}
+	if (splash != String() && FileAccess::exists(splash)) {
+		Vector<uint8_t> array = FileAccess::get_file_as_array(splash);
+		p_func(p_udata, splash, array, idx, total);
 	}
 
 	String config_file = "project.binary";
@@ -1249,6 +1279,7 @@ bool EditorExportPlatformPC::can_export(const Ref<EditorExportPreset> &p_preset,
 	if (custom_debug_binary == "" && custom_release_binary == "") {
 		if (!err.empty())
 			r_error = err;
+		r_missing_templates = !valid;
 		return valid;
 	}
 
@@ -1275,8 +1306,18 @@ bool EditorExportPlatformPC::can_export(const Ref<EditorExportPreset> &p_preset,
 	return valid;
 }
 
-String EditorExportPlatformPC::get_binary_extension() const {
-	return extension;
+String EditorExportPlatformPC::get_binary_extension(const Ref<EditorExportPreset> &p_preset) const {
+	for (Map<String, String>::Element *E = extensions.front(); E; E = E->next()) {
+		if (p_preset->get(E->key())) {
+			return extensions[E->key()];
+		}
+	}
+
+	if (extensions.has("default")) {
+		return extensions["default"];
+	}
+
+	return "";
 }
 
 Error EditorExportPlatformPC::export_project(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, int p_flags) {
@@ -1307,7 +1348,7 @@ Error EditorExportPlatformPC::export_project(const Ref<EditorExportPreset> &p_pr
 	}
 
 	if (template_path != String() && !FileAccess::exists(template_path)) {
-		EditorNode::get_singleton()->show_warning(TTR("Template file not found:\n") + template_path);
+		EditorNode::get_singleton()->show_warning(TTR("Template file not found:") + "\n" + template_path);
 		return ERR_FILE_NOT_FOUND;
 	}
 
@@ -1321,11 +1362,23 @@ Error EditorExportPlatformPC::export_project(const Ref<EditorExportPreset> &p_pr
 
 	String pck_path = p_path.get_basename() + ".pck";
 
-	return save_pack(p_preset, pck_path);
+	Vector<SharedObject> so_files;
+
+	err = save_pack(p_preset, pck_path, &so_files);
+
+	if (err != OK || so_files.empty())
+		return err;
+	//if shared object files, copy them
+	da = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
+	for (int i = 0; i < so_files.size(); i++) {
+		da->copy(so_files[i].path, p_path.get_base_dir().plus_file(so_files[i].path.get_file()));
+	}
+	memdelete(da);
+	return OK;
 }
 
-void EditorExportPlatformPC::set_extension(const String &p_extension) {
-	extension = p_extension;
+void EditorExportPlatformPC::set_extension(const String &p_extension, const String &p_feature_key) {
+	extensions[p_feature_key] = p_extension;
 }
 
 void EditorExportPlatformPC::set_name(const String &p_name) {
@@ -1385,4 +1438,31 @@ void EditorExportPlatformPC::set_chmod_flags(int p_flags) {
 EditorExportPlatformPC::EditorExportPlatformPC() {
 
 	chmod_flags = -1;
+}
+
+///////////////////////
+
+void EditorExportTextSceneToBinaryPlugin::_export_file(const String &p_path, const String &p_type, const Set<String> &p_features) {
+
+	String extension = p_path.get_extension().to_lower();
+	if (extension != "tres" && extension != "tscn") {
+		return;
+	}
+
+	print_line("exporting " + p_path);
+
+	bool convert = GLOBAL_GET("editor/convert_text_resources_to_binary_on_export");
+	if (!convert)
+		return;
+	String tmp_path = EditorSettings::get_singleton()->get_cache_dir().plus_file("file.res");
+	Error err = ResourceFormatLoaderText::convert_file_to_binary(p_path, tmp_path);
+	ERR_FAIL_COND(err != OK);
+	Vector<uint8_t> data = FileAccess::get_file_as_array(tmp_path);
+	ERR_FAIL_COND(data.size() == 0);
+	add_file(p_path + ".converted.res", data, true);
+}
+
+EditorExportTextSceneToBinaryPlugin::EditorExportTextSceneToBinaryPlugin() {
+
+	GLOBAL_DEF("editor/convert_text_resources_to_binary_on_export", false);
 }

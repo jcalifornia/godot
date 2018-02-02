@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #ifndef TEXTURE_H
 #define TEXTURE_H
 
@@ -491,6 +492,33 @@ public:
 
 	GradientTexture();
 	virtual ~GradientTexture();
+};
+
+class ProxyTexture : public Texture {
+	GDCLASS(ProxyTexture, Texture)
+
+private:
+	RID proxy;
+	Ref<Texture> base;
+
+protected:
+	static void _bind_methods();
+
+public:
+	void set_base(const Ref<Texture> &p_texture);
+	Ref<Texture> get_base() const;
+
+	virtual int get_width() const;
+	virtual int get_height() const;
+	virtual RID get_rid() const;
+
+	virtual bool has_alpha() const;
+
+	virtual void set_flags(uint32_t p_flags);
+	virtual uint32_t get_flags() const;
+
+	ProxyTexture();
+	~ProxyTexture();
 };
 
 #endif

@@ -1,13 +1,12 @@
 /*************************************************************************/
 /*  collision_object_bullet.h                                            */
-/*  Author: AndreaCatania                                                */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
-/*                    http://www.godotengine.org                         */
+/*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -32,12 +31,17 @@
 #ifndef COLLISION_OBJECT_BULLET_H
 #define COLLISION_OBJECT_BULLET_H
 
-#include "LinearMath/btTransform.h"
 #include "core/vset.h"
 #include "object.h"
 #include "shape_owner_bullet.h"
 #include "transform.h"
 #include "vector3.h"
+
+#include <LinearMath/btTransform.h>
+
+/**
+	@author AndreaCatania
+*/
 
 class AreaBullet;
 class ShapeBullet;
@@ -68,18 +72,25 @@ public:
 		ShapeBullet *shape;
 		btCollisionShape *bt_shape;
 		btTransform transform;
+		btVector3 scale;
 		bool active;
 
-		ShapeWrapper()
-			: shape(NULL), bt_shape(NULL), active(true) {}
+		ShapeWrapper() :
+				shape(NULL),
+				bt_shape(NULL),
+				active(true) {}
 
-		ShapeWrapper(ShapeBullet *p_shape, const btTransform &p_transform, bool p_active)
-			: shape(p_shape), bt_shape(NULL), active(p_active) {
+		ShapeWrapper(ShapeBullet *p_shape, const btTransform &p_transform, bool p_active) :
+				shape(p_shape),
+				bt_shape(NULL),
+				active(p_active) {
 			set_transform(p_transform);
 		}
 
-		ShapeWrapper(ShapeBullet *p_shape, const Transform &p_transform, bool p_active)
-			: shape(p_shape), bt_shape(NULL), active(p_active) {
+		ShapeWrapper(ShapeBullet *p_shape, const Transform &p_transform, bool p_active) :
+				shape(p_shape),
+				bt_shape(NULL),
+				active(p_active) {
 			set_transform(p_transform);
 		}
 		~ShapeWrapper();
@@ -92,6 +103,7 @@ public:
 			shape = otherShape.shape;
 			bt_shape = otherShape.bt_shape;
 			transform = otherShape.transform;
+			scale = otherShape.scale;
 			active = otherShape.active;
 		}
 
@@ -108,7 +120,8 @@ protected:
 	bool m_isStatic;
 	bool ray_pickable;
 	btCollisionObject *bt_collision_object;
-	btVector3 body_scale;
+	Vector3 body_scale;
+	bool force_shape_reset;
 	SpaceBullet *space;
 
 	VSet<RID> exceptions;
@@ -140,6 +153,8 @@ public:
 	_FORCE_INLINE_ bool is_ray_pickable() const { return ray_pickable; }
 
 	void set_body_scale(const Vector3 &p_new_scale);
+	const Vector3 &get_body_scale() const { return body_scale; }
+	btVector3 get_bt_body_scale() const;
 	virtual void on_body_scale_changed();
 
 	void add_collision_exception(const CollisionObjectBullet *p_ignoreCollisionObject);

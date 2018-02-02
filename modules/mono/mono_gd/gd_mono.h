@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #ifndef GD_MONO_H
 #define GD_MONO_H
 
@@ -111,14 +112,6 @@ public:
 	uint64_t get_api_editor_hash() { return api_editor_hash; }
 #endif
 #endif
-
-	enum MemberVisibility {
-		PRIVATE,
-		PROTECTED_AND_INTERNAL, // FAM_AND_ASSEM
-		INTERNAL, // ASSEMBLY
-		PROTECTED, // FAMILY
-		PUBLIC
-	};
 
 	static GDMono *get_singleton() { return singleton; }
 
@@ -215,7 +208,7 @@ public:
 	bool is_finalizing_domain();
 	bool is_domain_loaded();
 
-	void queue_dispose(Object *p_object);
+	void queue_dispose(MonoObject *p_mono_object, Object *p_object);
 	void queue_dispose(NodePath *p_node_path);
 	void queue_dispose(RID *p_rid);
 

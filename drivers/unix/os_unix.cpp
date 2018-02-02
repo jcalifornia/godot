@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "os_unix.h"
 
 #ifdef UNIX_ENABLED
@@ -52,6 +53,7 @@
 
 #if defined(__FreeBSD__) || defined(__OpenBSD__)
 #include <sys/param.h>
+#include <sys/sysctl.h>
 #endif
 #include "project_settings.h"
 #include <assert.h>
@@ -141,42 +143,14 @@ void OS_Unix::alert(const String &p_alert, const String &p_title) {
 	fprintf(stderr, "ERROR: %s\n", p_alert.utf8().get_data());
 }
 
-static int has_data(FILE *p_fd, int timeout_usec = 0) {
-
-	fd_set readset;
-	int fd = fileno(p_fd);
-	FD_ZERO(&readset);
-	FD_SET(fd, &readset);
-	timeval time;
-	time.tv_sec = 0;
-	time.tv_usec = timeout_usec;
-	int res = 0; //select(fd + 1, &readset, NULL, NULL, &time);
-	return res > 0;
-};
-
 String OS_Unix::get_stdin_string(bool p_block) {
 
-	String ret;
 	if (p_block) {
 		char buff[1024];
-		ret = stdin_buf + fgets(buff, 1024, stdin);
+		String ret = stdin_buf + fgets(buff, 1024, stdin);
 		stdin_buf = "";
 		return ret;
-	};
-
-	while (has_data(stdin)) {
-
-		char ch;
-		read(fileno(stdin), &ch, 1);
-		if (ch == '\n') {
-			ret = stdin_buf;
-			stdin_buf = "";
-			return ret;
-		} else {
-			char str[2] = { ch, 0 };
-			stdin_buf += str;
-		};
-	};
+	}
 
 	return "";
 }
@@ -194,8 +168,6 @@ uint64_t OS_Unix::get_unix_time() const {
 uint64_t OS_Unix::get_system_time_secs() const {
 	struct timeval tv_now;
 	gettimeofday(&tv_now, NULL);
-	//localtime(&tv_now.tv_usec);
-	//localtime((const long *)&tv_now.tv_usec);
 	return uint64_t(tv_now.tv_sec);
 }
 
@@ -327,17 +299,7 @@ Error OS_Unix::execute(const String &p_path, const List<String> &p_arguments, bo
 			args.push_back((char *)cs[i].get_data()); // shitty C cast
 		args.push_back(0);
 
-#ifdef __FreeBSD__
-		if (p_path.find("/")) {
-			// exec name contains path so use it
-			execv(p_path.utf8().get_data(), &args[0]);
-		} else {
-			// use program name and search through PATH to find it
-			execvp(getprogname(), &args[0]);
-		}
-#else
 		execvp(p_path.utf8().get_data(), &args[0]);
-#endif
 		// still alive? something failed..
 		fprintf(stderr, "**ERROR** OS_Unix::execute - Could not create child process while executing: %s\n", p_path.utf8().get_data());
 		abort();
@@ -391,8 +353,21 @@ String OS_Unix::get_locale() const {
 	return locale;
 }
 
-Error OS_Unix::open_dynamic_library(const String p_path, void *&p_library_handle) {
-	p_library_handle = dlopen(p_path.utf8().get_data(), RTLD_NOW);
+Error OS_Unix::open_dynamic_library(const String p_path, void *&p_library_handle, bool p_also_set_library_path) {
+
+	String path = p_path;
+
+	if (!FileAccess::exists(path)) {
+		//this code exists so gdnative can load .so files from within the executable path
+		path = get_executable_path().get_base_dir().plus_file(p_path.get_file());
+	}
+
+	if (!FileAccess::exists(path)) {
+		//this code exists so gdnative can load .so files from a standard unix location
+		path = get_executable_path().get_base_dir().plus_file("../lib").plus_file(p_path.get_file());
+	}
+
+	p_library_handle = dlopen(path.utf8().get_data(), RTLD_NOW);
 	if (!p_library_handle) {
 		ERR_EXPLAIN("Can't open dynamic library: " + p_path + ". Error: " + dlerror());
 		ERR_FAIL_V(ERR_CANT_OPEN);
@@ -478,12 +453,23 @@ String OS_Unix::get_executable_path() const {
 		return OS::get_executable_path();
 	}
 	return b;
-#elif defined(__FreeBSD__) || defined(__OpenBSD__)
+#elif defined(__OpenBSD__)
 	char resolved_path[MAXPATHLEN];
 
 	realpath(OS::get_executable_path().utf8().get_data(), resolved_path);
 
 	return String(resolved_path);
+#elif defined(__FreeBSD__)
+	int mib[4] = { CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 };
+	char buf[MAXPATHLEN];
+	size_t len = sizeof(buf);
+	if (sysctl(mib, 4, buf, &len, NULL, 0) != 0) {
+		WARN_PRINT("Couldn't get executable path from sysctl");
+		return OS::get_executable_path();
+	}
+	String b;
+	b.parse_utf8(buf);
+	return b;
 #elif defined(__APPLE__)
 	char temp_path[1];
 	uint32_t buff_size = 1;

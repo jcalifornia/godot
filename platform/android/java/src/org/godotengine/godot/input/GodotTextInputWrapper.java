@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 package org.godotengine.godot.input;
 import android.content.Context;
 import android.text.Editable;
@@ -67,7 +68,7 @@ public class GodotTextInputWrapper implements TextWatcher, OnEditorActionListene
 
 	private boolean isFullScreenEdit() {
 		final TextView textField = this.mEdit;
-		final InputMethodManager imm = (InputMethodManager) textField.getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+		final InputMethodManager imm = (InputMethodManager)textField.getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
 		return imm.isFullscreenMode();
 	}
 
@@ -81,7 +82,6 @@ public class GodotTextInputWrapper implements TextWatcher, OnEditorActionListene
 
 	@Override
 	public void afterTextChanged(final Editable s) {
-
 	}
 
 	@Override
@@ -103,13 +103,16 @@ public class GodotTextInputWrapper implements TextWatcher, OnEditorActionListene
 	public void onTextChanged(final CharSequence pCharSequence, final int start, final int before, final int count) {
 		//Log.d(TAG, "onTextChanged(" + pCharSequence + ")start: " + start + ",count: " + count + ",before: " + before);
 
+		final int[] newChars = new int[count];
+		for (int i = start; i < start + count; ++i) {
+			newChars[i - start] = pCharSequence.charAt(i);
+		}
 		mView.queueEvent(new Runnable() {
 			@Override
 			public void run() {
-				for (int i = start; i < start + count; ++i) {
-					final int ch = pCharSequence.charAt(i);
-					GodotLib.key(0, ch, true);
-					GodotLib.key(0, ch, false);
+				for (int i = 0; i < count; ++i) {
+					GodotLib.key(0, newChars[i], true);
+					GodotLib.key(0, newChars[i], false);
 				}
 			}
 		});

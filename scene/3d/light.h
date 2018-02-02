@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #ifndef LIGHT_H
 #define LIGHT_H
 
@@ -63,6 +64,12 @@ public:
 		PARAM_MAX = VS::LIGHT_PARAM_MAX
 	};
 
+	enum BakeMode {
+		BAKE_DISABLED,
+		BAKE_INDIRECT,
+		BAKE_ALL
+	};
+
 private:
 	Color color;
 	float param[PARAM_MAX];
@@ -74,6 +81,7 @@ private:
 	VS::LightType type;
 	bool editor_only;
 	void _update_visibility();
+	BakeMode bake_mode;
 
 	// bind helpers
 
@@ -114,6 +122,9 @@ public:
 	void set_shadow_reverse_cull_face(bool p_enable);
 	bool get_shadow_reverse_cull_face() const;
 
+	void set_bake_mode(BakeMode p_mode);
+	BakeMode get_bake_mode() const;
+
 	virtual AABB get_aabb() const;
 	virtual PoolVector<Face3> get_faces(uint32_t p_usage_flags) const;
 
@@ -122,6 +133,7 @@ public:
 };
 
 VARIANT_ENUM_CAST(Light::Param);
+VARIANT_ENUM_CAST(Light::BakeMode);
 
 class DirectionalLight : public Light {
 
@@ -208,8 +220,8 @@ protected:
 	static void _bind_methods();
 
 public:
-	SpotLight()
-		: Light(VisualServer::LIGHT_SPOT) {}
+	SpotLight() :
+			Light(VisualServer::LIGHT_SPOT) {}
 };
 
 #endif

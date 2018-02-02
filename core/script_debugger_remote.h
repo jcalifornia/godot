@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #ifndef SCRIPT_DEBUGGER_REMOTE_H
 #define SCRIPT_DEBUGGER_REMOTE_H
 
@@ -86,7 +87,11 @@ class ScriptDebuggerRemote : public ScriptDebugger {
 
 	List<String> output_strings;
 	List<Message> messages;
+	int max_messages_per_frame;
+	int n_messages_dropped;
 	List<OutputError> errors;
+	int max_errors_per_frame;
+	int n_errors_dropped;
 
 	int max_cps;
 	int char_count;
@@ -152,6 +157,7 @@ public:
 	virtual void request_quit();
 
 	virtual void send_message(const String &p_message, const Array &p_args);
+	virtual void send_error(const String &p_func, const String &p_file, int p_line, const String &p_err, const String &p_descr, ErrorHandlerType p_type, const Vector<ScriptLanguage::StackInfo> &p_stack_info);
 
 	virtual void set_request_scene_tree_message_func(RequestSceneTreeMessageFunc p_func, void *p_udata);
 	virtual void set_live_edit_funcs(LiveEditFuncs *p_funcs);

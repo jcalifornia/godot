@@ -1,12 +1,12 @@
 /*************************************************************************/
-/*  gi_probe_editor_plugin.h                                             */
+/*  gi_probe_editor_plugin.cpp                                           */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "gi_probe_editor_plugin.h"
 
 void GIProbeEditorPlugin::_bake() {
@@ -72,7 +73,7 @@ void GIProbeEditorPlugin::bake_func_begin(int p_steps) {
 void GIProbeEditorPlugin::bake_func_step(int p_step, const String &p_description) {
 
 	ERR_FAIL_COND(tmp_progress == NULL);
-	tmp_progress->step(p_description, p_step);
+	tmp_progress->step(p_description, p_step, false);
 }
 
 void GIProbeEditorPlugin::bake_func_end() {
@@ -90,7 +91,7 @@ GIProbeEditorPlugin::GIProbeEditorPlugin(EditorNode *p_node) {
 
 	editor = p_node;
 	bake = memnew(Button);
-	bake->set_icon(editor->get_gui_base()->get_icon("BakedLight", "EditorIcons"));
+	bake->set_icon(editor->get_gui_base()->get_icon("Bake", "EditorIcons"));
 	bake->set_text(TTR("Bake GI Probe"));
 	bake->hide();
 	bake->connect("pressed", this, "_bake");
