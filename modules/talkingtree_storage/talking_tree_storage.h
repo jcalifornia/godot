@@ -14,6 +14,7 @@
 #include "ustring.h"
 
 #include "ogg/ogg.h"
+#include "treecusion_types.h"
 #include "treecursion_writer.h"
 
 

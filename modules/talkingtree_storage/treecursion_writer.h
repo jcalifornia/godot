@@ -9,6 +9,7 @@
 
 
 
+
 class TreecursionWriter : public Object {
     GDCLASS(TreecursionWriter, Object);
 
@@ -25,6 +26,7 @@ protected:
 public:
     void write_header();
     void close();
+    String get_time_utc();
     TreecursionWriter();
     ~TreecursionWriter();
 	

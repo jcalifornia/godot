@@ -20,12 +20,29 @@ int ogg_buffer(FileAccess *fa, ogg_sync_state *oy){
 
 bool is_fishhead_packet(ogg_packet *packet){
 	return packet &&
-         packet->bytes > 8 &&
-         memcmp(packet->packet, "fishead", 8) == 0;
+			packet->bytes > 8 &&
+			memcmp(packet->packet, "fishead", 8) == 0;
 }
 
 bool is_fishbone_packet(ogg_packet *packet){
 	return packet->packet &&
-         packet->bytes >= 52 &&
-         memcmp(packet->packet, "fisbone", 8) == 0;
+			packet->bytes >= 52 &&
+			memcmp(packet->packet, "fisbone", 8) == 0;
+}
+
+unsigned char * write_le32(unsigned char* p, const ogg_uint32_t num){
+  ogg_int32_t n = num;
+  ogg_int32_t i;
+  for (i=0; i<4; i++) {
+	 p[i] = (unsigned char)(n & 0xff);
+	 n >>= 8;
+  }
+  return p + 4;
+}
+
+unsigned char * write_le16(unsigned char* p, const ogg_uint32_t num){
+  ogg_uint16_t n = num;
+  p[0] = (unsigned char)(n & 0xff);
+  p[1] = (unsigned char)((n >> 8) & 0xff);
+  return p + 2;
 }

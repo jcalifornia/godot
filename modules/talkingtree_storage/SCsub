@@ -33,4 +33,4 @@ if env['builtin_opus']:
 		env_talking_tree_storage.Append(CPPPATH=["#thirdparty/libogg"])
 
 env_talking_tree_storage.add_source_files(env.modules_sources,"*.cpp")
-env_talking_tree_storage.Append(CXXFLAGS=['-O2', '-std=c++11'])
+env_talking_tree_storage.Append(CXXFLAGS=['-O2', '-std=c++14'])
