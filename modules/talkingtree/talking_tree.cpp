@@ -82,11 +82,11 @@ void TalkingTree::send_text(String msg) {
 	txtMsg.set_message(m.get_data(), m.length());
 	_send_packet(0, PacketType::TEXTMESSAGE, txtMsg, NetworkedMultiplayerPeer::TRANSFER_MODE_RELIABLE);
 }
-void TalkingTree::_send_user_info(){
+void TalkingTree::_send_user_info(int p_to){
 	if(game_peer.is_valid()){
 		TalkingTreeProto::UserInfo usrInfo;
 		usrInfo.set_user_id(game_peer->get_unique_id());
-		_send_packet(0, PacketType::USERINFO, usrInfo, NetworkedMultiplayerPeer::TRANSFER_MODE_RELIABLE);
+		_send_packet(p_to, PacketType::USERINFO, usrInfo, NetworkedMultiplayerPeer::TRANSFER_MODE_RELIABLE);
 	}
 }
 void TalkingTree::_send_packet(int p_to, PacketType type, google::protobuf::Message &message, NetworkedMultiplayerPeer::TransferMode transferMode){
@@ -122,7 +122,7 @@ void TalkingTree::_network_process_packet(int p_from, const uint8_t *p_packet, i
 			TalkingTreeProto::UserInfo usrInfo;
 			usrInfo.ParseFromArray( proto_packet, proto_packet_len );
 			int game_id = usrInfo.user_id();
-			
+			connected_peers.add(game_id, p_from);
 		}
 		default:
 			break;

@@ -10,8 +10,8 @@ class BiMap {
 			backward.clear();
 		}
 		void add(const TKey &p_key, const TData &p_data) {
-			backward(p_data, p_key);
-			set(p_key, p_data);
+			backward.set(p_data, p_key);
+			forward.set(p_key, p_data);
 		}
 		const TData &getForward(const TKey &p_key) const {
 			return forward.get(p_key);

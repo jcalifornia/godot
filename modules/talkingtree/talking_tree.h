@@ -41,7 +41,7 @@ private:
 	int last_send_cache_id;
 	Ref<NetworkedMultiplayerPeer> network_peer;
 	Ref<NetworkedMultiplayerPeer> game_peer;
-	void _send_user_info();
+	void _send_user_info(int p_to);
 	void _send_packet(int p_to, PacketType type, google::protobuf::Message &message, NetworkedMultiplayerPeer::TransferMode transfer);
 	void _network_process_packet(int p_from, const uint8_t *p_packet, int p_packet_len);
 	void _network_poll();
