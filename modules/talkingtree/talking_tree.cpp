@@ -82,6 +82,13 @@ void TalkingTree::send_text(String msg) {
 	txtMsg.set_message(m.get_data(), m.length());
 	_send_packet(0, PacketType::TEXTMESSAGE, txtMsg, NetworkedMultiplayerPeer::TRANSFER_MODE_RELIABLE);
 }
+void TalkingTree::_send_user_info(){
+	if(game_peer.is_valid()){
+		TalkingTreeProto::UserInfo usrInfo;
+		usrInfo.set_user_id(game_peer->get_unique_id());
+		_send_packet(0, PacketType::USERINFO, usrInfo, NetworkedMultiplayerPeer::TRANSFER_MODE_RELIABLE);
+	}
+}
 void TalkingTree::_send_packet(int p_to, PacketType type, google::protobuf::Message &message, NetworkedMultiplayerPeer::TransferMode transferMode){
 	Vector<uint8_t> packet;
 	//incorrect
@@ -93,12 +100,7 @@ void TalkingTree::_send_packet(int p_to, PacketType type, google::protobuf::Mess
 	network_peer->set_target_peer(p_to);
 	network_peer->put_packet(packet.ptr(), packet.size());
 }
-void _send_user_info(){
-	ERR_FAIL_COND_V(!game_peer.is_valid(), 0);
-	TalkingTreeProto::UserInfo usrInfo;
-	usrInfo.set_user_id(game_peer->get_unique_id());
-	_send_packet(0, PacketType::USERINFO, usrInfo, NetworkedMultiplayerPeer::TRANSFER_MODE_RELIABLE);
-}
+
 void TalkingTree::_network_process_packet(int p_from, const uint8_t *p_packet, int p_packet_len) {
 	PacketType packet_type = (PacketType) p_packet[0];
 	const uint8_t * proto_packet = &p_packet[1];
@@ -119,6 +121,8 @@ void TalkingTree::_network_process_packet(int p_from, const uint8_t *p_packet, i
 		case PacketType::USERINFO: {
 			TalkingTreeProto::UserInfo usrInfo;
 			usrInfo.ParseFromArray( proto_packet, proto_packet_len );
+			int game_id = usrInfo.user_id();
+			
 		}
 		default:
 			break;
@@ -134,7 +138,12 @@ bool TalkingTree::is_network_server() const {
 bool TalkingTree::has_network_peer() const {
 	return network_peer.is_valid();
 }
+void TalkingTree::set_game_network_peer(const Ref<NetworkedMultiplayerPeer> &p_network_peer){
+	game_peer = p_network_peer;
+	if (game_peer.is_valid()) {
+	}
 
+}
 void TalkingTree::set_network_peer(const Ref<NetworkedMultiplayerPeer> &p_network_peer) {
 	if (network_peer.is_valid()) {
 		network_peer->disconnect("peer_connected", this, "_network_peer_connected");
@@ -237,7 +246,7 @@ void TalkingTree::talk(){
 }
 
 Ref<AudioStreamTalkingTree> TalkingTree::get_audio_stream_peer(int pid) {
-	int talkingtree_id = connected_peers.get(pid);
+	const int talkingtree_id = connected_peers.getForward(pid);
 	return connected_audio_stream_peers.get(talkingtree_id);
 }
 void TalkingTree::_create_audio_peer_stream(int p_id){

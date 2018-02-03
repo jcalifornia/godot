@@ -8,6 +8,7 @@
 #include "talking_tree_enum.h"
 #include "scene/main/timer.h"
 #include "audio_stream_talking_tree.h"
+#include "utils.h"
 #include <opus.h>
 #include <google/protobuf/message.h>
 
@@ -21,6 +22,7 @@ public:
 	TalkingTree();
 	~TalkingTree();
 	void set_network_peer(const Ref<NetworkedMultiplayerPeer> &p_network_peer);
+	void set_game_network_peer(const Ref<NetworkedMultiplayerPeer> &p_network_peer);
 	Vector<int> get_network_connected_peers() const;
 	bool is_network_server() const;
 	bool has_network_peer() const;
@@ -63,7 +65,7 @@ private:
 	void reset_encoder();
 	//audiostream
     HashMap<int, Ref<AudioStreamTalkingTree>> connected_audio_stream_peers;
-	HashMap<int, int> connected_peers; /* game_id : talkingtree_id */
+	BiMap<int, int> connected_peers; /* game_id : talkingtree_id */
 	void _create_audio_frame(PoolVector<uint8_t> pcm);
 	int _encode_audio_frame(int target, PoolVector<uint8_t> &pcm);
 	void _process_audio_packet(int p_from, const uint8_t *p_packet, int p_packet_len);
