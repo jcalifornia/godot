@@ -32,11 +32,14 @@ public:
 	Ref<AudioStreamTalkingTree> get_audio_stream_peer(int pid);
 	//Text
 	void send_text(String msg);
+	
 
 
 private:
 	int last_send_cache_id;
 	Ref<NetworkedMultiplayerPeer> network_peer;
+	Ref<NetworkedMultiplayerPeer> game_peer;
+	void _send_user_info();
 	void _send_packet(int p_to, PacketType type, google::protobuf::Message &message, NetworkedMultiplayerPeer::TransferMode transfer);
 	void _network_process_packet(int p_from, const uint8_t *p_packet, int p_packet_len);
 	void _network_poll();
@@ -60,6 +63,7 @@ private:
 	void reset_encoder();
 	//audiostream
     HashMap<int, Ref<AudioStreamTalkingTree>> connected_audio_stream_peers;
+	HashMap<int, int> connected_peers; /* game_id : talkingtree_id */
 	void _create_audio_frame(PoolVector<uint8_t> pcm);
 	int _encode_audio_frame(int target, PoolVector<uint8_t> &pcm);
 	void _process_audio_packet(int p_from, const uint8_t *p_packet, int p_packet_len);

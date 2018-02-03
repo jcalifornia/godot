@@ -35,3 +35,7 @@ message UDPTunnel {
 	// Not used.
 	required bytes packet = 1;
 }
+
+message UserInfo {
+	optional uint32 user_id = 1;
+}

@@ -93,6 +93,12 @@ void TalkingTree::_send_packet(int p_to, PacketType type, google::protobuf::Mess
 	network_peer->set_target_peer(p_to);
 	network_peer->put_packet(packet.ptr(), packet.size());
 }
+void _send_user_info(){
+	ERR_FAIL_COND_V(!game_peer.is_valid(), 0);
+	TalkingTreeProto::UserInfo usrInfo;
+	usrInfo.set_user_id(game_peer->get_unique_id());
+	_send_packet(0, PacketType::USERINFO, usrInfo, NetworkedMultiplayerPeer::TRANSFER_MODE_RELIABLE);
+}
 void TalkingTree::_network_process_packet(int p_from, const uint8_t *p_packet, int p_packet_len) {
 	PacketType packet_type = (PacketType) p_packet[0];
 	const uint8_t * proto_packet = &p_packet[1];
@@ -110,6 +116,10 @@ void TalkingTree::_network_process_packet(int p_from, const uint8_t *p_packet, i
 			msg.parse_utf8(txtMsg.message().c_str(), txtMsg.message().length());
 			this->emit_signal("text_message", msg, p_from);
 		} break;
+		case PacketType::USERINFO: {
+			TalkingTreeProto::UserInfo usrInfo;
+			usrInfo.ParseFromArray( proto_packet, proto_packet_len );
+		}
 		default:
 			break;
 	}
@@ -133,6 +143,7 @@ void TalkingTree::set_network_peer(const Ref<NetworkedMultiplayerPeer> &p_networ
 		network_peer->disconnect("connection_failed", this, "_connection_failed");
 		network_peer->disconnect("server_disconnected", this, "_server_disconnected");
 		connected_audio_stream_peers.clear();
+		connected_peers.clear();
 		last_send_cache_id = 1;
 		SDL2AudioCapture::get_singleton()->disconnect("get_pcm", this, "_create_audio_frame");
 	}
@@ -226,7 +237,8 @@ void TalkingTree::talk(){
 }
 
 Ref<AudioStreamTalkingTree> TalkingTree::get_audio_stream_peer(int pid) {
-	return connected_audio_stream_peers[pid];
+	int talkingtree_id = connected_peers.get(pid);
+	return connected_audio_stream_peers.get(talkingtree_id);
 }
 void TalkingTree::_create_audio_peer_stream(int p_id){
 	connected_audio_stream_peers[p_id].instance();
