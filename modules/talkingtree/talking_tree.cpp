@@ -86,6 +86,7 @@ void TalkingTree::_send_user_info(int p_to){
 	if(game_peer.is_valid()){
 		TalkingTreeProto::UserInfo usrInfo;
 		usrInfo.set_user_id(game_peer->get_unique_id());
+		usrInfo.set_tree_id(network_peer->get_unique_id());
 		_send_packet(p_to, PacketType::USERINFO, usrInfo, NetworkedMultiplayerPeer::TRANSFER_MODE_RELIABLE);
 	}
 }
@@ -122,7 +123,22 @@ void TalkingTree::_network_process_packet(int p_from, const uint8_t *p_packet, i
 			TalkingTreeProto::UserInfo usrInfo;
 			usrInfo.ParseFromArray( proto_packet, proto_packet_len );
 			int game_id = usrInfo.user_id();
-			connected_peers.add(game_id, p_from);
+			int tree_id = usrInfo.tree_id();
+			if(network_peer->is_server()){
+				//send everybody else
+				const int *k=NULL;
+				while((k=connected_peers.next(k))){
+					TalkingTreeProto::UserInfo otherUsr;
+					otherUsr.set_user_id(*k);
+					otherUsr.set_tree_id(connected_peers.getForward(*k));
+					_send_packet(p_from, PacketType::USERINFO, otherUsr, NetworkedMultiplayerPeer::TRANSFER_MODE_RELIABLE);
+					
+				}
+				//send yourself
+				_send_user_info(p_from);
+			}
+			connected_peers.add(game_id, tree_id);
+			
 		}
 		default:
 			break;

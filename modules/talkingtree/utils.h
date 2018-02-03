@@ -31,5 +31,8 @@ class BiMap {
 			forward.erase(backward.get(p_key));
 			return backward.erase(p_key);
 		}
+		const TKey *next(const TKey *p_key) const {
+			return forward.next(p_key);
+		}
 
 };
