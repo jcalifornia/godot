@@ -13,10 +13,12 @@
 #include "pair.h"
 void TalkingTree::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_network_peer", "peer"), &TalkingTree::set_network_peer);
+	ClassDB::bind_method(D_METHOD("set_game_network_peer", "peer"), &TalkingTree::set_game_network_peer);
 	ClassDB::bind_method(D_METHOD("is_network_server"), &TalkingTree::is_network_server);
 	ClassDB::bind_method(D_METHOD("has_network_peer"), &TalkingTree::has_network_peer);
 	ClassDB::bind_method(D_METHOD("get_network_connected_peers"), &TalkingTree::get_network_connected_peers);
 	ClassDB::bind_method(D_METHOD("get_network_unique_id"), &TalkingTree::get_network_unique_id);
+	ClassDB::bind_method(D_METHOD("send_user_info"), &TalkingTree::send_user_info);
 	ClassDB::bind_method(D_METHOD("poll"), &TalkingTree::poll);
 	
 	ClassDB::bind_method(D_METHOD("_network_peer_connected"), &TalkingTree::_network_peer_connected);
@@ -37,7 +39,6 @@ void TalkingTree::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("_create_audio_frame", "audio_frame"), &TalkingTree::_create_audio_frame);
 
 	ClassDB::bind_method(D_METHOD("get_audio_stream_peer", "p_id"), &TalkingTree::get_audio_stream_peer);
-	ClassDB::bind_method(D_METHOD("create_audio_peer_stream", "p_id"), &TalkingTree::_create_audio_peer_stream);
 	ClassDB::bind_method(D_METHOD("talk"), &TalkingTree::talk);
 	ClassDB::bind_method(D_METHOD("mute"), &TalkingTree::mute);
 }
@@ -82,6 +83,9 @@ void TalkingTree::send_text(String msg) {
 	txtMsg.set_message(m.get_data(), m.length());
 	_send_packet(0, PacketType::TEXTMESSAGE, txtMsg, NetworkedMultiplayerPeer::TRANSFER_MODE_RELIABLE);
 }
+void TalkingTree::send_user_info(){
+	_send_user_info(0);
+}
 void TalkingTree::_send_user_info(int p_to){
 	if(game_peer.is_valid()){
 		TalkingTreeProto::UserInfo usrInfo;
@@ -90,6 +94,19 @@ void TalkingTree::_send_user_info(int p_to){
 		_send_packet(p_to, PacketType::USERINFO, usrInfo, NetworkedMultiplayerPeer::TRANSFER_MODE_RELIABLE);
 	}
 }
+
+Ref<AudioStreamTalkingTree> TalkingTree::get_audio_stream_peer(int pid) {
+	const int talkingtree_id = connected_peers.getForward(pid);
+	return connected_audio_stream_peers.get(talkingtree_id);
+}
+void TalkingTree::_create_audio_peer_stream(int p_id){
+	connected_audio_stream_peers[p_id].instance();
+	connected_audio_stream_peers[p_id]->set_pid(p_id);
+	connected_audio_stream_peers[p_id]->set_mix_rate(TalkingTree::SAMPLE_RATE);
+	connected_audio_stream_peers[p_id]->set_format(AudioStreamTalkingTree::FORMAT_16_BITS);
+	
+}
+
 void TalkingTree::_send_packet(int p_to, PacketType type, google::protobuf::Message &message, NetworkedMultiplayerPeer::TransferMode transferMode){
 	Vector<uint8_t> packet;
 	//incorrect
@@ -124,6 +141,8 @@ void TalkingTree::_network_process_packet(int p_from, const uint8_t *p_packet, i
 			usrInfo.ParseFromArray( proto_packet, proto_packet_len );
 			int game_id = usrInfo.user_id();
 			int tree_id = usrInfo.tree_id();
+			//create audio stream peer
+			_create_audio_peer_stream(tree_id);
 			if(network_peer->is_server()){
 				//send everybody else
 				const int *k=NULL;
@@ -189,7 +208,6 @@ void TalkingTree::_connection_failed() {
 	emit_signal("connection_failed");
 }
 void TalkingTree::_connected_to_server() {
-	//_create_audio_peer_stream(1);
 	emit_signal("connected_to_server");
 }
 void TalkingTree::_network_peer_connected(int p_id) {
@@ -197,6 +215,7 @@ void TalkingTree::_network_peer_connected(int p_id) {
 }
 void TalkingTree::_network_peer_disconnected(int p_id) {
 	connected_audio_stream_peers.erase(p_id);
+	connected_peers.eraseData(p_id);
 	emit_signal("network_peer_disconnected", p_id);
 }
 void TalkingTree::_server_disconnected(){
@@ -261,17 +280,7 @@ void TalkingTree::talk(){
 	SDL2AudioCapture::get_singleton()->talk();
 }
 
-Ref<AudioStreamTalkingTree> TalkingTree::get_audio_stream_peer(int pid) {
-	const int talkingtree_id = connected_peers.getForward(pid);
-	return connected_audio_stream_peers.get(talkingtree_id);
-}
-void TalkingTree::_create_audio_peer_stream(int p_id){
-	connected_audio_stream_peers[p_id].instance();
-	connected_audio_stream_peers[p_id]->set_pid(p_id);
-	connected_audio_stream_peers[p_id]->set_mix_rate(TalkingTree::SAMPLE_RATE);
-	connected_audio_stream_peers[p_id]->set_format(AudioStreamTalkingTree::FORMAT_16_BITS);
-	
-}
+
 Pair<int, bool> TalkingTree::_decode_opus_frame(const uint8_t *in_buf, int in_len, int16_t *pcm_buf, int buf_len){
 	VarInt varint(in_buf);
 	int16_t opus_length = varint.getValue();

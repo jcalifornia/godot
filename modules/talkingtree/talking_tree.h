@@ -27,6 +27,7 @@ public:
 	bool is_network_server() const;
 	bool has_network_peer() const;
 	int get_network_unique_id() const;
+	void send_user_info();
 	void poll();
 	//VOIP
 	void talk();
