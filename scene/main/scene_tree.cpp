@@ -1986,6 +1986,8 @@ void SceneTree::_network_process_packet(int p_from, const uint8_t *p_packet, int
 
 			StringName name = String::utf8((const char *)&p_packet[5]);
 
+			uint64_t packet_time = OS::get_singleton()->get_ticks_usec();
+
 			if (packet_type == NETWORK_COMMAND_REMOTE_CALL) {
 
 				if (!node->can_call_rpc(name, p_from))
@@ -2022,10 +2024,8 @@ void SceneTree::_network_process_packet(int p_from, const uint8_t *p_packet, int
 					error = "RPC - " + error;
 					ERR_PRINTS(error);
 				} else {
-
-					print_line("remote call node : " + paths);
-					print_line("name : " + name);
-					print_line("argc : " + itos(argc));
+					TreecursionCallTask remote_call_packet( name, paths, args, packet_time, p_from);
+					//print_line(remote_call_packet.toString());
 				}
 
 
@@ -2042,15 +2042,13 @@ void SceneTree::_network_process_packet(int p_from, const uint8_t *p_packet, int
 				decode_variant(value, &p_packet[ofs], p_packet_len - ofs);
 
 				bool valid;
-
+				
 				node->set(name, value, &valid);
 				if (!valid) {
 					String error = "Error setting remote property '" + String(name) + "', not found in object of type " + node->get_class();
 					ERR_PRINTS(error);
 				}else{
-					print_line("node set node : " + paths);
-					print_line("name : " + name);
-					print_line("bool " + itos(value));
+					TreecursionSetTask remote_set_packet(name, paths, value, packet_time, p_from);
 				}
 
 			}
