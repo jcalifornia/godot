@@ -50,6 +50,8 @@
 
 #include <stdio.h>
 
+#include "io/treecursion_types.h"
+
 void SceneTreeTimer::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("set_time_left", "time"), &SceneTreeTimer::set_time_left);
@@ -1931,13 +1933,14 @@ void SceneTree::_network_process_packet(int p_from, const uint8_t *p_packet, int
 
 			Node *node = NULL;
 
+			String paths;
 			if (target & 0x80000000) {
 				//use full path (not cached yet)
 
 				int ofs = target & 0x7FFFFFFF;
 				ERR_FAIL_COND(ofs >= p_packet_len);
 
-				String paths;
+				
 				paths.parse_utf8((const char *)&p_packet[ofs], p_packet_len - ofs);
 
 				NodePath np = paths;
@@ -1964,6 +1967,8 @@ void SceneTree::_network_process_packet(int p_from, const uint8_t *p_packet, int
 				if (node == NULL) {
 					ERR_EXPLAIN("Failed to get cached path from RPC: " + String(ni->path));
 					ERR_FAIL_COND(node == NULL);
+				} else {
+					paths = ni->path;
 				}
 			}
 
@@ -2016,7 +2021,13 @@ void SceneTree::_network_process_packet(int p_from, const uint8_t *p_packet, int
 					String error = Variant::get_call_error_text(node, name, (const Variant **)argp.ptr(), argc, ce);
 					error = "RPC - " + error;
 					ERR_PRINTS(error);
+				} else {
+
+					print_line("remote call node : " + paths);
+					print_line("name : " + name);
+					print_line("argc : " + itos(argc));
 				}
+
 
 			} else {
 
@@ -2036,7 +2047,12 @@ void SceneTree::_network_process_packet(int p_from, const uint8_t *p_packet, int
 				if (!valid) {
 					String error = "Error setting remote property '" + String(name) + "', not found in object of type " + node->get_class();
 					ERR_PRINTS(error);
+				}else{
+					print_line("node set node : " + paths);
+					print_line("name : " + name);
+					print_line("bool " + itos(value));
 				}
+
 			}
 
 		} break;

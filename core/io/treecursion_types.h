@@ -11,9 +11,19 @@ class TreecusionWriteTask : Reference {
 };
 
 class TreecursionCommandTask : TreecusionWriteTask {
-	String func;
-	List<String> args;
+	String node_path;
+	
 };
+
+class TreecursionSetTask : TreecursionCommandTask {
+	bool value;
+};
+
+class TreecursionCallTask : TreecursionCommandTask {
+	Variant func;
+	Vector<Variant> args;
+};
+
 
 class TreecursionVoiceTask : TreecusionWriteTask {
 	PoolByteArray pcm_data;
