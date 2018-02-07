@@ -34,16 +34,18 @@ public:
 };
 
 class TreecursionSetTask : public TreecursionCommandTask {
-	const bool value;
+	const Variant value;
 public:
-	TreecursionSetTask(String n, String &node, bool v, uint64_t t, uint64_t u) 
+	TreecursionSetTask(String n, String &node, Variant v, uint64_t t, uint64_t u) 
 		: TreecursionCommandTask( n, node, t, u ), value(v) {
 	}
 	bool get_value() const { return value; }
 
 	String toString() const {
+		String var;
+		VariantWriter::write_to_string(value, var);
 		String ret = String("time: ") + itos(time) + String(", user_id : ") + itos(user_id) + String(", name : ") + name + String(", node : ") + node_path;
-		ret += String(", value: ")  + itos(value);
+		ret += String(", value: ")  + value;
 		return ret;
 	}
 };
