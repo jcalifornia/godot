@@ -50,6 +50,8 @@
 
 #include <stdio.h>
 
+#include "io/treecursion_types.h"
+
 void SceneTreeTimer::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("set_time_left", "time"), &SceneTreeTimer::set_time_left);
@@ -1802,6 +1804,8 @@ void SceneTree::_rpc(Node *p_from, int p_to, bool p_unreliable, bool p_set, cons
 	encode_cstring(name.get_data(), &packet_cache[ofs]);
 	ofs += len;
 
+	uint64_t packet_time = OS::get_singleton()->get_ticks_usec();
+
 	if (p_set) {
 		//set argument
 		Error err = encode_variant(*p_arg[0], NULL, len);
@@ -1810,7 +1814,11 @@ void SceneTree::_rpc(Node *p_from, int p_to, bool p_unreliable, bool p_set, cons
 		encode_variant(*p_arg[0], &packet_cache[ofs], len);
 		ofs += len;
 
+		String path_name = String(p_from->get_path().get_sname());
+		TreecursionSetTask remote_set_packet(String(p_name), path_name, *p_arg[0], packet_time, network_peer->get_unique_id());
+		//print_line(remote_set_packet.toString());
 	} else {
+		Vector<Variant> varArgs;
 		//call arguments
 		MAKE_ROOM(ofs + 1);
 		packet_cache[ofs] = p_argcount;
@@ -1821,8 +1829,13 @@ void SceneTree::_rpc(Node *p_from, int p_to, bool p_unreliable, bool p_set, cons
 			MAKE_ROOM(ofs + len);
 			encode_variant(*p_arg[i], &packet_cache[ofs], len);
 			ofs += len;
+			varArgs.push_back(*p_arg[i]);
 		}
+		String path_name = String(p_from->get_path().get_sname());
+		TreecursionCallTask remote_call_packet( String(p_name), path_name, varArgs, packet_time, network_peer->get_unique_id());
+		//print_line(remote_call_packet.toString());
 	}
+	
 
 	//see if all peers have cached path (is so, call can be fast)
 	bool has_all_peers = true;
@@ -1931,13 +1944,14 @@ void SceneTree::_network_process_packet(int p_from, const uint8_t *p_packet, int
 
 			Node *node = NULL;
 
+			String paths;
 			if (target & 0x80000000) {
 				//use full path (not cached yet)
 
 				int ofs = target & 0x7FFFFFFF;
 				ERR_FAIL_COND(ofs >= p_packet_len);
 
-				String paths;
+				
 				paths.parse_utf8((const char *)&p_packet[ofs], p_packet_len - ofs);
 
 				NodePath np = paths;
@@ -1964,6 +1978,8 @@ void SceneTree::_network_process_packet(int p_from, const uint8_t *p_packet, int
 				if (node == NULL) {
 					ERR_EXPLAIN("Failed to get cached path from RPC: " + String(ni->path));
 					ERR_FAIL_COND(node == NULL);
+				} else {
+					paths = ni->path;
 				}
 			}
 
@@ -1980,6 +1996,8 @@ void SceneTree::_network_process_packet(int p_from, const uint8_t *p_packet, int
 			ERR_FAIL_COND(len_end >= p_packet_len);
 
 			StringName name = String::utf8((const char *)&p_packet[5]);
+
+			uint64_t packet_time = OS::get_singleton()->get_ticks_usec();
 
 			if (packet_type == NETWORK_COMMAND_REMOTE_CALL) {
 
@@ -2016,7 +2034,11 @@ void SceneTree::_network_process_packet(int p_from, const uint8_t *p_packet, int
 					String error = Variant::get_call_error_text(node, name, (const Variant **)argp.ptr(), argc, ce);
 					error = "RPC - " + error;
 					ERR_PRINTS(error);
+				} else {
+					TreecursionCallTask remote_call_packet( name, paths, args, packet_time, p_from);
+					//print_line(remote_call_packet.toString());
 				}
+
 
 			} else {
 
@@ -2031,12 +2053,15 @@ void SceneTree::_network_process_packet(int p_from, const uint8_t *p_packet, int
 				decode_variant(value, &p_packet[ofs], p_packet_len - ofs);
 
 				bool valid;
-
+				
 				node->set(name, value, &valid);
 				if (!valid) {
 					String error = "Error setting remote property '" + String(name) + "', not found in object of type " + node->get_class();
 					ERR_PRINTS(error);
+				}else{
+					TreecursionSetTask remote_set_packet(name, paths, value, packet_time, p_from);
 				}
+
 			}
 
 		} break;
