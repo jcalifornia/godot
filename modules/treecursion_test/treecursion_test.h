@@ -16,6 +16,8 @@
 #include "treecursion_write.h"
 #include "io/treecursion_types.h"
 
+#include "treecursion_queue_lockless.h"
+
 class TreecursionTestStorage : public Object {
 	GDCLASS(TreecursionTestStorage, Object);
 
@@ -34,6 +36,7 @@ private:
 	mutable bool _exit_thread;
 	Thread *_thread;
 	Mutex *_mutex;
+	//Ref<TreecursionQueue<TreecusionWriteTask, >> _queue;
 
 protected:
 	static void _bind_methods();

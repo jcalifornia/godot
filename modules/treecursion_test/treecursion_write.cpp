@@ -14,7 +14,7 @@ void TreecursionTestWriter::write_packet(TreecusionWriteTask & packet){
 }
 TreecursionTestWriter::TreecursionTestWriter(){
 	int current_time = OS::get_singleton()->get_unix_time();
-	_outfile_name = itos(current_time) + ".htogg";
+	_outfile_name = itos(current_time) + ".tjson";
 	_fout = FileAccess::open(_outfile_name, FileAccess::WRITE);
 }
 

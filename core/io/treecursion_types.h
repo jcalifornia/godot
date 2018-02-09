@@ -75,7 +75,18 @@ public:
 		ret += String(", value: ")  + value;
 		return ret;
 	}
-
+	virtual String toJson() const {
+		Dictionary dict;
+		dict["time"] = time;
+		dict["value"] = value;
+		dict["node"] = node_path;
+		dict["user_id"] = user_id;
+		dict["name"] = name;
+		JSON a;
+		String ret = a.print(dict);
+		return ret;
+	}
+/*
 	virtual String toJson() const { 
 		return String("{") + _string2Json("name", name) + String(",")
 			 + _string2Json("path", node_path) + String(",")
@@ -83,6 +94,7 @@ public:
 			 + _int2Json("time", time) + String(",") 
 			 + _int2Json("user_id", user_id) + String("}");
 	}
+*/
 };
 
 class TreecursionCallTask : public TreecursionCommandTask {
@@ -100,6 +112,18 @@ public:
 		}
 		return ret;
 	}
+	virtual String toJson() const {
+		Dictionary dict;
+		dict["time"] = time;
+		dict["args"] = args;
+		dict["node"] = node_path;
+		dict["user_id"] = user_id;
+		dict["name"] = name;
+		JSON a;
+		String ret = a.print(dict);
+		return ret;
+	}
+/*
 	virtual String toJson() const { 
 		return String("{") + _string2Json("name", name) + String(",")
 			 + _string2Json("path", node_path) + String(",")
@@ -107,6 +131,7 @@ public:
 			 + _int2Json("time", time) + String(",") 
 			 + _int2Json("user_id", user_id) + String("}");
 	}
+*/
 };
 
 
