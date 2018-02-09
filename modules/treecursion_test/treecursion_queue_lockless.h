@@ -1,3 +1,6 @@
+#ifndef TREECURSION_QUEUE_LOCKLESS
+#define TREECURSION_QUEUE_LOCKLESS
+
 #include "core/object.h"
 
 #include "ref_ptr.h"
@@ -31,9 +34,9 @@ public:
 			/* buffer is full, just return */
 			return false;
 		}
-
+		T *expected = nullptr;
 		//maybe i need something different
-		while(!_buffer[ head % Q_SIZE ] -> compare_exchange_weak(nullptr, item)) {
+		while(!_buffer[ head % Q_SIZE ].compare_exchange_weak( expected, item)) {
 
 		}
 
@@ -47,9 +50,11 @@ public:
 	bool pop( Ref<T> &ref ){
 		uint64_t tail = _tail.load();
 		T *ptr = nullptr;
+
+		T *new_value = nullptr;
 		do{
 
-		} while ( !_buffer[tail % Q_SIZE] -> compare_exchange_weak( ptr, nullptr) );
+		} while ( !_buffer[tail % Q_SIZE].compare_exchange_weak( ptr, new_value ) );
 
 		ref = Ref<T>(ptr);
 		return true;
@@ -59,7 +64,12 @@ public:
 		return this -> _head.load() == this -> _tail.load();
 	}
 	TreecursionQueue(uint64_t producers) : _n_producers(producers) {
-		std::atomic_init(&_head, 0);
-		std::atomic_init(&_tail, 0);
+		//std::atomic_init(&_head, 0);
+		//std::atomic_init(&_tail, 0);
+	};
+	TreecursionQueue() : _n_producers(2) {
+		//std::atomic_init(&_head, 0);
+		//std::atomic_init(&_tail, 0);
 	};
 };
+#endif

@@ -16,6 +16,7 @@
 #include "treecursion_write.h"
 #include "io/treecursion_types.h"
 
+#include "ref_ptr.h"
 #include "treecursion_queue_lockless.h"
 
 class TreecursionTestStorage : public Object {
@@ -36,7 +37,6 @@ private:
 	mutable bool _exit_thread;
 	Thread *_thread;
 	Mutex *_mutex;
-	//Ref<TreecursionQueue<TreecusionWriteTask, >> _queue;
 
 protected:
 	static void _bind_methods();
@@ -44,12 +44,13 @@ protected:
 public:
 	void new_file();
 	void close_file();
-	void enqueue(TreecusionWriteTask & packet);
+	void enqueue(TreecusionWriteTask * packet);
 	TreecursionTestStorage();
 	~TreecursionTestStorage();
 	
 
 private:
+	TreecursionQueue<TreecusionWriteTask, 4096> game_queue;
 	void write_packet(TreecusionWriteTask & packet);
 	TreecursionTestWriter *treecursion;
 

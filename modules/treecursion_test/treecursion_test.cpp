@@ -4,6 +4,7 @@
 
 #include "os/os.h"
 
+#include <atomic>
 
 
 void TreecursionTestStorage::_bind_methods() {
@@ -38,6 +39,12 @@ void TreecursionTestStorage::unlock() {
 void TreecursionTestStorage::write_packet(TreecusionWriteTask & packet){
 	treecursion -> write_packet(packet);
 }
+void TreecursionTestStorage::enqueue(TreecusionWriteTask * packet ){
+	bool pushed = game_queue.push(packet);
+	if(!pushed){
+		ERR_PRINTS("Queue should not be full")
+	}
+}
 
 Error TreecursionTestStorage::init(){
 	_thread_exited = false;
@@ -55,7 +62,7 @@ void TreecursionTestStorage::thread_func(void *p_udata){
 	uint64_t usdelay = 500000;
 	while(!ac -> _exit_thread){
 		if(ac->treecursion != NULL){
-			
+			//while(ac->)
 		}
 		OS::get_singleton()->delay_usec(usdelay);
 	}

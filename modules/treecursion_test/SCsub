@@ -7,4 +7,5 @@ env_treecursion_test = env_modules.Clone()
 
 # Godot's own source files
 env_treecursion_test.add_source_files(env.modules_sources, "*.cpp")
+env_treecursion_test.Append(CXXFLAGS=['-O2', '-std=c++11'])
 
