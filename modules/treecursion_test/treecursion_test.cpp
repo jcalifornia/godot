@@ -35,7 +35,9 @@ void TreecursionTestStorage::unlock() {
 		return;
 	_mutex->unlock();
 }
-
+void TreecursionTestStorage::write_packet(TreecusionWriteTask & packet){
+	treecursion -> write_packet(packet);
+}
 
 Error TreecursionTestStorage::init(){
 	_thread_exited = false;

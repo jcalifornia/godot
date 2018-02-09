@@ -1,7 +1,12 @@
+#ifndef TREECURSION_TYPES
+#define TREECURSION_TYPES
+
 #include "core/variant.h"
 #include "reference.h"
 #include "vector.h"
 #include "variant_parser.h"
+#include "io/json.h"
+#include "dictionary.h"
 
 enum AUDIO_CODEC { OPUS, RAW };
 
@@ -15,12 +20,31 @@ protected:
 	TreecusionWriteTask( uint64_t t, uint64_t u ) : time(t), user_id(u){
 
 	}
+	String _string2Json(String key, String value) const {
+		return String("\"") + key + String("\": \"") + value.json_escape() + String("\""); 
+	}
+	String _int2Json(String key, uint64_t value) const {
+		return String("\"") + key + String("\": ") + itos(value); 
+	}
+	String _addQuotes(String s) const {
+		return String("\"") + s.json_escape() + String("\"");
+	}
+	String _variant2Json(String key, Variant v) const {
+		String var;
+		VariantWriter::write_to_string(v, var);
+		String("\"") + key + String("\": ") + _addQuotes(var); 
+	}
+
 public:
 	uint64_t get_user_id() const { return user_id; }
 	uint64_t get_time() const { return time; }
+	virtual String toJson() const { 
+		return String("");
+	}
+	
+
+
 };
-
-
 class TreecursionCommandTask : public TreecusionWriteTask {
 protected:
 	const String node_path;
@@ -31,6 +55,9 @@ public:
 
 	}
 	String get_node_path() const { return node_path; }
+	virtual String toJson() const { 
+		return String("");
+	}
 };
 
 class TreecursionSetTask : public TreecursionCommandTask {
@@ -47,6 +74,14 @@ public:
 		String ret = String("time: ") + itos(time) + String(", user_id : ") + itos(user_id) + String(", name : ") + name + String(", node : ") + node_path;
 		ret += String(", value: ")  + value;
 		return ret;
+	}
+
+	virtual String toJson() const { 
+		return String("{") + _string2Json("name", name) + String(",")
+			 + _string2Json("path", node_path) + String(",")
+			 + _variant2Json("value", value) + String(",")
+			 + _int2Json("time", time) + String(",") 
+			 + _int2Json("user_id", user_id) + String("}");
 	}
 };
 
@@ -65,11 +100,19 @@ public:
 		}
 		return ret;
 	}
+	virtual String toJson() const { 
+		return String("{") + _string2Json("name", name) + String(",")
+			 + _string2Json("path", node_path) + String(",")
+			 + _variant2Json("args", args) + String(",")
+			 + _int2Json("time", time) + String(",") 
+			 + _int2Json("user_id", user_id) + String("}");
+	}
 };
 
 
 class TreecursionVoiceTask : public TreecusionWriteTask {
 	PoolByteArray pcm_data;
+	
 };
 
 class TreecursionHeaderTask : public TreecusionWriteTask {
@@ -79,4 +122,4 @@ class TreecursionHeaderTask : public TreecusionWriteTask {
 	int version_major;
 	int version_minor;
 };
-
+#endif

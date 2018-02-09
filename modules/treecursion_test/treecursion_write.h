@@ -2,6 +2,9 @@
 #include "os/file_access.h"
 #include "ustring.h"
 
+#include "io/treecursion_types.h"
+
+
 class TreecursionTestWriter : public Object {
 	GDCLASS(TreecursionTestWriter, Object);
 
@@ -12,6 +15,7 @@ protected:
 	static void _bind_methods();
 
 public:
+	void write_packet(TreecusionWriteTask & packet);
 	void close();
 	TreecursionTestWriter();
 	~TreecursionTestWriter();

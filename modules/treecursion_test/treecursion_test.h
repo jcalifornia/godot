@@ -14,6 +14,7 @@
 #include "ustring.h"
 
 #include "treecursion_write.h"
+#include "io/treecursion_types.h"
 
 class TreecursionTestStorage : public Object {
 	GDCLASS(TreecursionTestStorage, Object);
@@ -40,10 +41,13 @@ protected:
 public:
 	void new_file();
 	void close_file();
+	void enqueue(TreecusionWriteTask & packet);
 	TreecursionTestStorage();
 	~TreecursionTestStorage();
+	
 
 private:
+	void write_packet(TreecusionWriteTask & packet);
 	TreecursionTestWriter *treecursion;
 
 
