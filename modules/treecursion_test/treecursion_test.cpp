@@ -11,7 +11,7 @@ void TreecursionTestStorage::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("close_file"), &TreecursionTestStorage::close_file);
 }
 
-TreecursionTestStorage *TreecursionTestStorage::_singleton = NULL;
+TreecursionTestStorage *TreecursionTestStorage::_singleton = nullptr;
 TreecursionTestStorage *TreecursionTestStorage::get_singleton() {
 	return _singleton;
 }
@@ -23,7 +23,7 @@ void TreecursionTestStorage::new_file(){
 }
 void TreecursionTestStorage::close_file(){
 	memdelete(treecursion);
-	treecursion = NULL;
+	treecursion = nullptr;
 }
 void TreecursionTestStorage::lock() {
 	if (!_thread || !_mutex)
@@ -36,14 +36,23 @@ void TreecursionTestStorage::unlock() {
 		return;
 	_mutex->unlock();
 }
-void TreecursionTestStorage::write_packet(TreecusionWriteTask & packet){
-	treecursion -> write_packet(packet);
+void TreecursionTestStorage::write_packet(TreecursionWriteTask *packet){
+	treecursion -> write_packet(*packet);
 }
-void TreecursionTestStorage::enqueue(TreecusionWriteTask * packet ){
+
+void TreecursionTestStorage::enqueue(TreecursionWriteTask * packet ){
 	bool pushed = game_queue.push(packet);
 	if(!pushed){
 		ERR_PRINTS("Queue should not be full")
 	}
+}
+Ref<TreecursionWriteTask> TreecursionTestStorage::dequeue(){
+	Ref<TreecursionWriteTask> pack;
+	game_queue.pop(pack);
+	return pack;
+}
+bool TreecursionTestStorage::is_empty(){
+	return game_queue.is_empty();
 }
 
 Error TreecursionTestStorage::init(){
@@ -54,6 +63,8 @@ Error TreecursionTestStorage::init(){
 }
 
 
+
+
 void TreecursionTestStorage::thread_func(void *p_udata){
 	TreecursionTestStorage *ac = (TreecursionTestStorage *) p_udata;
 
@@ -61,8 +72,11 @@ void TreecursionTestStorage::thread_func(void *p_udata){
 	//every half second.
 	uint64_t usdelay = 500000;
 	while(!ac -> _exit_thread){
-		if(ac->treecursion != NULL){
-			//while(ac->)
+		if(ac->treecursion != nullptr){
+			while(!ac->is_empty()){
+				Ref<TreecursionWriteTask> packet = ac->dequeue();
+				ac->write_packet(packet.ptr());
+			}
 		}
 		OS::get_singleton()->delay_usec(usdelay);
 	}
@@ -78,7 +92,7 @@ void TreecursionTestStorage::finish() {
 	memdelete(_thread);
 	if (_mutex)
 		memdelete(_mutex);
-	_thread = NULL;
+	_thread = nullptr;
 }
 
 

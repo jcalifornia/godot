@@ -11,13 +11,13 @@
 enum AUDIO_CODEC { OPUS, RAW };
 
 
-class TreecusionWriteTask : public Reference {
-	GDCLASS(TreecusionWriteTask, Reference);
+class TreecursionWriteTask : public Reference {
+	GDCLASS(TreecursionWriteTask, Reference);
 protected:
 	const uint64_t time;
 	const uint64_t user_id;
 protected:
-	TreecusionWriteTask( uint64_t t, uint64_t u ) : time(t), user_id(u){
+	TreecursionWriteTask( uint64_t t, uint64_t u ) : time(t), user_id(u){
 
 	}
 	String _string2Json(String key, String value) const {
@@ -45,13 +45,13 @@ public:
 
 
 };
-class TreecursionCommandTask : public TreecusionWriteTask {
+class TreecursionCommandTask : public TreecursionWriteTask {
 protected:
 	const String node_path;
 	const String name;
 public:
 	TreecursionCommandTask(String &n, String &node, uint64_t t, uint64_t u ) 
-		: TreecusionWriteTask(t, u), node_path(node), name(n){
+		: TreecursionWriteTask(t, u), node_path(node), name(n){
 
 	}
 	String get_node_path() const { return node_path; }
@@ -135,12 +135,12 @@ public:
 };
 
 
-class TreecursionVoiceTask : public TreecusionWriteTask {
+class TreecursionVoiceTask : public TreecursionWriteTask {
 	PoolByteArray pcm_data;
 	
 };
 
-class TreecursionHeaderTask : public TreecusionWriteTask {
+class TreecursionHeaderTask : public TreecursionWriteTask {
 	AUDIO_CODEC codec;
 	int bit_rate;
 	int frame_size;

@@ -9,7 +9,7 @@ void TreecursionTestWriter::_bind_methods() {
 void TreecursionTestWriter::close(){
 	_fout->close();
 }
-void TreecursionTestWriter::write_packet(TreecusionWriteTask & packet){
+void TreecursionTestWriter::write_packet(TreecursionWriteTask & packet){
 	_fout->store_line(packet.toJson());
 }
 TreecursionTestWriter::TreecursionTestWriter(){

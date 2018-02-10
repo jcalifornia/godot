@@ -42,16 +42,20 @@ protected:
 	static void _bind_methods();
 
 public:
+	bool is_empty();
 	void new_file();
 	void close_file();
-	void enqueue(TreecusionWriteTask * packet);
+
+	void enqueue(TreecursionWriteTask * packet);
+
+	Ref<TreecursionWriteTask> dequeue();
 	TreecursionTestStorage();
 	~TreecursionTestStorage();
 	
 
 private:
-	TreecursionQueue<TreecusionWriteTask, 4096> game_queue;
-	void write_packet(TreecusionWriteTask & packet);
+	TreecursionQueue<TreecursionWriteTask, 4096> game_queue;
+	void write_packet(TreecursionWriteTask * packet);
 	TreecursionTestWriter *treecursion;
 
 

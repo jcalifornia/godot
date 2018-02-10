@@ -15,7 +15,7 @@ protected:
 	static void _bind_methods();
 
 public:
-	void write_packet(TreecusionWriteTask & packet);
+	void write_packet(TreecursionWriteTask & packet);
 	void close();
 	TreecursionTestWriter();
 	~TreecursionTestWriter();
