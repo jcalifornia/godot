@@ -71,6 +71,7 @@ bool TreecursionTestStorage::is_running(){
 
 Error TreecursionTestStorage::init(){
 	_thread_exited = false;
+	treecursion = nullptr;
 	_mutex = Mutex::create();
 	_thread = Thread::create(TreecursionTestStorage::thread_func, this);
 	return OK;
@@ -96,8 +97,8 @@ void TreecursionTestStorage::finish() {
 		return;
 	_exit_thread = true;
 	Thread::wait_to_finish(_thread);
-
-	close_file();
+	if(treecursion)
+		close_file();
 
 	memdelete(_thread);
 	if (_mutex)
@@ -111,7 +112,8 @@ TreecursionTestStorage::TreecursionTestStorage() {
 }
 
 TreecursionTestStorage::~TreecursionTestStorage() {
-	
+	TreecursionTestStorage::get_singleton()->finish();
+	_singleton = nullptr;
 }
 
 _TreecursionTestStorage *_TreecursionTestStorage::_singleton = nullptr;
@@ -125,6 +127,7 @@ void _TreecursionTestStorage::start_recording(){
 }
 _TreecursionTestStorage::_TreecursionTestStorage() {
 	_singleton = this;
+	TreecursionTestStorage::get_singleton()->init();
 	
 }
 _TreecursionTestStorage::~_TreecursionTestStorage() {

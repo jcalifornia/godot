@@ -64,12 +64,12 @@ public:
 		return this -> _head.load() == this -> _tail.load();
 	}
 	TreecursionQueue(uint64_t producers) : _n_producers(producers) {
-		//std::atomic_init(&_head, 0);
-		//std::atomic_init(&_tail, 0);
+		_head.store(0);
+		_tail.store(0);
 	};
 	TreecursionQueue() : _n_producers(2) {
-		//std::atomic_init(&_head, 0);
-		//std::atomic_init(&_tail, 0);
+		_head.store(0);
+		_tail.store(0);
 	};
 };
 #endif
