@@ -42,13 +42,16 @@ protected:
 	static void _bind_methods();
 
 public:
+	static void startRecord();
+	void stopRecording();
 	bool is_empty();
 	void new_file();
 	void close_file();
-
+	void flush();
 	void enqueue(TreecursionWriteTask * packet);
-
+	bool is_running();
 	Ref<TreecursionWriteTask> dequeue();
+
 	TreecursionTestStorage();
 	~TreecursionTestStorage();
 	
@@ -57,8 +60,25 @@ private:
 	TreecursionQueue<TreecursionWriteTask, 4096> game_queue;
 	void write_packet(TreecursionWriteTask * packet);
 	TreecursionTestWriter *treecursion;
-
-
 };
+
+class _TreecursionTestStorage : public Object {
+	GDCLASS(_TreecursionTestStorage, Object);
+
+	friend class TreecursionTestStorage;
+
+	static _TreecursionTestStorage *_singleton;
+protected:
+	
+	static void _bind_methods();
+	
+public:
+	static _TreecursionTestStorage *get_singleton() { return _singleton; }
+	void start_recording();
+	_TreecursionTestStorage();
+	~_TreecursionTestStorage();
+};
+
+
 
 #endif

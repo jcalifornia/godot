@@ -2036,8 +2036,10 @@ void SceneTree::_network_process_packet(int p_from, const uint8_t *p_packet, int
 					error = "RPC - " + error;
 					ERR_PRINTS(error);
 				} else {
-					TreecursionCallTask *remote_call_packet = memnew(TreecursionCallTask( name, paths, args, packet_time, p_from));
-					TreecursionTestStorage::get_singleton()->enqueue(remote_call_packet);
+					if(TreecursionTestStorage::get_singleton()->is_running()) {
+						TreecursionCallTask *remote_call_packet = memnew(TreecursionCallTask( name, paths, args, packet_time, p_from));
+						TreecursionTestStorage::get_singleton()->enqueue(remote_call_packet);
+					}
 					//print_line(remote_call_packet.toString());
 				}
 
@@ -2061,8 +2063,10 @@ void SceneTree::_network_process_packet(int p_from, const uint8_t *p_packet, int
 					String error = "Error setting remote property '" + String(name) + "', not found in object of type " + node->get_class();
 					ERR_PRINTS(error);
 				}else{
-					TreecursionSetTask *remote_set_packet = memnew(TreecursionSetTask( name, paths, value, packet_time, p_from ));
-					TreecursionTestStorage::get_singleton()->enqueue(remote_set_packet);
+					if(TreecursionTestStorage::get_singleton()->is_running()) {
+						TreecursionSetTask *remote_set_packet = memnew(TreecursionSetTask( name, paths, value, packet_time, p_from ));
+						TreecursionTestStorage::get_singleton()->enqueue(remote_set_packet);
+					}
 				}
 
 			}
