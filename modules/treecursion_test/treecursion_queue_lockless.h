@@ -23,8 +23,10 @@ class TreecursionQueue : public Reference{
 private:
 	const uint32_t _n_producers;
 	std::atomic<uint64_t> _head;
+	std::atomic<uint64_t> _head_last;
 	std::atomic<uint64_t> _tail;
 	std::array<std::atomic<T*>, Q_SIZE> _buffer = {};
+	T* _tail_last;
 	
 public:
 	bool push(T * item) {
@@ -47,28 +49,34 @@ public:
 	 *  I will just get the last one on the next
 	 * 	wake up
 	 */
-	bool pop( Ref<T> &ref ){
+	bool try_pop(T ** ret){
 		uint64_t tail = _tail.load();
-		T *ptr = nullptr;
+		
 
 		T *new_value = nullptr;
-		do{
 
-		} while ( !_buffer[tail % Q_SIZE].compare_exchange_weak( ptr, new_value ) );
-
-		ref = Ref<T>(ptr);
-		return true;
-
+		T *ptr = _buffer[tail % Q_SIZE].load();
+		//compare the past point to the current one
+		//if equal then loop again
+		if ( _tail_last == ptr) {
+			return false;
+		} else {
+			*ret = ptr;
+			_tail.store(tail+1);
+			return true;
+		}
 	}
 	bool is_empty() {
 		return this -> _head.load() == this -> _tail.load();
 	}
-	TreecursionQueue(uint64_t producers) : _n_producers(producers) {
+	TreecursionQueue(uint64_t producers) : _n_producers(producers), _tail_last(nullptr) {
 		_head.store(0);
+		_head_last.store(0);
 		_tail.store(0);
 	};
-	TreecursionQueue() : _n_producers(2) {
+	TreecursionQueue() : _n_producers(2), _tail_last(nullptr) {
 		_head.store(0);
+		_head_last.store(0);
 		_tail.store(0);
 	};
 };

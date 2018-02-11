@@ -25,7 +25,12 @@ void TreecursionTestStorage::new_file(){
 void TreecursionTestStorage::flush(){
 	while(!this->is_empty()){
 		Ref<TreecursionWriteTask> packet = this->dequeue();
-		this->write_packet(packet.ptr());
+		if ( packet.is_valid() ) {
+			this->write_packet(packet.ptr());
+		}else{
+			//consumer caught up whatever just break;
+			break;
+		}
 	}
 }
 void TreecursionTestStorage::close_file(){
@@ -58,15 +63,14 @@ void TreecursionTestStorage::enqueue(TreecursionWriteTask * packet ){
 	}
 }
 Ref<TreecursionWriteTask> TreecursionTestStorage::dequeue(){
-	Ref<TreecursionWriteTask> pack;
-	game_queue.pop(pack);
-	return pack;
+	TreecursionWriteTask *ptr;
+	return game_queue.try_pop(&ptr) ? Ref<TreecursionWriteTask>(ptr) : Ref<TreecursionWriteTask>(nullptr);
 }
 bool TreecursionTestStorage::is_empty(){
 	return this->game_queue.is_empty();
 }
 bool TreecursionTestStorage::is_running(){
-	return !_exit_thread;
+	return this->treecursion != nullptr;
 }
 
 Error TreecursionTestStorage::init(){
