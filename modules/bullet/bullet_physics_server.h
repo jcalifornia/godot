@@ -1,13 +1,12 @@
 /*************************************************************************/
 /*  bullet_physics_server.h                                              */
-/*  Author: AndreaCatania                                                */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
-/*                    http://www.godotengine.org                         */
+/*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -40,6 +39,10 @@
 #include "shape_bullet.h"
 #include "soft_body_bullet.h"
 #include "space_bullet.h"
+
+/**
+	@author AndreaCatania
+*/
 
 class BulletPhysicsServer : public PhysicsServer {
 	GDCLASS(BulletPhysicsServer, PhysicsServer)
@@ -151,7 +154,7 @@ public:
 	/// AREA_PARAM_GRAVITY_VECTOR
 	/// Otherwise you can set area parameters
 	virtual void area_set_param(RID p_area, AreaParameter p_param, const Variant &p_value);
-	virtual Variant area_get_param(RID p_parea, AreaParameter p_param) const;
+	virtual Variant area_get_param(RID p_area, AreaParameter p_param) const;
 
 	virtual void area_set_transform(RID p_area, const Transform &p_transform);
 	virtual Transform area_get_transform(RID p_area) const;
@@ -226,8 +229,8 @@ public:
 	virtual void body_apply_torque_impulse(RID p_body, const Vector3 &p_impulse);
 	virtual void body_set_axis_velocity(RID p_body, const Vector3 &p_axis_velocity);
 
-	virtual void body_set_axis_lock(RID p_body, BodyAxisLock p_lock);
-	virtual BodyAxisLock body_get_axis_lock(RID p_body) const;
+	virtual void body_set_axis_lock(RID p_body, BodyAxis p_axis, bool p_lock);
+	virtual bool body_is_axis_locked(RID p_body, BodyAxis p_axis) const;
 
 	virtual void body_add_collision_exception(RID p_body, RID p_body_b);
 	virtual void body_remove_collision_exception(RID p_body, RID p_body_b);
@@ -298,7 +301,7 @@ public:
 	virtual void pin_joint_set_local_b(RID p_joint, const Vector3 &p_B);
 	virtual Vector3 pin_joint_get_local_b(RID p_joint) const;
 
-	virtual RID joint_create_hinge(RID p_body_A, const Transform &p_frame_A, RID p_body_B, const Transform &p_frame_B);
+	virtual RID joint_create_hinge(RID p_body_A, const Transform &p_hinge_A, RID p_body_B, const Transform &p_hinge_B);
 	virtual RID joint_create_hinge_simple(RID p_body_A, const Vector3 &p_pivot_A, const Vector3 &p_axis_A, RID p_body_B, const Vector3 &p_pivot_B, const Vector3 &p_axis_B);
 
 	virtual void hinge_joint_set_param(RID p_joint, HingeJointParam p_param, float p_value);

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "scene_tree_editor.h"
 
 #include "editor/plugins/canvas_item_editor_plugin.h"
@@ -256,9 +257,9 @@ bool SceneTreeEditor::_add_nodes(Node *p_node, TreeItem *p_parent) {
 
 			bool v = p_node->call("is_visible");
 			if (v)
-				item->add_button(0, get_icon("Visible", "EditorIcons"), BUTTON_VISIBILITY, false, TTR("Toggle Visibility"));
+				item->add_button(0, get_icon("GuiVisibilityVisible", "EditorIcons"), BUTTON_VISIBILITY, false, TTR("Toggle Visibility"));
 			else
-				item->add_button(0, get_icon("Hidden", "EditorIcons"), BUTTON_VISIBILITY, false, TTR("Toggle Visibility"));
+				item->add_button(0, get_icon("GuiVisibilityHidden", "EditorIcons"), BUTTON_VISIBILITY, false, TTR("Toggle Visibility"));
 
 			if (!p_node->is_connected("visibility_changed", this, "_node_visibility_changed"))
 				p_node->connect("visibility_changed", this, "_node_visibility_changed", varray(p_node));
@@ -272,9 +273,9 @@ bool SceneTreeEditor::_add_nodes(Node *p_node, TreeItem *p_parent) {
 
 			bool v = p_node->call("is_visible");
 			if (v)
-				item->add_button(0, get_icon("Visible", "EditorIcons"), BUTTON_VISIBILITY, false, TTR("Toggle Visibility"));
+				item->add_button(0, get_icon("GuiVisibilityVisible", "EditorIcons"), BUTTON_VISIBILITY, false, TTR("Toggle Visibility"));
 			else
-				item->add_button(0, get_icon("Hidden", "EditorIcons"), BUTTON_VISIBILITY, false, TTR("Toggle Visibility"));
+				item->add_button(0, get_icon("GuiVisibilityHidden", "EditorIcons"), BUTTON_VISIBILITY, false, TTR("Toggle Visibility"));
 
 			if (!p_node->is_connected("visibility_changed", this, "_node_visibility_changed"))
 				p_node->connect("visibility_changed", this, "_node_visibility_changed", varray(p_node));
@@ -337,9 +338,9 @@ void SceneTreeEditor::_node_visibility_changed(Node *p_node) {
 	}
 
 	if (visible)
-		item->set_button(0, idx, get_icon("Visible", "EditorIcons"));
+		item->set_button(0, idx, get_icon("GuiVisibilityVisible", "EditorIcons"));
 	else
-		item->set_button(0, idx, get_icon("Hidden", "EditorIcons"));
+		item->set_button(0, idx, get_icon("GuiVisibilityHidden", "EditorIcons"));
 
 	_update_visibility_color(p_node, item);
 }
@@ -484,7 +485,8 @@ void SceneTreeEditor::_selected_changed() {
 void SceneTreeEditor::_deselect_items() {
 
 	// Clear currently elected items in scene tree dock.
-	editor_selection->clear();
+	if (editor_selection)
+		editor_selection->clear();
 }
 
 void SceneTreeEditor::_cell_multi_selected(Object *p_object, int p_cell, bool p_selected) {
@@ -773,9 +775,11 @@ Variant SceneTreeEditor::get_drag_data_fw(const Point2 &p_point, Control *p_from
 
 		Node *n = get_node(np);
 		if (n) {
-
-			selected.push_back(n);
-			icons.push_back(next->get_icon(0));
+			// Only allow selection if not part of an instanced scene.
+			if (!n->get_owner() || n->get_owner() == get_scene_node() || n->get_owner()->get_filename() == String()) {
+				selected.push_back(n);
+				icons.push_back(next->get_icon(0));
+			}
 		}
 		next = tree->get_next_selected(next);
 	}

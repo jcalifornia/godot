@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "video_player.h"
 
 #include "os/os.h"
@@ -35,11 +36,6 @@
 int VideoPlayer::sp_get_channel_count() const {
 
 	return playback->get_channels();
-}
-
-void VideoPlayer::sp_set_mix_rate(int p_rate) {
-
-	server_mix_rate = p_rate;
 }
 
 bool VideoPlayer::mix(AudioFrame *p_buffer, int p_frames) {
@@ -240,7 +236,7 @@ void VideoPlayer::set_stream(const Ref<VideoStream> &p_stream) {
 
 		AudioServer::get_singleton()->lock();
 		if (channels > 0)
-			resampler.setup(channels, playback->get_mix_rate(), server_mix_rate, buffering_ms, 0);
+			resampler.setup(channels, playback->get_mix_rate(), AudioServer::get_singleton()->get_mix_rate(), buffering_ms, 0);
 		else
 			resampler.clear();
 		AudioServer::get_singleton()->unlock();
@@ -475,9 +471,13 @@ void VideoPlayer::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "stream", PROPERTY_HINT_RESOURCE_TYPE, "VideoStream"), "set_stream", "get_stream");
 	//ADD_PROPERTY( PropertyInfo(Variant::BOOL, "stream/loop"), "set_loop", "has_loop") ;
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "volume_db", PROPERTY_HINT_RANGE, "-80,24,0.01"), "set_volume_db", "get_volume_db");
+	ADD_PROPERTY(PropertyInfo(Variant::REAL, "volume", PROPERTY_HINT_EXP_RANGE, "0,15,0.01", 0), "set_volume", "get_volume");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "autoplay"), "set_autoplay", "has_autoplay");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "paused"), "set_paused", "is_paused");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "expand"), "set_expand", "has_expand");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "buffering_msec", PROPERTY_HINT_RANGE, "10,1000"), "set_buffering_msec", "get_buffering_msec");
+	ADD_PROPERTY(PropertyInfo(Variant::REAL, "stream_position", PROPERTY_HINT_RANGE, "0,1280000,0.1", 0), "set_stream_position", "get_stream_position");
+
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "bus", PROPERTY_HINT_ENUM, ""), "set_bus", "get_bus");
 }
 
@@ -493,7 +493,6 @@ VideoPlayer::VideoPlayer() {
 	bus_index = 0;
 
 	buffering_ms = 500;
-	server_mix_rate = 44100;
 
 	//	internal_stream.player=this;
 	//	stream_rid=AudioServer::get_singleton()->audio_stream_create(&internal_stream);

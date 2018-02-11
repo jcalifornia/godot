@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+#run this after running
+#xcode-select --install
+#PKGS="git"
+
+GODOT_PKGS="scons"
+
+#MUMBLE_PKGS="log4cpp protobuf"
+RDRR_PROTO_PKGS="protobuf"
+FACIAL_PKGS='opencv'
+
+brew install boost --c++11
+brew install $GODOT_PKGS $RDRR_PROTO_PKGS $FACIAL_PKGS
+

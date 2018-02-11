@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "godotsharp_editor.h"
 
 #include "core/os/os.h"
@@ -50,9 +51,9 @@ GodotSharpEditor *GodotSharpEditor::singleton = NULL;
 
 bool GodotSharpEditor::_create_project_solution() {
 
-	EditorProgress pr("create_csharp_solution", "Generating solution...", 2);
+	EditorProgress pr("create_csharp_solution", TTR("Generating solution..."), 2);
 
-	pr.step("Generating C# project...");
+	pr.step(TTR("Generating C# project..."));
 
 	String path = OS::get_singleton()->get_resource_dir();
 	String name = ProjectSettings::get_singleton()->get("application/config/name");
@@ -67,7 +68,7 @@ bool GodotSharpEditor::_create_project_solution() {
 		NETSolution solution(name);
 
 		if (!solution.set_path(path)) {
-			show_error_dialog("Failed to create solution.");
+			show_error_dialog(TTR("Failed to create solution."));
 			return false;
 		}
 
@@ -79,7 +80,7 @@ bool GodotSharpEditor::_create_project_solution() {
 		Error sln_error = solution.save();
 
 		if (sln_error != OK) {
-			show_error_dialog("Failed to save solution.");
+			show_error_dialog(TTR("Failed to save solution."));
 			return false;
 		}
 
@@ -89,13 +90,13 @@ bool GodotSharpEditor::_create_project_solution() {
 		if (!GodotSharpBuilds::make_api_sln(GodotSharpBuilds::API_EDITOR))
 			return false;
 
-		pr.step("Done");
+		pr.step(TTR("Done"));
 
 		// Here, after all calls to progress_task_step
 		call_deferred("_remove_create_sln_menu_option");
 
 	} else {
-		show_error_dialog("Failed to create C# project.");
+		show_error_dialog(TTR("Failed to create C# project."));
 	}
 
 	return true;
@@ -111,6 +112,21 @@ void GodotSharpEditor::_remove_create_sln_menu_option() {
 	bottom_panel_btn->show();
 }
 
+void GodotSharpEditor::_show_about_dialog() {
+
+	bool show_on_start = EDITOR_GET("mono/editor/show_info_on_start");
+	about_dialog_checkbox->set_pressed(show_on_start);
+	about_dialog->popup_centered_minsize();
+}
+
+void GodotSharpEditor::_toggle_about_dialog_on_start(bool p_enabled) {
+
+	bool show_on_start = EDITOR_GET("mono/editor/show_info_on_start");
+	if (show_on_start != p_enabled) {
+		EditorSettings::get_singleton()->set_setting("mono/editor/show_info_on_start", p_enabled);
+	}
+}
+
 void GodotSharpEditor::_menu_option_pressed(int p_id) {
 
 	switch (p_id) {
@@ -118,8 +134,29 @@ void GodotSharpEditor::_menu_option_pressed(int p_id) {
 
 			_create_project_solution();
 		} break;
+		case MENU_ABOUT_CSHARP: {
+
+			_show_about_dialog();
+		} break;
 		default:
 			ERR_FAIL();
+	}
+}
+
+void GodotSharpEditor::_notification(int p_notification) {
+
+	switch (p_notification) {
+
+		case NOTIFICATION_READY: {
+
+			bool show_info_dialog = EDITOR_GET("mono/editor/show_info_on_start");
+			if (show_info_dialog) {
+				about_dialog->set_exclusive(true);
+				_show_about_dialog();
+				// Once shown a first time, it can be seen again via the Mono menu - it doesn't have to be exclusive then.
+				about_dialog->set_exclusive(false);
+			}
+		}
 	}
 }
 
@@ -127,6 +164,7 @@ void GodotSharpEditor::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("_create_project_solution"), &GodotSharpEditor::_create_project_solution);
 	ClassDB::bind_method(D_METHOD("_remove_create_sln_menu_option"), &GodotSharpEditor::_remove_create_sln_menu_option);
+	ClassDB::bind_method(D_METHOD("_toggle_about_dialog_on_start"), &GodotSharpEditor::_toggle_about_dialog_on_start);
 	ClassDB::bind_method(D_METHOD("_menu_option_pressed", "id"), &GodotSharpEditor::_menu_option_pressed);
 }
 
@@ -150,7 +188,7 @@ Error GodotSharpEditor::open_in_external_editor(const Ref<Script> &p_script, int
 
 			if (p_line >= 0) {
 				args.push_back("-g");
-				args.push_back(script_path + ":" + itos(p_line) + ":" + itos(p_col));
+				args.push_back(script_path + ":" + itos(p_line + 1) + ":" + itos(p_col));
 			} else {
 				args.push_back(script_path);
 			}
@@ -169,6 +207,11 @@ Error GodotSharpEditor::open_in_external_editor(const Ref<Script> &p_script, int
 				monodevel_instance = memnew(MonoDevelopInstance(GodotSharpDirs::get_project_sln_path()));
 
 			String script_path = ProjectSettings::get_singleton()->globalize_path(p_script->get_path());
+
+			if (p_line >= 0) {
+				script_path += ";" + itos(p_line + 1) + ";" + itos(p_col);
+			}
+
 			monodevel_instance->execute(script_path);
 		} break;
 		default:
@@ -194,22 +237,71 @@ GodotSharpEditor::GodotSharpEditor(EditorNode *p_editor) {
 	error_dialog = memnew(AcceptDialog);
 	editor->get_gui_base()->add_child(error_dialog);
 
-	bottom_panel_btn = editor->add_bottom_panel_item("Mono", memnew(MonoBottomPanel(editor)));
+	bottom_panel_btn = editor->add_bottom_panel_item(TTR("Mono"), memnew(MonoBottomPanel(editor)));
 
 	godotsharp_builds = memnew(GodotSharpBuilds);
 
 	editor->add_child(memnew(MonoReloadNode));
 
 	menu_button = memnew(MenuButton);
-	menu_button->set_text("Mono");
+	menu_button->set_text(TTR("Mono"));
 	menu_popup = menu_button->get_popup();
+
+	// TODO: Remove or edit this info dialog once Mono support is no longer in alpha
+	{
+		menu_popup->add_item(TTR("About C# support"), MENU_ABOUT_CSHARP);
+		about_dialog = memnew(AcceptDialog);
+		editor->get_gui_base()->add_child(about_dialog);
+		about_dialog->set_title("Important: C# support is not feature-complete");
+
+		// We don't use set_text() as the default AcceptDialog Label doesn't play well with the TextureRect and CheckBox
+		// we'll add. Instead we add containers and a new autowrapped Label inside.
+
+		// Main VBoxContainer (icon + label on top, checkbox at bottom)
+		VBoxContainer *about_vbc = memnew(VBoxContainer);
+		about_dialog->add_child(about_vbc);
+
+		// HBoxContainer for icon + label
+		HBoxContainer *about_hbc = memnew(HBoxContainer);
+		about_vbc->add_child(about_hbc);
+
+		TextureRect *about_icon = memnew(TextureRect);
+		about_hbc->add_child(about_icon);
+		Ref<Texture> about_icon_tex = about_icon->get_icon("NodeWarning", "EditorIcons");
+		about_icon->set_texture(about_icon_tex);
+
+		Label *about_label = memnew(Label);
+		about_hbc->add_child(about_label);
+		about_label->set_custom_minimum_size(Size2(600, 150) * EDSCALE);
+		about_label->set_v_size_flags(Control::SIZE_EXPAND_FILL);
+		about_label->set_autowrap(true);
+		String about_text =
+				String("C# support in Godot Engine is a brand new feature and a work in progress.\n") +
+				"It is at the alpha stage and thus not suitable for use in production.\n\n" +
+				"As of Godot 3.0, C# support is not feature-complete and can crash in some situations. " +
+				"Bugs and usability issues will be addressed gradually over 3.0.x and 3.x releases.\n" +
+				"The main missing feature is the ability to export games using C# assemblies - you will therefore be able to develop and run games in the editor, " +
+				"but not to share them as standalone binaries. This feature is of course high on the priority list and should be available in 3.0.1.\n\n" +
+				"If you experience issues with this Mono build, please report them on Godot's issue tracker with details about your system, Mono version, IDE, etc.:\n\n" +
+				"        https://github.com/godotengine/godot/issues\n\n" +
+				"Your critical feedback at this stage will play a great role in shaping the C# support in future releases, so thank you!";
+		about_label->set_text(about_text);
+
+		EDITOR_DEF("mono/editor/show_info_on_start", true);
+
+		// CheckBox in main container
+		about_dialog_checkbox = memnew(CheckBox);
+		about_vbc->add_child(about_dialog_checkbox);
+		about_dialog_checkbox->set_text("Show this warning when starting the editor");
+		about_dialog_checkbox->connect("toggled", this, "_toggle_about_dialog_on_start");
+	}
 
 	String sln_path = GodotSharpDirs::get_project_sln_path();
 	String csproj_path = GodotSharpDirs::get_project_csproj_path();
 
 	if (!FileAccess::exists(sln_path) || !FileAccess::exists(csproj_path)) {
 		bottom_panel_btn->hide();
-		menu_popup->add_item("Create C# solution", MENU_CREATE_SLN);
+		menu_popup->add_item(TTR("Create C# solution"), MENU_CREATE_SLN);
 	}
 
 	menu_popup->connect("id_pressed", this, "_menu_option_pressed");

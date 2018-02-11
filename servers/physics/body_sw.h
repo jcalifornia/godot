@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #ifndef BODY_SW_H
 #define BODY_SW_H
 
@@ -53,7 +54,7 @@ class BodySW : public CollisionObjectSW {
 	real_t angular_damp;
 	real_t gravity_scale;
 
-	PhysicsServer::BodyAxisLock axis_lock;
+	uint16_t locked_axis;
 
 	real_t kinematic_safe_margin;
 	real_t _inv_mass;
@@ -288,8 +289,8 @@ public:
 	_FORCE_INLINE_ Vector3 get_gravity() const { return gravity; }
 	_FORCE_INLINE_ real_t get_bounce() const { return bounce; }
 
-	_FORCE_INLINE_ void set_axis_lock(PhysicsServer::BodyAxisLock p_lock) { axis_lock = p_lock; }
-	_FORCE_INLINE_ PhysicsServer::BodyAxisLock get_axis_lock() const { return axis_lock; }
+	void set_axis_lock(PhysicsServer::BodyAxis p_axis, bool lock);
+	bool is_axis_locked(PhysicsServer::BodyAxis p_axis) const;
 
 	void integrate_forces(real_t p_step);
 	void integrate_velocities(real_t p_step);

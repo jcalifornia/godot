@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #ifndef FILE_DIALOG_H
 #define FILE_DIALOG_H
 
@@ -92,6 +93,8 @@ private:
 
 	Vector<String> filters;
 
+	bool mode_overrides_title;
+
 	static bool default_show_hidden_files;
 	bool show_hidden_files;
 
@@ -142,6 +145,9 @@ public:
 	void set_current_dir(const String &p_dir);
 	void set_current_file(const String &p_file);
 	void set_current_path(const String &p_path);
+
+	void set_mode_overrides_title(bool p_override);
+	bool is_mode_overriding_title() const;
 
 	void set_mode(Mode p_mode);
 	Mode get_mode() const;

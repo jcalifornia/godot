@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "light.h"
 
 #include "engine.h"
@@ -142,6 +143,14 @@ PoolVector<Face3> Light::get_faces(uint32_t p_usage_flags) const {
 	return PoolVector<Face3>();
 }
 
+void Light::set_bake_mode(BakeMode p_mode) {
+	bake_mode = p_mode;
+}
+
+Light::BakeMode Light::get_bake_mode() const {
+	return bake_mode;
+}
+
 void Light::_update_visibility() {
 
 	if (!is_inside_tree())
@@ -219,12 +228,16 @@ void Light::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_shadow_color", "shadow_color"), &Light::set_shadow_color);
 	ClassDB::bind_method(D_METHOD("get_shadow_color"), &Light::get_shadow_color);
 
+	ClassDB::bind_method(D_METHOD("set_bake_mode", "bake_mode"), &Light::set_bake_mode);
+	ClassDB::bind_method(D_METHOD("get_bake_mode"), &Light::get_bake_mode);
+
 	ADD_GROUP("Light", "light_");
 	ADD_PROPERTY(PropertyInfo(Variant::COLOR, "light_color", PROPERTY_HINT_COLOR_NO_ALPHA), "set_color", "get_color");
 	ADD_PROPERTYI(PropertyInfo(Variant::REAL, "light_energy", PROPERTY_HINT_RANGE, "0,16,0.01"), "set_param", "get_param", PARAM_ENERGY);
 	ADD_PROPERTYI(PropertyInfo(Variant::REAL, "light_indirect_energy", PROPERTY_HINT_RANGE, "0,16,0.01"), "set_param", "get_param", PARAM_INDIRECT_ENERGY);
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "light_negative"), "set_negative", "is_negative");
 	ADD_PROPERTYI(PropertyInfo(Variant::REAL, "light_specular", PROPERTY_HINT_RANGE, "0,1,0.01"), "set_param", "get_param", PARAM_SPECULAR);
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "light_bake_mode", PROPERTY_HINT_ENUM, "Disable,Indirect,All"), "set_bake_mode", "get_bake_mode");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "light_cull_mask", PROPERTY_HINT_LAYERS_3D_RENDER), "set_cull_mask", "get_cull_mask");
 	ADD_GROUP("Shadow", "shadow_");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "shadow_enabled"), "set_shadow", "has_shadow");
@@ -252,6 +265,10 @@ void Light::_bind_methods() {
 	BIND_ENUM_CONSTANT(PARAM_SHADOW_BIAS);
 	BIND_ENUM_CONSTANT(PARAM_SHADOW_BIAS_SPLIT_SCALE);
 	BIND_ENUM_CONSTANT(PARAM_MAX);
+
+	BIND_ENUM_CONSTANT(BAKE_DISABLED);
+	BIND_ENUM_CONSTANT(BAKE_INDIRECT);
+	BIND_ENUM_CONSTANT(BAKE_ALL);
 }
 
 Light::Light(VisualServer::LightType p_type) {
@@ -267,6 +284,7 @@ Light::Light(VisualServer::LightType p_type) {
 	VS::get_singleton()->instance_set_base(get_instance(), light);
 
 	reverse_cull = false;
+	bake_mode = BAKE_INDIRECT;
 
 	editor_only = false;
 	set_color(Color(1, 1, 1, 1));
@@ -367,8 +385,8 @@ void DirectionalLight::_bind_methods() {
 	BIND_ENUM_CONSTANT(SHADOW_DEPTH_RANGE_OPTIMIZED);
 }
 
-DirectionalLight::DirectionalLight()
-	: Light(VisualServer::LIGHT_DIRECTIONAL) {
+DirectionalLight::DirectionalLight() :
+		Light(VisualServer::LIGHT_DIRECTIONAL) {
 
 	set_param(PARAM_SHADOW_NORMAL_BIAS, 0.8);
 	set_param(PARAM_SHADOW_BIAS, 0.1);
@@ -422,8 +440,8 @@ void OmniLight::_bind_methods() {
 	BIND_ENUM_CONSTANT(SHADOW_DETAIL_HORIZONTAL);
 }
 
-OmniLight::OmniLight()
-	: Light(VisualServer::LIGHT_OMNI) {
+OmniLight::OmniLight() :
+		Light(VisualServer::LIGHT_OMNI) {
 
 	set_shadow_mode(SHADOW_CUBE);
 	set_shadow_detail(SHADOW_DETAIL_HORIZONTAL);

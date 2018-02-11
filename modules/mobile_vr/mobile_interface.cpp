@@ -3,10 +3,10 @@
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
-/*                    http://www.godotengine.org                         */
+/*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -345,7 +345,7 @@ Transform MobileVRInterface::get_transform_for_eye(ARVRInterface::Eyes p_eye, co
 	if (initialized) {
 		float world_scale = arvr_server->get_world_scale();
 
-		// we don't need to check for the existance of our HMD, doesn't effect our values...
+		// we don't need to check for the existence of our HMD, doesn't effect our values...
 		// note * 0.01 to convert cm to m and * 0.5 as we're moving half in each direction...
 		if (p_eye == ARVRInterface::EYE_LEFT) {
 			transform_for_eye.origin.x = -(intraocular_dist * 0.01 * 0.5 * world_scale);
@@ -461,6 +461,7 @@ MobileVRInterface::MobileVRInterface() {
 		glGenBuffers(1, &half_screen_quad);
 		glBindBuffer(GL_ARRAY_BUFFER, half_screen_quad);
 		{
+			/* clang-format off */
 			const float qv[16] = {
 				0, -1,
 				-1, -1,
@@ -471,6 +472,7 @@ MobileVRInterface::MobileVRInterface() {
 				1, -1,
 				1, -1,
 			};
+			/* clang-format on */
 
 			glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 16, qv, GL_STATIC_DRAW);
 		}

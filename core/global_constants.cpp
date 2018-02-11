@@ -5,12 +5,12 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
-/* "Software") to deal in the Software without restriction, including   */
+/* "Software"), to deal in the Software without restriction, including   */
 /* without limitation the rights to use, copy, modify, merge, publish,   */
 /* distribute, sublicense, and/or sell copies of the Software, and to    */
 /* permit persons to whom the Software is furnished to do so, subject to */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "global_constants.h"
 
 #include "object.h"
@@ -45,15 +46,15 @@ struct _GlobalConstant {
 	_GlobalConstant() {}
 
 #ifdef DEBUG_METHODS_ENABLED
-	_GlobalConstant(const StringName &p_enum_name, const char *p_name, int p_value)
-		: enum_name(p_enum_name),
-		  name(p_name),
-		  value(p_value) {
+	_GlobalConstant(const StringName &p_enum_name, const char *p_name, int p_value) :
+			enum_name(p_enum_name),
+			name(p_name),
+			value(p_value) {
 	}
 #else
-	_GlobalConstant(const char *p_name, int p_value)
-		: name(p_name),
-		  value(p_value) {
+	_GlobalConstant(const char *p_name, int p_value) :
+			name(p_name),
+			value(p_value) {
 	}
 #endif
 };
@@ -97,6 +98,11 @@ void register_global_constants() {
 	BIND_GLOBAL_ENUM_CONSTANT(MARGIN_TOP);
 	BIND_GLOBAL_ENUM_CONSTANT(MARGIN_RIGHT);
 	BIND_GLOBAL_ENUM_CONSTANT(MARGIN_BOTTOM);
+
+	BIND_GLOBAL_ENUM_CONSTANT(CORNER_TOP_LEFT);
+	BIND_GLOBAL_ENUM_CONSTANT(CORNER_TOP_RIGHT);
+	BIND_GLOBAL_ENUM_CONSTANT(CORNER_BOTTOM_RIGHT);
+	BIND_GLOBAL_ENUM_CONSTANT(CORNER_BOTTOM_LEFT);
 
 	BIND_GLOBAL_ENUM_CONSTANT(VERTICAL);
 	BIND_GLOBAL_ENUM_CONSTANT(HORIZONTAL);
@@ -491,7 +497,6 @@ void register_global_constants() {
 	BIND_GLOBAL_ENUM_CONSTANT(ERR_BUSY);
 	BIND_GLOBAL_ENUM_CONSTANT(ERR_HELP); ///< user requested help!!
 	BIND_GLOBAL_ENUM_CONSTANT(ERR_BUG); ///< a bug in the software certainly happened ), due to a double check failing or unexpected behavior.
-	BIND_GLOBAL_ENUM_CONSTANT(ERR_WTF);
 
 	BIND_GLOBAL_ENUM_CONSTANT(PROPERTY_HINT_NONE);
 	BIND_GLOBAL_ENUM_CONSTANT(PROPERTY_HINT_RANGE);
@@ -574,6 +579,38 @@ void register_global_constants() {
 	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("TYPE_VECTOR3_ARRAY", Variant::POOL_VECTOR3_ARRAY);
 	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("TYPE_COLOR_ARRAY", Variant::POOL_COLOR_ARRAY);
 	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("TYPE_MAX", Variant::VARIANT_MAX);
+
+	//comparation
+	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("OP_EQUAL", Variant::OP_EQUAL);
+	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("OP_NOT_EQUAL", Variant::OP_NOT_EQUAL);
+	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("OP_LESS", Variant::OP_LESS);
+	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("OP_LESS_EQUAL", Variant::OP_LESS_EQUAL);
+	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("OP_GREATER", Variant::OP_GREATER);
+	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("OP_GREATER_EQUAL", Variant::OP_GREATER_EQUAL);
+	//mathematic
+	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("OP_ADD", Variant::OP_ADD);
+	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("OP_SUBTRACT", Variant::OP_SUBTRACT);
+	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("OP_MULTIPLY", Variant::OP_MULTIPLY);
+	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("OP_DIVIDE", Variant::OP_DIVIDE);
+	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("OP_NEGATE", Variant::OP_NEGATE);
+	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("OP_POSITIVE", Variant::OP_POSITIVE);
+	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("OP_MODULE", Variant::OP_MODULE);
+	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("OP_STRING_CONCAT", Variant::OP_STRING_CONCAT);
+	//bitwise
+	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("OP_SHIFT_LEFT", Variant::OP_SHIFT_LEFT);
+	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("OP_SHIFT_RIGHT", Variant::OP_SHIFT_RIGHT);
+	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("OP_BIT_AND", Variant::OP_BIT_AND);
+	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("OP_BIT_OR", Variant::OP_BIT_OR);
+	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("OP_BIT_XOR", Variant::OP_BIT_XOR);
+	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("OP_BIT_NEGATE", Variant::OP_BIT_NEGATE);
+	//logic
+	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("OP_AND", Variant::OP_AND);
+	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("OP_OR", Variant::OP_OR);
+	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("OP_XOR", Variant::OP_XOR);
+	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("OP_NOT", Variant::OP_NOT);
+	//containment
+	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("OP_IN", Variant::OP_IN);
+	BIND_GLOBAL_ENUM_CONSTANT_CUSTOM("OP_MAX", Variant::OP_MAX);
 }
 
 void unregister_global_constants() {

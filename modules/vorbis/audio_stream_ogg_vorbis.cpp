@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "audio_stream_ogg_vorbis.h"
 
 size_t AudioStreamPlaybackOGGVorbis::_ov_read_func(void *p_dst, size_t p_data, size_t p_count, void *_f) {
@@ -64,7 +65,7 @@ int AudioStreamPlaybackOGGVorbis::_ov_seek_func(void *_f, ogg_int64_t offs, int 
 		fa->seek_end(offs);
 	} else {
 
-		ERR_PRINT("BUG, wtf was whence set to?\n");
+		ERR_PRINT("Vorbis seek function failure: Unexpected value in _whence\n");
 	}
 	int ret = fa->eof_reached() ? -1 : 0;
 	//printf("returning %i\n",ret);

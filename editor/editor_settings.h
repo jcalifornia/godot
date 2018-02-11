@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #ifndef EDITOR_SETTINGS_H
 #define EDITOR_SETTINGS_H
 
@@ -70,6 +71,8 @@ private:
 		bool hide_from_editor;
 		bool save;
 		VariantContainer() {
+			variant = Variant();
+			initial = Variant();
 			order = 0;
 			hide_from_editor = false;
 			has_default_value = false;
@@ -77,8 +80,11 @@ private:
 		}
 		VariantContainer(const Variant &p_variant, int p_order) {
 			variant = p_variant;
+			initial = Variant();
 			order = p_order;
 			hide_from_editor = false;
+			has_default_value = false;
+			save = false;
 		}
 	};
 
@@ -105,7 +111,8 @@ private:
 	bool save_changed_setting;
 	bool optimize_save; //do not save stuff that came from config but was not set from engine
 
-	bool _set(const StringName &p_name, const Variant &p_value, bool p_emit_signal = true);
+	bool _set(const StringName &p_name, const Variant &p_value);
+	bool _set_only(const StringName &p_name, const Variant &p_value);
 	bool _get(const StringName &p_name, Variant &r_ret) const;
 	void _initial_set(const StringName &p_name, const Variant &p_value);
 	void _get_property_list(List<PropertyInfo> *p_list) const;
@@ -138,9 +145,12 @@ public:
 	bool has_setting(const String &p_setting) const;
 	void erase(const String &p_setting);
 	void raise_order(const String &p_setting);
-	void set_initial_value(const StringName &p_setting, const Variant &p_value);
+	void set_initial_value(const StringName &p_setting, const Variant &p_value, bool p_update_current = false);
 	void set_manually(const StringName &p_setting, const Variant &p_value, bool p_emit_signal = false) {
-		_set(p_setting, p_value, p_emit_signal);
+		if (p_emit_signal)
+			_set(p_setting, p_value);
+		else
+			_set_only(p_setting, p_value);
 	}
 	bool property_can_revert(const String &p_setting);
 	Variant property_get_revert(const String &p_setting);

@@ -3,12 +3,12 @@
 Import('env')
 
 gdn_env = env.Clone()
-
-gdn_env.add_source_files(env.modules_sources, "gd_native_library_editor.cpp")
 gdn_env.add_source_files(env.modules_sources, "gdnative.cpp")
 gdn_env.add_source_files(env.modules_sources, "register_types.cpp")
 gdn_env.add_source_files(env.modules_sources, "gdnative/*.cpp")
 gdn_env.add_source_files(env.modules_sources, "nativescript/*.cpp")
+gdn_env.add_source_files(env.modules_sources, "gdnative_library_singleton_editor.cpp")
+gdn_env.add_source_files(env.modules_sources, "gdnative_library_editor_plugin.cpp")
 
 gdn_env.Append(CPPPATH=['#modules/gdnative/include/'])
 
@@ -244,6 +244,14 @@ if ARGUMENTS.get('gdnative_wrapper', False):
 
     gd_wrapper_env = env.Clone()
     gd_wrapper_env.Append(CPPPATH=['#modules/gdnative/include/'])
+
+    if gd_wrapper_env['use_lto']:
+        if not env.msvc:
+            gd_wrapper_env.Append(CCFLAGS=['--no-lto'])
+            gd_wrapper_env.Append(LINKFLAGS=['--no-lto'])
+        else:
+            gd_wrapper_env.Append(CCFLAGS=['/GL-'])
+            gd_wrapper_env.Append(LINKFLAGS=['/LTCG:OFF'])
 
     if not env.msvc:
         gd_wrapper_env.Append(CCFLAGS=['-fPIC'])

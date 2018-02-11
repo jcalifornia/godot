@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #ifndef TILE_SET_H
 #define TILE_SET_H
 
@@ -76,13 +77,14 @@ public:
 		Size2 size;
 		Vector2 icon_coord;
 		Map<Vector2, uint16_t> flags;
-		Map<Vector2, Ref<OccluderPolygon2D> > ocludder_map;
+		Map<Vector2, Ref<OccluderPolygon2D> > occluder_map;
 		Map<Vector2, Ref<NavigationPolygon> > navpoly_map;
 		Map<Vector2, int> priority_map;
 
 		// Default size to prevent invalid value
-		explicit AutotileData()
-			: size(64, 64), icon_coord(0, 0) {
+		explicit AutotileData() :
+				size(64, 64),
+				icon_coord(0, 0) {
 			bitmask_mode = BITMASK_2X2;
 		}
 	};
@@ -106,8 +108,9 @@ private:
 		AutotileData autotile_data;
 
 		// Default modulate for back-compat
-		explicit TileData()
-			: modulate(1, 1, 1), is_autotile(false) {}
+		explicit TileData() :
+				modulate(1, 1, 1),
+				is_autotile(false) {}
 	};
 
 	Map<int, TileData> tile_map;

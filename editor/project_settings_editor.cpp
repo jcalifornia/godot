@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "project_settings_editor.h"
 
 #include "core/global_constants.h"
@@ -531,7 +532,7 @@ void ProjectSettingsEditor::_action_button_pressed(Object *p_obj, int p_column, 
 			Variant old_val = ProjectSettings::get_singleton()->get(name);
 			int order = ProjectSettings::get_singleton()->get_order(name);
 
-			undo_redo->create_action(TTR("Add Input Action"));
+			undo_redo->create_action(TTR("Erase Input Action"));
 			undo_redo->add_do_method(ProjectSettings::get_singleton(), "clear", name);
 			undo_redo->add_undo_method(ProjectSettings::get_singleton(), "set", name, old_val);
 			undo_redo->add_undo_method(ProjectSettings::get_singleton(), "set_order", name, order);
@@ -749,7 +750,16 @@ void ProjectSettingsEditor::_item_add() {
 
 	String catname = category->get_text().strip_edges();
 	String propname = property->get_text().strip_edges();
-	String name = catname != "" ? catname + "/" + propname : propname;
+
+	if (propname.empty()) {
+		return;
+	}
+
+	if (catname.empty()) {
+		catname = "global";
+	}
+
+	String name = catname + "/" + propname;
 
 	undo_redo->create_action(TTR("Add Global Property"));
 
@@ -852,7 +862,7 @@ void ProjectSettingsEditor::_action_add() {
 
 	Array va;
 	String name = "input/" + action_name->get_text();
-	undo_redo->create_action(TTR("Add Input Action Event"));
+	undo_redo->create_action(TTR("Add Input Action"));
 	undo_redo->add_do_method(ProjectSettings::get_singleton(), "set", name, va);
 	undo_redo->add_undo_method(ProjectSettings::get_singleton(), "clear", name);
 	undo_redo->add_do_method(this, "_update_actions");
@@ -1460,7 +1470,6 @@ void ProjectSettingsEditor::_update_translations() {
 					t2->set_editable(1, true);
 					t2->set_metadata(1, path);
 					int idx = langs.find(locale);
-					//print_line("find " + locale + " at " + itos(idx));
 					if (idx < 0)
 						idx = 0;
 
@@ -1690,12 +1699,12 @@ ProjectSettingsEditor::ProjectSettingsEditor(EditorData *p_data) {
 	vbc->set_anchor_and_margin(MARGIN_LEFT, ANCHOR_BEGIN, 0);
 	vbc->set_anchor_and_margin(MARGIN_RIGHT, ANCHOR_END, 0);
 
-	l = memnew(Label);
-	vbc->add_child(l);
-	l->set_text(TTR("Action:"));
-
 	hbc = memnew(HBoxContainer);
 	vbc->add_child(hbc);
+
+	l = memnew(Label);
+	hbc->add_child(l);
+	l->set_text(TTR("Action:"));
 
 	action_name = memnew(LineEdit);
 	action_name->set_h_size_flags(SIZE_EXPAND_FILL);
@@ -1709,7 +1718,6 @@ ProjectSettingsEditor::ProjectSettingsEditor(EditorData *p_data) {
 
 	add = memnew(Button);
 	hbc->add_child(add);
-	add->set_custom_minimum_size(Size2(150, 0) * EDSCALE);
 	add->set_text(TTR("Add"));
 	add->set_disabled(true);
 	add->connect("pressed", this, "_action_add");
@@ -1776,7 +1784,6 @@ ProjectSettingsEditor::ProjectSettingsEditor(EditorData *p_data) {
 
 	//translations
 	TabContainer *translations = memnew(TabContainer);
-	translations->add_style_override("panel", memnew(StyleBoxEmpty));
 	translations->set_tab_align(TabContainer::ALIGN_LEFT);
 	translations->set_name(TTR("Localization"));
 	tab_container->add_child(translations);
@@ -1888,19 +1895,14 @@ ProjectSettingsEditor::ProjectSettingsEditor(EditorData *p_data) {
 		translation_filter->connect("item_edited", this, "_translation_filter_option_changed");
 	}
 
-	{
-		autoload_settings = memnew(EditorAutoloadSettings);
-		autoload_settings->set_name(TTR("AutoLoad"));
-		tab_container->add_child(autoload_settings);
-		autoload_settings->connect("autoload_changed", this, "_settings_changed");
-	}
+	autoload_settings = memnew(EditorAutoloadSettings);
+	autoload_settings->set_name(TTR("AutoLoad"));
+	tab_container->add_child(autoload_settings);
+	autoload_settings->connect("autoload_changed", this, "_settings_changed");
 
-	{
-
-		plugin_settings = memnew(EditorPluginSettings);
-		plugin_settings->set_name(TTR("Plugins"));
-		tab_container->add_child(plugin_settings);
-	}
+	plugin_settings = memnew(EditorPluginSettings);
+	plugin_settings->set_name(TTR("Plugins"));
+	tab_container->add_child(plugin_settings);
 
 	timer = memnew(Timer);
 	timer->set_wait_time(1.5);

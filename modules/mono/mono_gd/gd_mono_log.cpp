@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "gd_mono_log.h"
 
 #include <mono/utils/mono-logger.h>
@@ -70,7 +71,9 @@ void gdmono_MonoLogCallback(const char *log_domain, const char *log_level, const
 	}
 
 	if (fatal) {
-		ERR_PRINTS("Mono: FALTAL ERROR, ABORTING! Logfile: " + GDMonoLog::get_singleton()->get_log_file_path() + "\n");
+		ERR_PRINTS("Mono: FATAL ERROR, ABORTING! Logfile: " + GDMonoLog::get_singleton()->get_log_file_path() + "\n");
+		// If we were to abort without flushing, the log wouldn't get written.
+		f->flush();
 		abort();
 	}
 }

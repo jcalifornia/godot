@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "visibility_notifier_2d.h"
 
 #include "engine.h"
@@ -218,7 +219,7 @@ void VisibilityEnabler2D::_find_nodes(Node *p_node) {
 
 	if (add) {
 
-		p_node->connect(SceneStringNames::get_singleton()->tree_exited, this, "_node_removed", varray(p_node), CONNECT_ONESHOT);
+		p_node->connect(SceneStringNames::get_singleton()->tree_exiting, this, "_node_removed", varray(p_node), CONNECT_ONESHOT);
 		nodes[p_node] = meta;
 		_change_node_state(p_node, false);
 	}
@@ -261,7 +262,7 @@ void VisibilityEnabler2D::_notification(int p_what) {
 
 			if (!visible)
 				_change_node_state(E->key(), true);
-			E->key()->disconnect(SceneStringNames::get_singleton()->tree_exited, this, "_node_removed");
+			E->key()->disconnect(SceneStringNames::get_singleton()->tree_exiting, this, "_node_removed");
 		}
 
 		nodes.clear();

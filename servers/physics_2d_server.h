@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #ifndef PHYSICS_2D_SERVER_H
 #define PHYSICS_2D_SERVER_H
 
@@ -589,14 +590,17 @@ class Physics2DServerManager {
 		String name;
 		CreatePhysics2DServerCallback create_callback;
 
-		ClassInfo()
-			: name(""), create_callback(NULL) {}
+		ClassInfo() :
+				name(""),
+				create_callback(NULL) {}
 
-		ClassInfo(String p_name, CreatePhysics2DServerCallback p_create_callback)
-			: name(p_name), create_callback(p_create_callback) {}
+		ClassInfo(String p_name, CreatePhysics2DServerCallback p_create_callback) :
+				name(p_name),
+				create_callback(p_create_callback) {}
 
-		ClassInfo(const ClassInfo &p_ci)
-			: name(p_ci.name), create_callback(p_ci.create_callback) {}
+		ClassInfo(const ClassInfo &p_ci) :
+				name(p_ci.name),
+				create_callback(p_ci.create_callback) {}
 	};
 
 	static Vector<ClassInfo> physics_2d_servers;

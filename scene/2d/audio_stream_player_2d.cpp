@@ -1,3 +1,32 @@
+/*************************************************************************/
+/*  audio_stream_player_2d.cpp                                           */
+/*************************************************************************/
+/*                       This file is part of:                           */
+/*                           GODOT ENGINE                                */
+/*                      https://godotengine.org                          */
+/*************************************************************************/
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
+/*                                                                       */
+/* Permission is hereby granted, free of charge, to any person obtaining */
+/* a copy of this software and associated documentation files (the       */
+/* "Software"), to deal in the Software without restriction, including   */
+/* without limitation the rights to use, copy, modify, merge, publish,   */
+/* distribute, sublicense, and/or sell copies of the Software, and to    */
+/* permit persons to whom the Software is furnished to do so, subject to */
+/* the following conditions:                                             */
+/*                                                                       */
+/* The above copyright notice and this permission notice shall be        */
+/* included in all copies or substantial portions of the Software.       */
+/*                                                                       */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*/
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY  */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
+/*************************************************************************/
 
 #include "audio_stream_player_2d.h"
 
@@ -25,7 +54,7 @@ void AudioStreamPlayer2D::_mix_audio() {
 	int buffer_size = mix_buffer.size();
 
 	//mix
-	stream_playback->mix(buffer, 1.0, buffer_size);
+	stream_playback->mix(buffer, pitch_scale, buffer_size);
 
 	//write all outputs
 	for (int i = 0; i < output_count; i++) {
@@ -166,7 +195,7 @@ void AudioStreamPlayer2D::_notification(int p_what) {
 					float dist = global_pos.distance_to(screen_in_global); //distance to screen center
 
 					if (dist > max_distance)
-						continue; //cant hear this sound in this viewport
+						continue; //can't hear this sound in this viewport
 
 					float multiplier = Math::pow(1.0f - dist / max_distance, attenuation);
 					multiplier *= Math::db2linear(volume_db); //also apply player volume!
@@ -248,6 +277,13 @@ void AudioStreamPlayer2D::set_volume_db(float p_volume) {
 float AudioStreamPlayer2D::get_volume_db() const {
 
 	return volume_db;
+}
+
+void AudioStreamPlayer2D::set_pitch_scale(float p_pitch_scale) {
+	pitch_scale = p_pitch_scale;
+}
+float AudioStreamPlayer2D::get_pitch_scale() const {
+	return pitch_scale;
 }
 
 void AudioStreamPlayer2D::play(float p_from_pos) {
@@ -390,6 +426,9 @@ void AudioStreamPlayer2D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_volume_db", "volume_db"), &AudioStreamPlayer2D::set_volume_db);
 	ClassDB::bind_method(D_METHOD("get_volume_db"), &AudioStreamPlayer2D::get_volume_db);
 
+	ClassDB::bind_method(D_METHOD("set_pitch_scale", "pitch_scale"), &AudioStreamPlayer2D::set_pitch_scale);
+	ClassDB::bind_method(D_METHOD("get_pitch_scale"), &AudioStreamPlayer2D::get_pitch_scale);
+
 	ClassDB::bind_method(D_METHOD("play", "from_position"), &AudioStreamPlayer2D::play, DEFVAL(0.0));
 	ClassDB::bind_method(D_METHOD("seek", "to_position"), &AudioStreamPlayer2D::seek);
 	ClassDB::bind_method(D_METHOD("stop"), &AudioStreamPlayer2D::stop);
@@ -419,6 +458,7 @@ void AudioStreamPlayer2D::_bind_methods() {
 
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "stream", PROPERTY_HINT_RESOURCE_TYPE, "AudioStream"), "set_stream", "get_stream");
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "volume_db", PROPERTY_HINT_RANGE, "-80,24"), "set_volume_db", "get_volume_db");
+	ADD_PROPERTY(PropertyInfo(Variant::REAL, "pitch_scale", PROPERTY_HINT_RANGE, "0.01,32,0.01"), "set_pitch_scale", "get_pitch_scale");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "playing", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR), "_set_playing", "is_playing");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "autoplay"), "set_autoplay", "is_autoplay_enabled");
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "max_distance", PROPERTY_HINT_RANGE, "1,65536,1"), "set_max_distance", "get_max_distance");
@@ -432,6 +472,7 @@ void AudioStreamPlayer2D::_bind_methods() {
 AudioStreamPlayer2D::AudioStreamPlayer2D() {
 
 	volume_db = 0;
+	pitch_scale = 1.0;
 	autoplay = false;
 	setseek = -1;
 	active = false;

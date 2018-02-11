@@ -90,6 +90,7 @@ env_base.android_appattributes_chunk = ""
 env_base.disabled_modules = []
 env_base.use_ptrcall = False
 env_base.split_drivers = False
+env_base.split_modules = False
 env_base.module_version_string = ""
 
 # To decide whether to rebuild a file, use the MD5 sum only if the timestamp has changed.
@@ -168,8 +169,10 @@ opts.Add(BoolVariable('vsproj', "Generate Visual Studio Project.", False))
 opts.Add(EnumVariable('warnings', "Set the level of warnings emitted during compilation", 'no', ('extra', 'all', 'moderate', 'no')))
 opts.Add(BoolVariable('progress', "Show a progress indicator during build", True))
 opts.Add(BoolVariable('dev', "If yes, alias for verbose=yes warnings=all", False))
+opts.Add(EnumVariable('macports_clang', "Build using clang from MacPorts", 'no', ('no', '5.0', 'devel')))
 
 # Thirdparty libraries
+opts.Add(BoolVariable('builtin_bullet', "Use the builtin bullet library", True))
 opts.Add(BoolVariable('builtin_enet', "Use the builtin enet library", True))
 opts.Add(BoolVariable('builtin_freetype', "Use the builtin freetype library", True))
 opts.Add(BoolVariable('builtin_libogg', "Use the builtin libogg library", True))
@@ -183,13 +186,17 @@ opts.Add(BoolVariable('builtin_opus', "Use the builtin opus library", True))
 opts.Add(BoolVariable('builtin_pcre2', "Use the builtin pcre2 library)", True))
 opts.Add(BoolVariable('builtin_recast', "Use the builtin recast library", True))
 opts.Add(BoolVariable('builtin_squish', "Use the builtin squish library", True))
+opts.Add(BoolVariable('builtin_thekla_atlas', "Use the builtin thekla_altas library", True))
 opts.Add(BoolVariable('builtin_zlib', "Use the builtin zlib library", True))
 opts.Add(BoolVariable('builtin_zstd', "Use the builtin zstd library", True))
+opts.Add(BoolVariable('no_editor_splash', "Don't use the custom splash screen for the editor", False))
 
-# Environment setup
+# Compilation environment setup
 opts.Add("CXX", "C++ compiler")
 opts.Add("CC", "C compiler")
-opts.Add("CCFLAGS", "Custom flags for the C and C++ compilers")
+opts.Add("LINK", "Linker")
+opts.Add("CCFLAGS", "Custom flags for both the C and C++ compilers")
+opts.Add("CXXFLAGS", "Custom flags for the C++ compiler")
 opts.Add("CFLAGS", "Custom flags for the C compiler")
 opts.Add("LINKFLAGS", "Custom flags for the linker")
 
@@ -236,6 +243,9 @@ if (env_base['target'] == 'debug'):
     env_base.Append(CPPFLAGS=['-DDEBUG_MEMORY_ALLOC'])
     env_base.Append(CPPFLAGS=['-DSCI_NAMESPACE'])
 
+if (env_base['no_editor_splash']):
+    env_base.Append(CPPFLAGS=['-DNO_EDITOR_SPLASH'])
+
 if not env_base['deprecated']:
     env_base.Append(CPPFLAGS=['-DDISABLE_DEPRECATED'])
 
@@ -280,6 +290,8 @@ if selected_platform in platform_list:
                     basename = basename.replace('\\\\', '/')
                     if os.path.isfile(basename + ".h"):
                         env.vs_incs = env.vs_incs + [basename + ".h"]
+                    elif os.path.isfile(basename + ".hpp"):
+                        env.vs_incs = env.vs_incs + [basename + ".hpp"]
                     if os.path.isfile(basename + ".c"):
                         env.vs_srcs = env.vs_srcs + [basename + ".c"]
                     elif os.path.isfile(basename + ".cpp"):
@@ -404,9 +416,7 @@ if selected_platform in platform_list:
 
     methods.update_version(env.module_version_string)
 
-    suffix += env.module_version_string
-
-    env["PROGSUFFIX"] = suffix + env["PROGSUFFIX"]
+    env["PROGSUFFIX"] = suffix + env.module_version_string + env["PROGSUFFIX"]
     env["OBJSUFFIX"] = suffix + env["OBJSUFFIX"]
     env["LIBSUFFIX"] = suffix + env["LIBSUFFIX"]
     env["SHLIBSUFFIX"] = suffix + env["SHLIBSUFFIX"]
@@ -491,7 +501,12 @@ node_count_interval = 1
 node_pruning = 8 # Number of nodes to process before prunning the cache
 if ('env' in locals()):
     node_count_fname = str(env.Dir('#')) + '/.scons_node_count'
-show_progress = env['progress']
+# Progress reporting is not available in non-TTY environments since it
+# messes with the output (for example, when writing to a file)
+if sys.stdout.isatty():
+    show_progress = env['progress']
+else:
+    show_progress = False
 
 import time, math
 
@@ -550,9 +565,9 @@ class cache_progress:
         # decay since the ctime, and return a list with the entries
         # (filename, size, weight).
         current_time = time.time()
-        file_stat = [(x[0], x[1][0], x[1][0] * math.exp(self.exponent_scale * (x[1][1] - current_time))) for x in file_stat]
-        # Sort by highest weight (most sensible to keep) first
-        file_stat.sort(key=lambda x: x[2], reverse=True)
+        file_stat = [(x[0], x[1][0], (current_time - x[1][1])) for x in file_stat]
+        # Sort by the most resently accessed files (most sensible to keep) first
+        file_stat.sort(key=lambda x: x[2])
         # Search for the first entry where the storage limit is
         # reached
         sum, mark = 0, None

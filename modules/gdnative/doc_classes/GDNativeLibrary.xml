@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="GDNativeLibrary" inherits="Resource" category="Core" version="3.0-beta">
+<class name="GDNativeLibrary" inherits="Resource" category="Core" version="3.0-stable">
 	<brief_description>
 	</brief_description>
 	<description>
@@ -30,6 +30,8 @@
 	</methods>
 	<members>
 		<member name="load_once" type="bool" setter="set_load_once" getter="should_load_once">
+		</member>
+		<member name="reloadable" type="bool" setter="set_reloadable" getter="is_reloadable">
 		</member>
 		<member name="singleton" type="bool" setter="set_singleton" getter="is_singleton">
 		</member>

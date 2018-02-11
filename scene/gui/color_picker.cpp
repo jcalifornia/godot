@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "color_picker.h"
 
 #include "os/input.h"
@@ -39,33 +40,32 @@ void ColorPicker::_notification(int p_what) {
 
 	switch (p_what) {
 		case NOTIFICATION_THEME_CHANGED: {
-			//sample->set_texture(get_icon("color_sample"));
+
 			btn_pick->set_icon(get_icon("screen_picker", "ColorPicker"));
 			bt_add_preset->set_icon(get_icon("add_preset"));
 
 			_update_controls();
 		} break;
-
 		case NOTIFICATION_ENTER_TREE: {
+
 			btn_pick->set_icon(get_icon("screen_picker", "ColorPicker"));
 			bt_add_preset->set_icon(get_icon("add_preset"));
 
 			_update_color();
 		} break;
-
 		case NOTIFICATION_PARENTED: {
+
 			for (int i = 0; i < 4; i++)
 				set_margin((Margin)i, get_constant("margin"));
 		} break;
-
 		case NOTIFICATION_VISIBILITY_CHANGED: {
 
 			Popup *p = Object::cast_to<Popup>(get_parent());
 			if (p)
 				p->set_size(Size2(get_combined_minimum_size().width + get_constant("margin") * 2, get_combined_minimum_size().height + get_constant("margin") * 2));
 		} break;
-
 		case MainLoop::NOTIFICATION_WM_QUIT_REQUEST: {
+
 			if (screen != NULL) {
 				if (screen->is_visible()) {
 					screen->hide();
@@ -210,6 +210,7 @@ Color ColorPicker::get_pick_color() const {
 }
 
 void ColorPicker::add_preset(const Color &p_color) {
+
 	if (presets.find(p_color)) {
 		presets.move_to_back(presets.find(p_color));
 	} else {
@@ -483,11 +484,15 @@ void ColorPicker::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("_preset_input"), &ColorPicker::_preset_input);
 	ClassDB::bind_method(D_METHOD("_screen_input"), &ColorPicker::_screen_input);
 
+	ADD_PROPERTY(PropertyInfo(Variant::COLOR, "color"), "set_pick_color", "get_pick_color");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "edit_alpha"), "set_edit_alpha", "is_editing_alpha");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "raw_mode"), "set_raw_mode", "is_raw_mode");
+
 	ADD_SIGNAL(MethodInfo("color_changed", PropertyInfo(Variant::COLOR, "color")));
 }
 
-ColorPicker::ColorPicker()
-	: BoxContainer(true) {
+ColorPicker::ColorPicker() :
+		BoxContainer(true) {
 
 	updating = true;
 	edit_alpha = true;
@@ -523,7 +528,6 @@ ColorPicker::ColorPicker()
 	add_child(hb_edit);
 
 	w_edit = memnew(Control);
-	//w_edit->set_ignore_mouse(false);
 	w_edit->set_custom_minimum_size(Size2(get_constant("h_width"), 0));
 	w_edit->set_h_size_flags(SIZE_FILL);
 	w_edit->set_v_size_flags(SIZE_EXPAND_FILL);
@@ -589,7 +593,6 @@ ColorPicker::ColorPicker()
 	c_text->set_h_size_flags(SIZE_EXPAND_FILL);
 
 	_update_controls();
-	//_update_color();
 	updating = false;
 
 	set_pick_color(Color(1, 1, 1));
@@ -599,7 +602,6 @@ ColorPicker::ColorPicker()
 
 	preset = memnew(TextureRect);
 	bbc->add_child(preset);
-	//preset->set_ignore_mouse(false);
 	preset->connect("gui_input", this, "_preset_input");
 	preset->connect("draw", this, "_update_presets");
 
@@ -660,8 +662,14 @@ bool ColorPickerButton::is_editing_alpha() const {
 	return picker->is_editing_alpha();
 }
 
-ColorPicker *ColorPickerButton::get_picker() {
+ColorPicker *ColorPickerButton::get_picker() const {
+
 	return picker;
+}
+
+PopupPanel *ColorPickerButton::get_popup() const {
+
+	return popup;
 }
 
 void ColorPickerButton::_bind_methods() {
@@ -669,6 +677,7 @@ void ColorPickerButton::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_pick_color", "color"), &ColorPickerButton::set_pick_color);
 	ClassDB::bind_method(D_METHOD("get_pick_color"), &ColorPickerButton::get_pick_color);
 	ClassDB::bind_method(D_METHOD("get_picker"), &ColorPickerButton::get_picker);
+	ClassDB::bind_method(D_METHOD("get_popup"), &ColorPickerButton::get_popup);
 	ClassDB::bind_method(D_METHOD("set_edit_alpha", "show"), &ColorPickerButton::set_edit_alpha);
 	ClassDB::bind_method(D_METHOD("is_editing_alpha"), &ColorPickerButton::is_editing_alpha);
 	ClassDB::bind_method(D_METHOD("_color_changed"), &ColorPickerButton::_color_changed);

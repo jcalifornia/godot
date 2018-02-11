@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "csharp_script.h"
 
 #include <mono/metadata/threads.h>
@@ -122,6 +123,16 @@ void CSharpLanguage::init() {
 
 void CSharpLanguage::finish() {
 
+	finalizing = true;
+
+#ifdef TOOLS_ENABLED
+	// Must be here, to avoid StringName leaks
+	if (BindingsGenerator::singleton) {
+		memdelete(BindingsGenerator::singleton);
+		BindingsGenerator::singleton = NULL;
+	}
+#endif
+
 	// Release gchandle bindings before finalizing mono runtime
 	gchandle_bindings.clear();
 
@@ -129,6 +140,8 @@ void CSharpLanguage::finish() {
 		memdelete(gdmono);
 		gdmono = NULL;
 	}
+
+	finalizing = false;
 }
 
 void CSharpLanguage::get_reserved_words(List<String> *p_words) const {
@@ -163,7 +176,7 @@ void CSharpLanguage::get_reserved_words(List<String> *p_words) const {
 		"fixed",
 		"float",
 		"for",
-		"forech",
+		"foreach",
 		"goto",
 		"if",
 		"implicit",
@@ -209,14 +222,17 @@ void CSharpLanguage::get_reserved_words(List<String> *p_words) const {
 		"ushort",
 		"using",
 		"virtual",
-		"volatile",
 		"void",
+		"volatile",
 		"while",
 
 		// Contextual keywords. Not reserved words, but I guess we should include
 		// them because this seems to be used only for syntax highlighting.
 		"add",
+		"alias",
 		"ascending",
+		"async",
+		"await",
 		"by",
 		"descending",
 		"dynamic",
@@ -225,10 +241,10 @@ void CSharpLanguage::get_reserved_words(List<String> *p_words) const {
 		"get",
 		"global",
 		"group",
-		"in",
 		"into",
 		"join",
 		"let",
+		"nameof",
 		"on",
 		"orderby",
 		"partial",
@@ -237,6 +253,7 @@ void CSharpLanguage::get_reserved_words(List<String> *p_words) const {
 		"set",
 		"value",
 		"var",
+		"when",
 		"where",
 		"yield",
 		0
@@ -431,6 +448,82 @@ String CSharpLanguage::_get_indentation() const {
 #endif
 	return "\t";
 }
+
+Vector<ScriptLanguage::StackInfo> CSharpLanguage::debug_get_current_stack_info() {
+
+#ifdef DEBUG_ENABLED
+	// Printing an error here will result in endless recursion, so we must be careful
+
+	if (!gdmono->is_runtime_initialized() || !GDMono::get_singleton()->get_api_assembly() || !GDMonoUtils::mono_cache.corlib_cache_updated)
+		return Vector<StackInfo>();
+
+	MonoObject *stack_trace = mono_object_new(mono_domain_get(), CACHED_CLASS(System_Diagnostics_StackTrace)->get_mono_ptr());
+
+	MonoBoolean need_file_info = true;
+	void *ctor_args[1] = { &need_file_info };
+
+	CACHED_METHOD(System_Diagnostics_StackTrace, ctor_bool)->invoke_raw(stack_trace, ctor_args);
+
+	Vector<StackInfo> si;
+	si = stack_trace_get_info(stack_trace);
+
+	return si;
+#else
+	return Vector<StackInfo>();
+#endif
+}
+
+#ifdef DEBUG_ENABLED
+Vector<ScriptLanguage::StackInfo> CSharpLanguage::stack_trace_get_info(MonoObject *p_stack_trace) {
+
+	// Printing an error here could result in endless recursion, so we must be careful
+
+	MonoObject *exc = NULL;
+
+	GDMonoUtils::StackTrace_GetFrames st_get_frames = CACHED_METHOD_THUNK(System_Diagnostics_StackTrace, GetFrames);
+	MonoArray *frames = st_get_frames(p_stack_trace, &exc);
+
+	if (exc) {
+		GDMonoUtils::print_unhandled_exception(exc, true /* fail silently to avoid endless recursion */);
+		return Vector<StackInfo>();
+	}
+
+	int frame_count = mono_array_length(frames);
+
+	if (frame_count <= 0)
+		return Vector<StackInfo>();
+
+	GDMonoUtils::DebugUtils_StackFrameInfo get_sf_info = CACHED_METHOD_THUNK(DebuggingUtils, GetStackFrameInfo);
+
+	Vector<StackInfo> si;
+	si.resize(frame_count);
+
+	for (int i = 0; i < frame_count; i++) {
+		StackInfo &sif = si[i];
+		MonoObject *frame = mono_array_get(frames, MonoObject *, i);
+
+		MonoString *file_name;
+		int file_line_num;
+		MonoString *method_decl;
+		get_sf_info(frame, &file_name, &file_line_num, &method_decl, &exc);
+
+		if (exc) {
+			GDMonoUtils::print_unhandled_exception(exc, true /* fail silently to avoid endless recursion */);
+			return Vector<StackInfo>();
+		}
+
+		// TODO
+		// what if the StackFrame method is null (method_decl is empty). should we skip this frame?
+		// can reproduce with a MissingMethodException on internal calls
+
+		sif.file = GDMonoMarshal::mono_string_to_godot(file_name);
+		sif.line = file_line_num;
+		sif.func = GDMonoMarshal::mono_string_to_godot(method_decl);
+	}
+
+	return si;
+}
+#endif
 
 void CSharpLanguage::frame() {
 
@@ -742,6 +835,8 @@ CSharpLanguage::CSharpLanguage() {
 	ERR_FAIL_COND(singleton);
 	singleton = this;
 
+	finalizing = false;
+
 	gdmono = NULL;
 
 #ifdef NO_THREADS
@@ -798,12 +893,9 @@ void *CSharpLanguage::alloc_instance_binding_data(Object *p_object) {
 	ERR_FAIL_NULL_V(mono_object, NULL);
 
 	// Tie managed to unmanaged
-	bool strong_handle = true;
 	Reference *ref = Object::cast_to<Reference>(p_object);
 
 	if (ref) {
-		strong_handle = false;
-
 		// Unsafe refcount increment. The managed instance also counts as a reference.
 		// This way if the unmanaged world has no references to our owner
 		// but the managed instance is alive, the refcount will be 1 instead of 0.
@@ -812,8 +904,7 @@ void *CSharpLanguage::alloc_instance_binding_data(Object *p_object) {
 		ref->reference();
 	}
 
-	Ref<MonoGCHandle> gchandle = strong_handle ? MonoGCHandle::create_strong(mono_object) :
-												 MonoGCHandle::create_weak(mono_object);
+	Ref<MonoGCHandle> gchandle = MonoGCHandle::create_strong(mono_object);
 
 #ifndef NO_THREADS
 	script_bind_lock->lock();
@@ -838,28 +929,26 @@ void CSharpLanguage::free_instance_binding_data(void *p_data) {
 		return;
 	}
 
+	if (finalizing)
+		return; // inside CSharpLanguage::finish(), all the gchandle bindings are released there
+
 #ifndef NO_THREADS
 	script_bind_lock->lock();
 #endif
 
-	gchandle_bindings.erase((Map<Object *, Ref<MonoGCHandle> >::Element *)p_data);
+	Map<Object *, Ref<MonoGCHandle> >::Element *data = (Map<Object *, Ref<MonoGCHandle> >::Element *)p_data;
+
+	// Set the native instance field to IntPtr.Zero, if not yet garbage collected
+	MonoObject *mono_object = data->value()->get_target();
+	if (mono_object) {
+		CACHED_FIELD(GodotObject, ptr)->set_value_raw(mono_object, NULL);
+	}
+
+	gchandle_bindings.erase(data);
 
 #ifndef NO_THREADS
 	script_bind_lock->unlock();
 #endif
-}
-
-void CSharpInstance::_ml_call_reversed(GDMonoClass *klass, const StringName &p_method, const Variant **p_args, int p_argcount) {
-
-	GDMonoClass *base = klass->get_parent_class();
-	if (base && base != script->native)
-		_ml_call_reversed(base, p_method, p_args, p_argcount);
-
-	GDMonoMethod *method = klass->get_method(p_method, p_argcount);
-
-	if (method) {
-		method->invoke(get_mono_object(), p_args);
-	}
 }
 
 CSharpInstance *CSharpInstance::create_for_managed_type(Object *p_owner, CSharpScript *p_script, const Ref<MonoGCHandle> &p_gchandle) {
@@ -892,19 +981,23 @@ bool CSharpInstance::set(const StringName &p_name, const Variant &p_value) {
 
 	ERR_FAIL_COND_V(!script.is_valid(), false);
 
+	MonoObject *mono_object = get_mono_object();
+	ERR_FAIL_NULL_V(mono_object, false);
+
 	GDMonoClass *top = script->script_class;
 
 	while (top && top != script->native) {
 		GDMonoField *field = script->script_class->get_field(p_name);
 
 		if (field) {
-			MonoObject *mono_object = get_mono_object();
+			field->set_value_from_variant(mono_object, p_value);
+			return true;
+		}
 
-			ERR_EXPLAIN("Reference has been garbage collected?");
-			ERR_FAIL_NULL_V(mono_object, false);
+		GDMonoProperty *property = script->script_class->get_property(p_name);
 
-			field->set_value(mono_object, p_value);
-
+		if (property) {
+			property->set_value(mono_object, GDMonoMarshal::variant_to_mono_object(p_value));
 			return true;
 		}
 
@@ -913,20 +1006,21 @@ bool CSharpInstance::set(const StringName &p_name, const Variant &p_value) {
 
 	// Call _set
 
-	Variant name = p_name;
-	const Variant *args[2] = { &name, &p_value };
-
-	MonoObject *mono_object = get_mono_object();
 	top = script->script_class;
 
 	while (top && top != script->native) {
 		GDMonoMethod *method = top->get_method(CACHED_STRING_NAME(_set), 2);
 
 		if (method) {
+			Variant name = p_name;
+			const Variant *args[2] = { &name, &p_value };
+
 			MonoObject *ret = method->invoke(mono_object, args);
 
 			if (ret && GDMonoMarshal::unbox<MonoBoolean>(ret) == true)
 				return true;
+
+			break;
 		}
 
 		top = top->get_parent_class();
@@ -939,36 +1033,56 @@ bool CSharpInstance::get(const StringName &p_name, Variant &r_ret) const {
 
 	ERR_FAIL_COND_V(!script.is_valid(), false);
 
+	MonoObject *mono_object = get_mono_object();
+	ERR_FAIL_NULL_V(mono_object, false);
+
 	GDMonoClass *top = script->script_class;
 
 	while (top && top != script->native) {
 		GDMonoField *field = top->get_field(p_name);
 
 		if (field) {
-			MonoObject *mono_object = get_mono_object();
-
-			ERR_EXPLAIN("Reference has been garbage collected?");
-			ERR_FAIL_NULL_V(mono_object, false);
-
 			MonoObject *value = field->get_value(mono_object);
-			r_ret = GDMonoMarshal::mono_object_to_variant(value, field->get_type());
+			r_ret = GDMonoMarshal::mono_object_to_variant(value);
 			return true;
 		}
 
-		// Call _get
+		GDMonoProperty *property = top->get_property(p_name);
 
+		if (property) {
+			MonoObject *exc = NULL;
+			MonoObject *value = property->get_value(mono_object, &exc);
+			if (exc) {
+				r_ret = Variant();
+				GDMonoUtils::print_unhandled_exception(exc);
+			} else {
+				r_ret = GDMonoMarshal::mono_object_to_variant(value);
+			}
+			return true;
+		}
+
+		top = top->get_parent_class();
+	}
+
+	// Call _get
+
+	top = script->script_class;
+
+	while (top && top != script->native) {
 		GDMonoMethod *method = top->get_method(CACHED_STRING_NAME(_get), 1);
 
 		if (method) {
 			Variant name = p_name;
 			const Variant *args[1] = { &name };
 
-			MonoObject *ret = method->invoke(get_mono_object(), args);
+			MonoObject *ret = method->invoke(mono_object, args);
 
 			if (ret) {
 				r_ret = GDMonoMarshal::mono_object_to_variant(ret);
 				return true;
 			}
+
+			break;
 		}
 
 		top = top->get_parent_class();
@@ -1006,7 +1120,7 @@ bool CSharpInstance::has_method(const StringName &p_method) const {
 	GDMonoClass *top = script->script_class;
 
 	while (top && top != script->native) {
-		if (top->has_method(p_method)) {
+		if (top->has_fetched_method_unknown_params(p_method)) {
 			return true;
 		}
 
@@ -1020,11 +1134,13 @@ Variant CSharpInstance::call(const StringName &p_method, const Variant **p_args,
 
 	MonoObject *mono_object = get_mono_object();
 
-	ERR_EXPLAIN("Reference has been garbage collected?");
-	ERR_FAIL_NULL_V(mono_object, Variant());
+	if (!mono_object) {
+		r_error.error = Variant::CallError::CALL_ERROR_INSTANCE_IS_NULL;
+		ERR_FAIL_V(Variant());
+	}
 
 	if (!script.is_valid())
-		return Variant();
+		ERR_FAIL_V(Variant());
 
 	GDMonoClass *top = script->script_class;
 
@@ -1034,8 +1150,10 @@ Variant CSharpInstance::call(const StringName &p_method, const Variant **p_args,
 		if (method) {
 			MonoObject *return_value = method->invoke(mono_object, p_args);
 
+			r_error.error = Variant::CallError::CALL_OK;
+
 			if (return_value) {
-				return GDMonoMarshal::mono_object_to_variant(return_value, method->get_return_type());
+				return GDMonoMarshal::mono_object_to_variant(return_value);
 			} else {
 				return Variant();
 			}
@@ -1054,24 +1172,33 @@ void CSharpInstance::call_multilevel(const StringName &p_method, const Variant *
 	if (script.is_valid()) {
 		MonoObject *mono_object = get_mono_object();
 
-		GDMonoClass *top = script->script_class;
+		ERR_FAIL_NULL(mono_object);
 
-		while (top && top != script->native) {
-			GDMonoMethod *method = top->get_method(p_method, p_argcount);
+		_call_multilevel(mono_object, p_method, p_args, p_argcount);
+	}
+}
 
-			if (method)
-				method->invoke(mono_object, p_args);
+void CSharpInstance::_call_multilevel(MonoObject *p_mono_object, const StringName &p_method, const Variant **p_args, int p_argcount) {
 
-			top = top->get_parent_class();
+	GDMonoClass *top = script->script_class;
+
+	while (top && top != script->native) {
+		GDMonoMethod *method = top->get_method(p_method, p_argcount);
+
+		if (method) {
+			method->invoke(p_mono_object, p_args);
+			return;
 		}
+
+		top = top->get_parent_class();
 	}
 }
 
 void CSharpInstance::call_multilevel_reversed(const StringName &p_method, const Variant **p_args, int p_argcount) {
 
-	if (script.is_valid()) {
-		_ml_call_reversed(script->script_class, p_method, p_args, p_argcount);
-	}
+	// Sorry, the method is the one that controls the call order
+
+	call_multilevel(p_method, p_args, p_argcount);
 }
 
 void CSharpInstance::_reference_owner_unsafe() {
@@ -1118,7 +1245,7 @@ void CSharpInstance::refcount_incremented() {
 
 	Reference *ref_owner = Object::cast_to<Reference>(owner);
 
-	if (ref_owner->reference_get_count() > 1) { // Remember the managed side holds a reference, hence 1 instead of 0 here
+	if (ref_owner->reference_get_count() > 1) { // The managed side also holds a reference, hence 1 instead of 0
 		// The reference count was increased after the managed side was the only one referencing our owner.
 		// This means the owner is being referenced again by the unmanaged side,
 		// so the owner must hold the managed side alive again to avoid it from being GCed.
@@ -1138,7 +1265,7 @@ bool CSharpInstance::refcount_decremented() {
 
 	int refcount = ref_owner->reference_get_count();
 
-	if (refcount == 1) { // Remember the managed side holds a reference, hence 1 instead of 0 here
+	if (refcount == 1) { // The managed side also holds a reference, hence 1 instead of 0
 		// If owner owner is no longer referenced by the unmanaged side,
 		// the managed instance takes responsibility of deleting the owner when GCed.
 
@@ -1155,24 +1282,29 @@ bool CSharpInstance::refcount_decremented() {
 	return ref_dying;
 }
 
+ScriptInstance::RPCMode CSharpInstance::_member_get_rpc_mode(GDMonoClassMember *p_member) const {
+
+	if (p_member->has_attribute(CACHED_CLASS(RemoteAttribute)))
+		return RPC_MODE_REMOTE;
+	if (p_member->has_attribute(CACHED_CLASS(SyncAttribute)))
+		return RPC_MODE_SYNC;
+	if (p_member->has_attribute(CACHED_CLASS(MasterAttribute)))
+		return RPC_MODE_MASTER;
+	if (p_member->has_attribute(CACHED_CLASS(SlaveAttribute)))
+		return RPC_MODE_SLAVE;
+
+	return RPC_MODE_DISABLED;
+}
+
 ScriptInstance::RPCMode CSharpInstance::get_rpc_mode(const StringName &p_method) const {
 
 	GDMonoClass *top = script->script_class;
 
 	while (top && top != script->native) {
-		GDMonoMethod *method = top->get_method(p_method);
+		GDMonoMethod *method = top->get_fetched_method_unknown_params(p_method);
 
-		if (method) { // TODO should we reject static methods?
-			// TODO cache result
-			if (method->has_attribute(CACHED_CLASS(RemoteAttribute)))
-				return RPC_MODE_REMOTE;
-			if (method->has_attribute(CACHED_CLASS(SyncAttribute)))
-				return RPC_MODE_SYNC;
-			if (method->has_attribute(CACHED_CLASS(MasterAttribute)))
-				return RPC_MODE_MASTER;
-			if (method->has_attribute(CACHED_CLASS(SlaveAttribute)))
-				return RPC_MODE_SLAVE;
-		}
+		if (method && !method->is_static())
+			return _member_get_rpc_mode(method);
 
 		top = top->get_parent_class();
 	}
@@ -1187,17 +1319,13 @@ ScriptInstance::RPCMode CSharpInstance::get_rset_mode(const StringName &p_variab
 	while (top && top != script->native) {
 		GDMonoField *field = top->get_field(p_variable);
 
-		if (field) { // TODO should we reject static fields?
-			// TODO cache result
-			if (field->has_attribute(CACHED_CLASS(RemoteAttribute)))
-				return RPC_MODE_REMOTE;
-			if (field->has_attribute(CACHED_CLASS(SyncAttribute)))
-				return RPC_MODE_SYNC;
-			if (field->has_attribute(CACHED_CLASS(MasterAttribute)))
-				return RPC_MODE_MASTER;
-			if (field->has_attribute(CACHED_CLASS(SlaveAttribute)))
-				return RPC_MODE_SLAVE;
-		}
+		if (field && !field->is_static())
+			return _member_get_rpc_mode(field);
+
+		GDMonoProperty *property = top->get_property(p_variable);
+
+		if (property && !property->is_static())
+			return _member_get_rpc_mode(property);
 
 		top = top->get_parent_class();
 	}
@@ -1207,10 +1335,25 @@ ScriptInstance::RPCMode CSharpInstance::get_rset_mode(const StringName &p_variab
 
 void CSharpInstance::notification(int p_notification) {
 
+	MonoObject *mono_object = get_mono_object();
+
+	if (p_notification == Object::NOTIFICATION_PREDELETE) {
+		if (mono_object != NULL) { // otherwise it was collected, and the finalizer already called NOTIFICATION_PREDELETE
+			call_notification_no_check(mono_object, p_notification);
+			// Set the native instance field to IntPtr.Zero
+			CACHED_FIELD(GodotObject, ptr)->set_value_raw(mono_object, NULL);
+		}
+		return;
+	}
+
+	call_notification_no_check(mono_object, p_notification);
+}
+
+void CSharpInstance::call_notification_no_check(MonoObject *p_mono_object, int p_notification) {
 	Variant value = p_notification;
 	const Variant *args[1] = { &value };
 
-	call_multilevel(CACHED_STRING_NAME(_notification), args, 1);
+	_call_multilevel(p_mono_object, CACHED_STRING_NAME(_notification), args, 1);
 }
 
 Ref<Script> CSharpInstance::get_script() const {
@@ -1307,7 +1450,7 @@ bool CSharpScript::_update_exports() {
 		// We are creating a temporary new instance of the class here to get the default value
 		// TODO Workaround. Should be replaced with IL opcodes analysis
 
-		MonoObject *tmp_object = mono_object_new(SCRIPTS_DOMAIN, script_class->get_raw());
+		MonoObject *tmp_object = mono_object_new(SCRIPTS_DOMAIN, script_class->get_mono_ptr());
 
 		if (tmp_object) {
 			CACHED_FIELD(GodotObject, ptr)->set_value_raw(tmp_object, tmp_object); // FIXME WTF is this workaround
@@ -1330,65 +1473,55 @@ bool CSharpScript::_update_exports() {
 		GDMonoClass *top = script_class;
 
 		while (top && top != native) {
+			PropertyInfo prop_info;
+			bool exported;
+
 			const Vector<GDMonoField *> &fields = top->get_all_fields();
 
-			for (int i = 0; i < fields.size(); i++) {
+			for (int i = fields.size() - 1; i >= 0; i--) {
 				GDMonoField *field = fields[i];
 
-				if (field->is_static()) {
-					if (field->has_attribute(CACHED_CLASS(ExportAttribute)))
-						ERR_PRINTS("Cannot export field because it is static: " + top->get_full_name() + "." + field->get_name());
-					continue;
-				}
+				if (_get_member_export(top, field, prop_info, exported)) {
+					StringName name = field->get_name();
 
-				String name = field->get_name();
-				StringName cname = name;
+					if (exported) {
+						member_info[name] = prop_info;
+						exported_members_cache.push_front(prop_info);
 
-				if (member_info.has(cname))
-					continue;
-
-				ManagedType field_type = field->get_type();
-				Variant::Type type = GDMonoMarshal::managed_to_variant_type(field_type);
-
-				if (field->has_attribute(CACHED_CLASS(ExportAttribute))) {
-					// Field has Export attribute
-					MonoObject *attr = field->get_attribute(CACHED_CLASS(ExportAttribute));
-
-					PropertyHint hint;
-					String hint_string;
-
-					if (type == Variant::NIL) {
-						ERR_PRINTS("Unknown type of exported field: " + top->get_full_name() + "." + field->get_name());
-						continue;
-					} else if (type == Variant::INT && field_type.type_encoding == MONO_TYPE_VALUETYPE && mono_class_is_enum(field_type.type_class->get_raw())) {
-						type = Variant::INT;
-						hint = PROPERTY_HINT_ENUM;
-
-						Vector<MonoClassField *> fields = field_type.type_class->get_enum_fields();
-
-						for (int i = 0; i < fields.size(); i++) {
-							if (i > 0)
-								hint_string += ",";
-							hint_string += mono_field_get_name(fields[i]);
+						if (tmp_object) {
+							exported_members_defval_cache[name] = GDMonoMarshal::mono_object_to_variant(field->get_value(tmp_object));
 						}
-					} else if (type == Variant::OBJECT && CACHED_CLASS(GodotReference)->is_assignable_from(field_type.type_class)) {
-						hint = PROPERTY_HINT_RESOURCE_TYPE;
-						hint_string = NATIVE_GDMONOCLASS_NAME(field_type.type_class);
 					} else {
-						hint = PropertyHint(CACHED_FIELD(ExportAttribute, hint)->get_int_value(attr));
-						hint_string = CACHED_FIELD(ExportAttribute, hint_string)->get_string_value(attr);
+						member_info[name] = prop_info;
 					}
+				}
+			}
 
-					PropertyInfo prop_info = PropertyInfo(type, name, hint, hint_string, PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_SCRIPT_VARIABLE);
+			const Vector<GDMonoProperty *> &properties = top->get_all_properties();
 
-					member_info[cname] = prop_info;
-					exported_members_cache.push_back(prop_info);
+			for (int i = properties.size() - 1; i >= 0; i--) {
+				GDMonoProperty *property = properties[i];
 
-					if (tmp_object) {
-						exported_members_defval_cache[cname] = GDMonoMarshal::mono_object_to_variant(field->get_value(tmp_object));
+				if (_get_member_export(top, property, prop_info, exported)) {
+					StringName name = property->get_name();
+
+					if (exported) {
+						member_info[name] = prop_info;
+						exported_members_cache.push_front(prop_info);
+
+						if (tmp_object) {
+							MonoObject *exc = NULL;
+							MonoObject *ret = property->get_value(tmp_object, &exc);
+							if (exc) {
+								exported_members_defval_cache[name] = Variant();
+								GDMonoUtils::print_unhandled_exception(exc);
+							} else {
+								exported_members_defval_cache[name] = GDMonoMarshal::mono_object_to_variant(ret);
+							}
+						}
+					} else {
+						member_info[name] = prop_info;
 					}
-				} else {
-					member_info[cname] = PropertyInfo(type, name, PROPERTY_HINT_NONE, "", PROPERTY_USAGE_SCRIPT_VARIABLE);
 				}
 			}
 
@@ -1412,6 +1545,79 @@ bool CSharpScript::_update_exports() {
 	return false;
 }
 
+#ifdef TOOLS_ENABLED
+bool CSharpScript::_get_member_export(GDMonoClass *p_class, GDMonoClassMember *p_member, PropertyInfo &r_prop_info, bool &r_exported) {
+
+	StringName name = p_member->get_name();
+
+	if (p_member->is_static()) {
+		if (p_member->has_attribute(CACHED_CLASS(ExportAttribute)))
+			ERR_PRINTS("Cannot export member because it is static: " + p_class->get_full_name() + "." + name.operator String());
+		return false;
+	}
+
+	if (member_info.has(name))
+		return false;
+
+	ManagedType type;
+
+	if (p_member->get_member_type() == GDMonoClassMember::MEMBER_TYPE_FIELD) {
+		type = static_cast<GDMonoField *>(p_member)->get_type();
+	} else if (p_member->get_member_type() == GDMonoClassMember::MEMBER_TYPE_PROPERTY) {
+		type = static_cast<GDMonoProperty *>(p_member)->get_type();
+	} else {
+		CRASH_NOW();
+	}
+
+	Variant::Type variant_type = GDMonoMarshal::managed_to_variant_type(type);
+
+	if (p_member->has_attribute(CACHED_CLASS(ExportAttribute))) {
+		if (p_member->get_member_type() == GDMonoClassMember::MEMBER_TYPE_PROPERTY) {
+			GDMonoProperty *property = static_cast<GDMonoProperty *>(p_member);
+			if (!property->has_getter() || !property->has_setter()) {
+				ERR_PRINTS("Cannot export property because it does not provide a getter or a setter: " + p_class->get_full_name() + "." + name.operator String());
+				return false;
+			}
+		}
+
+		MonoObject *attr = p_member->get_attribute(CACHED_CLASS(ExportAttribute));
+
+		PropertyHint hint;
+		String hint_string;
+
+		if (variant_type == Variant::NIL) {
+			ERR_PRINTS("Unknown type of exported member: " + p_class->get_full_name() + "." + name.operator String());
+			return false;
+		} else if (variant_type == Variant::INT && type.type_encoding == MONO_TYPE_VALUETYPE && mono_class_is_enum(type.type_class->get_mono_ptr())) {
+			variant_type = Variant::INT;
+			hint = PROPERTY_HINT_ENUM;
+
+			Vector<MonoClassField *> fields = type.type_class->get_enum_fields();
+
+			for (int i = 0; i < fields.size(); i++) {
+				if (i > 0)
+					hint_string += ",";
+				hint_string += mono_field_get_name(fields[i]);
+			}
+		} else if (variant_type == Variant::OBJECT && CACHED_CLASS(GodotReference)->is_assignable_from(type.type_class)) {
+			hint = PROPERTY_HINT_RESOURCE_TYPE;
+			hint_string = NATIVE_GDMONOCLASS_NAME(type.type_class);
+		} else {
+			hint = PropertyHint(CACHED_FIELD(ExportAttribute, hint)->get_int_value(attr));
+			hint_string = CACHED_FIELD(ExportAttribute, hintString)->get_string_value(attr);
+		}
+
+		r_prop_info = PropertyInfo(variant_type, name.operator String(), hint, hint_string, PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_SCRIPT_VARIABLE);
+		r_exported = true;
+	} else {
+		r_prop_info = PropertyInfo(variant_type, name.operator String(), PROPERTY_HINT_NONE, "", PROPERTY_USAGE_SCRIPT_VARIABLE);
+		r_exported = false;
+	}
+
+	return true;
+}
+#endif
+
 void CSharpScript::_clear() {
 
 	tool = false;
@@ -1433,7 +1639,7 @@ Variant CSharpScript::call(const StringName &p_method, const Variant **p_args, i
 			MonoObject *result = method->invoke(NULL, p_args);
 
 			if (result) {
-				return GDMonoMarshal::mono_object_to_variant(result, method->get_return_type());
+				return GDMonoMarshal::mono_object_to_variant(result);
 			} else {
 				return Variant();
 			}
@@ -1480,7 +1686,7 @@ bool CSharpScript::_set(const StringName &p_name, const Variant &p_value) {
 
 void CSharpScript::_get_property_list(List<PropertyInfo> *p_properties) const {
 
-	p_properties->push_back(PropertyInfo(Variant::STRING, CSharpLanguage::singleton->string_names._script_source, PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR));
+	p_properties->push_back(PropertyInfo(Variant::STRING, CSharpLanguage::singleton->string_names._script_source, PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR | PROPERTY_USAGE_INTERNAL));
 }
 
 void CSharpScript::_bind_methods() {
@@ -1580,7 +1786,7 @@ CSharpInstance *CSharpScript::_create_instance(const Variant **p_args, int p_arg
 
 	/* STEP 2, INITIALIZE AND CONSTRUCT */
 
-	MonoObject *mono_object = mono_object_new(SCRIPTS_DOMAIN, script_class->get_raw());
+	MonoObject *mono_object = mono_object_new(SCRIPTS_DOMAIN, script_class->get_mono_ptr());
 
 	if (!mono_object) {
 		instance->script = Ref<CSharpScript>();
@@ -1718,7 +1924,7 @@ void CSharpScript::set_source_code(const String &p_code) {
 
 bool CSharpScript::has_method(const StringName &p_method) const {
 
-	return script_class->has_method(p_method);
+	return script_class->has_fetched_method_unknown_params(p_method);
 }
 
 Error CSharpScript::reload(bool p_keep_state) {
@@ -1885,8 +2091,8 @@ StringName CSharpScript::get_script_name() const {
 	return name;
 }
 
-CSharpScript::CSharpScript()
-	: script_list(this) {
+CSharpScript::CSharpScript() :
+		script_list(this) {
 
 	_clear();
 

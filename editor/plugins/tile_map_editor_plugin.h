@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #ifndef TILE_MAP_EDITOR_PLUGIN_H
 #define TILE_MAP_EDITOR_PLUGIN_H
 
@@ -167,7 +168,7 @@ class TileMapEditor : public VBoxContainer {
 	void _update_palette();
 	void _menu_option(int p_option);
 
-	void _set_cell(const Point2i &p_pos, int p_value, bool p_flip_h = false, bool p_flip_v = false, bool p_transpose = false, bool p_with_undo = false);
+	void _set_cell(const Point2i &p_pos, int p_value, bool p_flip_h = false, bool p_flip_v = false, bool p_transpose = false);
 
 	void _canvas_mouse_enter();
 	void _canvas_mouse_exit();

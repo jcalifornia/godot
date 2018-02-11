@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #ifndef OS_UNIX_H
 #define OS_UNIX_H
 
@@ -55,7 +56,7 @@ protected:
 
 	virtual void initialize_core();
 	virtual int unix_initialize_audio(int p_audio_driver);
-	//virtual void initialize(int p_video_driver,int p_audio_driver);
+	//virtual Error initialize(int p_video_driver,int p_audio_driver);
 
 	virtual void finalize_core();
 
@@ -77,7 +78,7 @@ public:
 	//virtual VideoMode get_video_mode() const;
 	//virtual void get_fullscreen_mode_list(List<VideoMode> *p_list) const;
 
-	virtual Error open_dynamic_library(const String p_path, void *&p_library_handle);
+	virtual Error open_dynamic_library(const String p_path, void *&p_library_handle, bool p_also_set_library_path = false);
 	virtual Error close_dynamic_library(void *p_library_handle);
 	virtual Error get_dynamic_library_symbol_handle(void *p_library_handle, const String p_name, void *&p_symbol_handle, bool p_optional = false);
 

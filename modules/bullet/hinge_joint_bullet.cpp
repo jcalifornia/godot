@@ -1,13 +1,12 @@
 /*************************************************************************/
 /*  hinge_joint_bullet.cpp                                               */
-/*  Author: AndreaCatania                                                */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
-/*                    http://www.godotengine.org                         */
+/*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -30,19 +29,33 @@
 /*************************************************************************/
 
 #include "hinge_joint_bullet.h"
-#include "BulletDynamics/ConstraintSolver/btHingeConstraint.h"
+
 #include "bullet_types_converter.h"
 #include "bullet_utilities.h"
 #include "rigid_body_bullet.h"
 
-HingeJointBullet::HingeJointBullet(RigidBodyBullet *rbA, RigidBodyBullet *rbB, const Transform &frameA, const Transform &frameB)
-	: JointBullet() {
+#include <BulletDynamics/ConstraintSolver/btHingeConstraint.h>
+
+/**
+	@author AndreaCatania
+*/
+
+HingeJointBullet::HingeJointBullet(RigidBodyBullet *rbA, RigidBodyBullet *rbB, const Transform &frameA, const Transform &frameB) :
+		JointBullet() {
+
+	Transform scaled_AFrame(frameA.scaled(rbA->get_body_scale()));
+	scaled_AFrame.basis.rotref_posscale_decomposition(scaled_AFrame.basis);
+
 	btTransform btFrameA;
-	G_TO_B(frameA, btFrameA);
+	G_TO_B(scaled_AFrame, btFrameA);
 
 	if (rbB) {
+
+		Transform scaled_BFrame(frameB.scaled(rbB->get_body_scale()));
+		scaled_BFrame.basis.rotref_posscale_decomposition(scaled_BFrame.basis);
+
 		btTransform btFrameB;
-		G_TO_B(frameB, btFrameB);
+		G_TO_B(scaled_BFrame, btFrameB);
 
 		hingeConstraint = bulletnew(btHingeConstraint(*rbA->get_bt_rigid_body(), *rbB->get_bt_rigid_body(), btFrameA, btFrameB));
 	} else {
@@ -53,19 +66,19 @@ HingeJointBullet::HingeJointBullet(RigidBodyBullet *rbA, RigidBodyBullet *rbB, c
 	setup(hingeConstraint);
 }
 
-HingeJointBullet::HingeJointBullet(RigidBodyBullet *rbA, RigidBodyBullet *rbB, const Vector3 &pivotInA, const Vector3 &pivotInB, const Vector3 &axisInA, const Vector3 &axisInB)
-	: JointBullet() {
+HingeJointBullet::HingeJointBullet(RigidBodyBullet *rbA, RigidBodyBullet *rbB, const Vector3 &pivotInA, const Vector3 &pivotInB, const Vector3 &axisInA, const Vector3 &axisInB) :
+		JointBullet() {
 
 	btVector3 btPivotA;
 	btVector3 btAxisA;
-	G_TO_B(pivotInA, btPivotA);
-	G_TO_B(axisInA, btAxisA);
+	G_TO_B(pivotInA * rbA->get_body_scale(), btPivotA);
+	G_TO_B(axisInA * rbA->get_body_scale(), btAxisA);
 
 	if (rbB) {
 		btVector3 btPivotB;
 		btVector3 btAxisB;
-		G_TO_B(pivotInB, btPivotB);
-		G_TO_B(axisInB, btAxisB);
+		G_TO_B(pivotInB * rbB->get_body_scale(), btPivotB);
+		G_TO_B(axisInB * rbB->get_body_scale(), btAxisB);
 
 		hingeConstraint = bulletnew(btHingeConstraint(*rbA->get_bt_rigid_body(), *rbB->get_bt_rigid_body(), btPivotA, btPivotB, btAxisA, btAxisB));
 	} else {

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #ifndef RASTERIZER_H
 #define RASTERIZER_H
 
@@ -112,12 +113,16 @@ public:
 
 		SelfList<InstanceBase> dependency_item;
 
+		InstanceBase *lightmap_capture;
+		RID lightmap;
+		Vector<Color> lightmap_capture_data; //in a array (12 values) to avoid wasting space if unused. Alpha is unused, but needed to send to shader
+
 		virtual void base_removed() = 0;
 		virtual void base_changed() = 0;
 		virtual void base_material_changed() = 0;
 
-		InstanceBase()
-			: dependency_item(this) {
+		InstanceBase() :
+				dependency_item(this) {
 
 			base_type = VS::INSTANCE_NONE;
 			cast_shadows = VS::SHADOW_CASTING_SETTING_ON;
@@ -126,6 +131,7 @@ public:
 			depth_layer = 0;
 			layer_mask = 1;
 			baked_light = false;
+			lightmap_capture = NULL;
 		}
 	};
 
@@ -192,6 +198,8 @@ public:
 	virtual void texture_set_detect_normal_callback(RID p_texture, VisualServer::TextureDetectCallback p_callback, void *p_userdata) = 0;
 
 	virtual void textures_keep_original(bool p_enable) = 0;
+
+	virtual void texture_set_proxy(RID p_proxy, RID p_base) = 0;
 
 	/* SKY API */
 
@@ -435,11 +443,39 @@ public:
 	virtual RID gi_probe_dynamic_data_create(int p_width, int p_height, int p_depth, GIProbeCompression p_compression) = 0;
 	virtual void gi_probe_dynamic_data_update(RID p_gi_probe_data, int p_depth_slice, int p_slice_count, int p_mipmap, const void *p_data) = 0;
 
+	/* LIGHTMAP CAPTURE */
+
+	struct LightmapCaptureOctree {
+
+		enum {
+			CHILD_EMPTY = 0xFFFFFFFF
+		};
+
+		uint16_t light[6][3]; //anisotropic light
+		float alpha;
+		uint32_t children[8];
+	};
+
+	virtual RID lightmap_capture_create() = 0;
+	virtual void lightmap_capture_set_bounds(RID p_capture, const AABB &p_bounds) = 0;
+	virtual AABB lightmap_capture_get_bounds(RID p_capture) const = 0;
+	virtual void lightmap_capture_set_octree(RID p_capture, const PoolVector<uint8_t> &p_octree) = 0;
+	virtual PoolVector<uint8_t> lightmap_capture_get_octree(RID p_capture) const = 0;
+	virtual void lightmap_capture_set_octree_cell_transform(RID p_capture, const Transform &p_xform) = 0;
+	virtual Transform lightmap_capture_get_octree_cell_transform(RID p_capture) const = 0;
+	virtual void lightmap_capture_set_octree_cell_subdiv(RID p_capture, int p_subdiv) = 0;
+	virtual int lightmap_capture_get_octree_cell_subdiv(RID p_capture) const = 0;
+	virtual void lightmap_capture_set_energy(RID p_capture, float p_energy) = 0;
+	virtual float lightmap_capture_get_energy(RID p_capture) const = 0;
+	virtual const PoolVector<LightmapCaptureOctree> *lightmap_capture_get_octree_ptr(RID p_capture) const = 0;
+
 	/* PARTICLES */
 
 	virtual RID particles_create() = 0;
 
 	virtual void particles_set_emitting(RID p_particles, bool p_emitting) = 0;
+	virtual bool particles_get_emitting(RID p_particles) = 0;
+
 	virtual void particles_set_amount(RID p_particles, int p_amount) = 0;
 	virtual void particles_set_lifetime(RID p_particles, float p_lifetime) = 0;
 	virtual void particles_set_one_shot(RID p_particles, bool p_one_shot) = 0;
@@ -634,6 +670,7 @@ public:
 		struct CommandPolyLine : public Command {
 
 			bool antialiased;
+			bool multiline;
 			Vector<Point2> triangles;
 			Vector<Color> triangle_colors;
 			Vector<Point2> lines;
@@ -641,6 +678,7 @@ public:
 			CommandPolyLine() {
 				type = TYPE_POLYLINE;
 				antialiased = false;
+				multiline = false;
 			}
 		};
 

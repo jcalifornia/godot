@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #ifndef SCRIPT_DEBUGGER_LOCAL_H
 #define SCRIPT_DEBUGGER_LOCAL_H
 
@@ -43,6 +44,7 @@ class ScriptDebuggerLocal : public ScriptDebugger {
 public:
 	void debug(ScriptLanguage *p_script, bool p_can_continue);
 	virtual void send_message(const String &p_message, const Array &p_args);
+	virtual void send_error(const String &p_func, const String &p_file, int p_line, const String &p_err, const String &p_descr, ErrorHandlerType p_type, const Vector<ScriptLanguage::StackInfo> &p_stack_info);
 
 	virtual bool is_profiling() const { return profiling; }
 	virtual void add_profiling_frame_data(const StringName &p_name, const Array &p_data) {}

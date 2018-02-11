@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "os_haiku.h"
 
 #include "drivers/gles3/rasterizer_gles3.h"
@@ -79,7 +80,7 @@ const char *OS_Haiku::get_video_driver_name(int p_driver) const {
 	return "GLES3";
 }
 
-void OS_Haiku::initialize(const VideoMode &p_desired, int p_video_driver, int p_audio_driver) {
+Error OS_Haiku::initialize(const VideoMode &p_desired, int p_video_driver, int p_audio_driver) {
 	main_loop = NULL;
 	current_video_mode = p_desired;
 
@@ -105,6 +106,7 @@ void OS_Haiku::initialize(const VideoMode &p_desired, int p_video_driver, int p_
 	context_gl = memnew(ContextGL_Haiku(window));
 	context_gl->initialize();
 	context_gl->make_current();
+	context_gl->set_use_vsync(current_video_mode.use_vsync);
 
 	/* Port to GLES 3 rasterizer */
 	//rasterizer = memnew(RasterizerGLES2);
@@ -113,7 +115,7 @@ void OS_Haiku::initialize(const VideoMode &p_desired, int p_video_driver, int p_
 
 	visual_server = memnew(VisualServerRaster(rasterizer));
 
-	ERR_FAIL_COND(!visual_server);
+	ERR_FAIL_COND_V(!visual_server, ERR_UNAVAILABLE);
 
 	// TODO: enable multithreaded VS
 	/*
@@ -131,6 +133,8 @@ void OS_Haiku::initialize(const VideoMode &p_desired, int p_video_driver, int p_
 	AudioDriverManager::initialize(p_audio_driver);
 
 	power_manager = memnew(PowerHaiku);
+
+	return OK;
 }
 
 void OS_Haiku::finalize() {
@@ -197,6 +201,10 @@ int OS_Haiku::get_mouse_button_state() const {
 
 void OS_Haiku::set_cursor_shape(CursorShape p_shape) {
 	//ERR_PRINT("set_cursor_shape() NOT IMPLEMENTED");
+}
+
+void OS_Haiku::set_custom_mouse_cursor(const RES &p_cursor, CursorShape p_shape, const Vector2 &p_hotspot) {
+	// TODO
 }
 
 int OS_Haiku::get_screen_count() const {

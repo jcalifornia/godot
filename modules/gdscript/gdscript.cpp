@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "gdscript.h"
 
 #include "engine.h"
@@ -100,7 +101,7 @@ GDScriptInstance *GDScript::_create_instance(const Variant **p_args, int p_argco
 #endif
 	instance->owner->set_script_instance(instance);
 
-/* STEP 2, INITIALIZE AND CONSRTUCT */
+	/* STEP 2, INITIALIZE AND CONSRTUCT */
 
 #ifndef NO_THREADS
 	GDScriptLanguage::singleton->lock->lock();
@@ -704,7 +705,7 @@ bool GDScript::_set(const StringName &p_name, const Variant &p_value) {
 
 void GDScript::_get_property_list(List<PropertyInfo> *p_properties) const {
 
-	p_properties->push_back(PropertyInfo(Variant::STRING, "script/source", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR));
+	p_properties->push_back(PropertyInfo(Variant::STRING, "script/source", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR | PROPERTY_USAGE_INTERNAL));
 }
 
 void GDScript::_bind_methods() {
@@ -876,8 +877,8 @@ void GDScript::get_script_signal_list(List<MethodInfo> *r_signals) const {
 #endif
 }
 
-GDScript::GDScript()
-	: script_list(this) {
+GDScript::GDScript() :
+		script_list(this) {
 
 	_static_ref = this;
 	valid = false;

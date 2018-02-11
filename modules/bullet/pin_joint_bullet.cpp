@@ -1,13 +1,12 @@
 /*************************************************************************/
 /*  pin_joint_bullet.cpp                                                 */
-/*  Author: AndreaCatania                                                */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
-/*                    http://www.godotengine.org                         */
+/*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -30,18 +29,24 @@
 /*************************************************************************/
 
 #include "pin_joint_bullet.h"
-#include "BulletDynamics/ConstraintSolver/btPoint2PointConstraint.h"
+
 #include "bullet_types_converter.h"
 #include "rigid_body_bullet.h"
 
-PinJointBullet::PinJointBullet(RigidBodyBullet *p_body_a, const Vector3 &p_pos_a, RigidBodyBullet *p_body_b, const Vector3 &p_pos_b)
-	: JointBullet() {
+#include <BulletDynamics/ConstraintSolver/btPoint2PointConstraint.h>
+
+/**
+	@author AndreaCatania
+*/
+
+PinJointBullet::PinJointBullet(RigidBodyBullet *p_body_a, const Vector3 &p_pos_a, RigidBodyBullet *p_body_b, const Vector3 &p_pos_b) :
+		JointBullet() {
 	if (p_body_b) {
 
 		btVector3 btPivotA;
 		btVector3 btPivotB;
-		G_TO_B(p_pos_a, btPivotA);
-		G_TO_B(p_pos_b, btPivotB);
+		G_TO_B(p_pos_a * p_body_a->get_body_scale(), btPivotA);
+		G_TO_B(p_pos_b * p_body_b->get_body_scale(), btPivotB);
 		p2pConstraint = bulletnew(btPoint2PointConstraint(*p_body_a->get_bt_rigid_body(),
 				*p_body_b->get_bt_rigid_body(),
 				btPivotA,

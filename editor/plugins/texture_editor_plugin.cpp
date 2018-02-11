@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "texture_editor_plugin.h"
 
 #include "editor/editor_settings.h"
@@ -74,6 +75,9 @@ void TextureEditor::_notification(int p_what) {
 			// In the case of CurveTextures we know they are 1 in height, so fill the preview to see the gradient
 			ofs_y = 0;
 			tex_height = size.height;
+		} else if (Object::cast_to<GradientTexture>(*texture)) {
+			ofs_y = size.height / 4.0;
+			tex_height = size.height / 2.0;
 		}
 
 		draw_texture_rect(texture, Rect2(ofs_x, ofs_y, tex_width, tex_height));

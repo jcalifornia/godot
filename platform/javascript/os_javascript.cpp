@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "os_javascript.h"
 
 #include "core/engine.h"
@@ -78,12 +79,6 @@ void OS_JavaScript::initialize_core() {
 
 	OS_Unix::initialize_core();
 	FileAccess::make_default<FileAccessBufferedFA<FileAccessUnix> >(FileAccess::ACCESS_RESOURCES);
-}
-
-void OS_JavaScript::set_opengl_extensions(const char *p_gl_extensions) {
-
-	ERR_FAIL_COND(!p_gl_extensions);
-	gl_extensions = p_gl_extensions;
 }
 
 static EM_BOOL _browser_resize_callback(int event_type, const EmscriptenUiEvent *ui_event, void *user_data) {
@@ -419,7 +414,7 @@ void send_notification(int notif) {
 }
 }
 
-void OS_JavaScript::initialize(const VideoMode &p_desired, int p_video_driver, int p_audio_driver) {
+Error OS_JavaScript::initialize(const VideoMode &p_desired, int p_video_driver, int p_audio_driver) {
 
 	print_line("Init OS");
 
@@ -429,22 +424,17 @@ void OS_JavaScript::initialize(const VideoMode &p_desired, int p_video_driver, i
 	attributes.antialias = false;
 	attributes.majorVersion = 2;
 	EMSCRIPTEN_WEBGL_CONTEXT_HANDLE ctx = emscripten_webgl_create_context(NULL, &attributes);
-	ERR_FAIL_COND(emscripten_webgl_make_context_current(ctx) != EMSCRIPTEN_RESULT_SUCCESS);
+	ERR_FAIL_COND_V(emscripten_webgl_make_context_current(ctx) != EMSCRIPTEN_RESULT_SUCCESS, ERR_UNAVAILABLE);
 
 	video_mode = p_desired;
 	// can't fulfil fullscreen request due to browser security
 	video_mode.fullscreen = false;
 	/* clang-format off */
-	bool resize_canvas_on_start = EM_ASM_INT_V(
-		return Module.resizeCanvasOnStart;
-	);
-	/* clang-format on */
-	if (resize_canvas_on_start) {
+	if (EM_ASM_INT_V({ return Module.resizeCanvasOnStart })) {
+		/* clang-format on */
 		set_window_size(Size2(video_mode.width, video_mode.height));
 	} else {
-		Size2 canvas_size = get_window_size();
-		video_mode.width = canvas_size.width;
-		video_mode.height = canvas_size.height;
+		set_window_size(get_window_size());
 	}
 
 	char locale_ptr[16];
@@ -507,6 +497,8 @@ void OS_JavaScript::initialize(const VideoMode &p_desired, int p_video_driver, i
 #undef EM_CHECK
 
 	visual_server->init();
+
+	return OK;
 }
 
 void OS_JavaScript::set_main_loop(MainLoop *p_main_loop) {
@@ -563,7 +555,7 @@ void OS_JavaScript::set_css_cursor(const char *p_cursor) {
 
 	/* clang-format off */
 	EM_ASM_({
-		Module.canvas.style.cursor = Module.UTF8ToString($0);
+		Module.canvas.style.cursor = UTF8ToString($0);
 	}, p_cursor);
 	/* clang-format on */
 }
@@ -573,7 +565,7 @@ const char *OS_JavaScript::get_css_cursor() const {
 	char cursor[16];
 	/* clang-format off */
 	EM_ASM_INT({
-		Module.stringToUTF8(Module.canvas.style.cursor ? Module.canvas.style.cursor : 'auto', $0, 16);
+		stringToUTF8(Module.canvas.style.cursor ? Module.canvas.style.cursor : 'auto', $0, 16);
 	}, cursor);
 	/* clang-format on */
 	return cursor;
@@ -779,6 +771,9 @@ void OS_JavaScript::set_cursor_shape(CursorShape p_shape) {
 		set_css_cursor(godot2dom_cursor(cursor_shape));
 }
 
+void OS_JavaScript::set_custom_mouse_cursor(const RES &p_cursor, CursorShape p_shape, const Vector2 &p_hotspot) {
+}
+
 void OS_JavaScript::main_loop_begin() {
 
 	if (main_loop)
@@ -786,7 +781,7 @@ void OS_JavaScript::main_loop_begin() {
 
 	/* clang-format off */
 	EM_ASM_ARGS({
-		const send_notification = Module.cwrap('send_notification', null, ['number']);
+		const send_notification = cwrap('send_notification', null, ['number']);
 		const notifs = arguments;
 		(['mouseover', 'mouseleave', 'focus', 'blur']).forEach(function(event, i) {
 			Module.canvas.addEventListener(event, send_notification.bind(null, notifs[i]));
@@ -969,7 +964,25 @@ int OS_JavaScript::get_power_percent_left() {
 
 bool OS_JavaScript::_check_internal_feature_support(const String &p_feature) {
 
-	return p_feature == "web" || p_feature == "s3tc"; // TODO check for these features really being available
+	if (p_feature == "HTML5" || p_feature == "web")
+		return true;
+
+#ifdef JAVASCRIPT_EVAL_ENABLED
+	if (p_feature == "JavaScript")
+		return true;
+#endif
+
+	EMSCRIPTEN_WEBGL_CONTEXT_HANDLE ctx = emscripten_webgl_get_current_context();
+	// all extensions are already automatically enabled, this function allows
+	// checking WebGL extension support without inline JavaScript
+	if (p_feature == "s3tc" && emscripten_webgl_enable_extension(ctx, "WEBGL_compressed_texture_s3tc_srgb"))
+		return true;
+	if (p_feature == "etc" && emscripten_webgl_enable_extension(ctx, "WEBGL_compressed_texture_etc1"))
+		return true;
+	if (p_feature == "etc2" && emscripten_webgl_enable_extension(ctx, "WEBGL_compressed_texture_etc"))
+		return true;
+
+	return false;
 }
 
 void OS_JavaScript::set_idbfs_available(bool p_idbfs_available) {
@@ -983,9 +996,9 @@ bool OS_JavaScript::is_userfs_persistent() const {
 }
 
 OS_JavaScript::OS_JavaScript(const char *p_execpath, GetUserDataDirFunc p_get_user_data_dir_func) {
+
 	set_cmdline(p_execpath, get_cmdline_args());
 	main_loop = NULL;
-	gl_extensions = NULL;
 	window_maximized = false;
 	soft_fs_enabled = false;
 	canvas_size_adjustment_requested = false;
@@ -995,6 +1008,10 @@ OS_JavaScript::OS_JavaScript(const char *p_execpath, GetUserDataDirFunc p_get_us
 
 	idbfs_available = false;
 	time_to_save_sync = -1;
+
+	Vector<Logger *> loggers;
+	loggers.push_back(memnew(StdLogger));
+	_set_logger(memnew(CompositeLogger(loggers)));
 }
 
 OS_JavaScript::~OS_JavaScript() {

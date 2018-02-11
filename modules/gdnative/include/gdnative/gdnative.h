@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #ifndef GODOT_GDNATIVE_H
 #define GODOT_GDNATIVE_H
 
@@ -69,7 +70,7 @@ typedef enum {
 	GODOT_OK,
 	GODOT_FAILED, ///< Generic fail error
 	GODOT_ERR_UNAVAILABLE, ///< What is requested is unsupported/unavailable
-	GODOT_ERR_UNCONFIGURED, ///< The object being used hasnt been properly set up yet
+	GODOT_ERR_UNCONFIGURED, ///< The object being used hasn't been properly set up yet
 	GODOT_ERR_UNAUTHORIZED, ///< Missing credentials for requested resource
 	GODOT_ERR_PARAMETER_RANGE_ERROR, ///< Parameter given out of range (5)
 	GODOT_ERR_OUT_OF_MEMORY, ///< Out of memory
@@ -115,8 +116,6 @@ typedef enum {
 	GODOT_ERR_HELP, ///< user requested help!!
 	GODOT_ERR_BUG, ///< a bug in the software certainly happened, due to a double check failing or unexpected behavior.
 	GODOT_ERR_PRINTER_ON_FIRE, /// the parallel port printer is engulfed in flames
-	GODOT_ERR_OMFG_THIS_IS_VERY_VERY_BAD, ///< shit happens, has never been used, though
-	GODOT_ERR_WTF = GODOT_ERR_OMFG_THIS_IS_VERY_VERY_BAD ///< short version of the above
 } godot_error;
 
 ////// bool
@@ -213,10 +212,6 @@ void GDAPI godot_object_destroy(godot_object *p_o);
 ////// Singleton API
 
 godot_object GDAPI *godot_global_get_singleton(char *p_name); // result shouldn't be freed
-
-////// OS API
-
-void GDAPI *godot_get_stack_bottom(); //  returns stack bottom of the main thread
 
 ////// MethodBind API
 

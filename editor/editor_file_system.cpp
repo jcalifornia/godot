@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "editor_file_system.h"
 
 #include "editor_node.h"
@@ -320,7 +321,10 @@ bool EditorFileSystem::_test_for_reimport(const String &p_path, bool p_only_impo
 
 	List<String> to_check;
 
+	String source_file;
 	String source_md5;
+	Vector<String> dest_files;
+	String dest_md5;
 
 	while (true) {
 
@@ -346,8 +350,16 @@ bool EditorFileSystem::_test_for_reimport(const String &p_path, bool p_only_impo
 				for (int i = 0; i < fa.size(); i++) {
 					to_check.push_back(fa[i]);
 				}
-			} else if (!p_only_imported_files && assign == "source_md5") {
-				source_md5 = value;
+			} else if (!p_only_imported_files) {
+				if (assign == "source_md5") {
+					source_md5 = value;
+				} else if (assign == "source_file") {
+					source_file = value;
+				} else if (assign == "dest_md5") {
+					dest_md5 = value;
+				} else if (assign == "dest_files") {
+					dest_files = value;
+				}
 			}
 
 		} else if (next_tag.name != "remap" && next_tag.name != "deps") {
@@ -366,6 +378,11 @@ bool EditorFileSystem::_test_for_reimport(const String &p_path, bool p_only_impo
 
 	//check source md5 matching
 	if (!p_only_imported_files) {
+
+		if (source_file != String() && source_file != p_path) {
+			return true; //file was moved, reimport
+		}
+
 		if (source_md5 == String()) {
 			return true; //lacks md5, so just reimport
 		}
@@ -373,6 +390,13 @@ bool EditorFileSystem::_test_for_reimport(const String &p_path, bool p_only_impo
 		String md5 = FileAccess::get_md5(p_path);
 		if (md5 != source_md5) {
 			return true;
+		}
+
+		if (dest_files.size() && dest_md5 != String()) {
+			md5 = FileAccess::get_multiple_md5(dest_files);
+			if (md5 != dest_md5) {
+				return true;
+			}
 		}
 	}
 
@@ -1244,8 +1268,10 @@ void EditorFileSystem::update_file(const String &p_file) {
 	if (!FileAccess::exists(p_file)) {
 		//was removed
 		_delete_internal_files(p_file);
-		memdelete(fs->files[cpos]);
-		fs->files.remove(cpos);
+		if (cpos != -1) { // Might've never been part of the editor file system (*.* files deleted in Open dialog).
+			memdelete(fs->files[cpos]);
+			fs->files.remove(cpos);
+		}
 		call_deferred("emit_signal", "filesystem_changed"); //update later
 		return;
 	}
@@ -1386,6 +1412,8 @@ void EditorFileSystem::_reimport_file(const String &p_file) {
 		f->store_line("type=\"" + importer->get_resource_type() + "\"");
 	}
 
+	Vector<String> dest_paths;
+
 	if (err == OK) {
 
 		if (importer->get_save_extension() == "") {
@@ -1397,10 +1425,12 @@ void EditorFileSystem::_reimport_file(const String &p_file) {
 				String path = base_path.c_escape() + "." + E->get() + "." + importer->get_save_extension();
 
 				f->store_line("path." + E->get() + "=\"" + path + "\"");
+				dest_paths.push_back(path);
 			}
 		} else {
-
-			f->store_line("path=\"" + base_path + "." + importer->get_save_extension() + "\"");
+			String path = base_path + "." + importer->get_save_extension();
+			f->store_line("path=\"" + path + "\"");
+			dest_paths.push_back(path);
 		}
 
 	} else {
@@ -1416,6 +1446,7 @@ void EditorFileSystem::_reimport_file(const String &p_file) {
 		Array genf;
 		for (List<String>::Element *E = gen_files.front(); E; E = E->next()) {
 			genf.push_back(E->get());
+			dest_paths.push_back(E->get());
 		}
 
 		String value;
@@ -1424,7 +1455,17 @@ void EditorFileSystem::_reimport_file(const String &p_file) {
 		f->store_line("");
 	}
 
+	f->store_line("source_file=" + Variant(p_file).get_construct_string());
 	f->store_line("source_md5=\"" + FileAccess::get_md5(p_file) + "\"\n");
+
+	if (dest_paths.size()) {
+		Array dp;
+		for (int i = 0; i < dest_paths.size(); i++) {
+			dp.push_back(dest_paths[i]);
+		}
+		f->store_line("dest_files=" + Variant(dp).get_construct_string());
+		f->store_line("dest_md5=\"" + FileAccess::get_multiple_md5(dest_paths) + "\"\n");
+	}
 
 	f->store_line("[params]");
 	f->store_line("");
@@ -1467,6 +1508,19 @@ void EditorFileSystem::_reimport_file(const String &p_file) {
 }
 
 void EditorFileSystem::reimport_files(const Vector<String> &p_files) {
+
+	{ //check that .import folder exists
+		DirAccess *da = DirAccess::open("res://");
+		if (da->change_dir(".import") != OK) {
+			Error err = da->make_dir(".import");
+			if (err) {
+				memdelete(da);
+				ERR_EXPLAIN("Failed to create 'res://.import' folder.");
+				ERR_FAIL_COND(err != OK);
+			}
+		}
+		memdelete(da);
+	}
 
 	importing = true;
 	EditorProgress pr("reimport", TTR("(Re)Importing Assets"), p_files.size());

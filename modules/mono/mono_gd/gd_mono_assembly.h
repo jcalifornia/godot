@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #ifndef GD_MONO_ASSEMBLY_H
 #define GD_MONO_ASSEMBLY_H
 
@@ -109,7 +110,7 @@ public:
 	_FORCE_INLINE_ String get_path() const { return path; }
 	_FORCE_INLINE_ uint64_t get_modified_time() const { return modified_time; }
 
-	GDMonoClass *get_class(const StringName &p_namespace, const StringName &p_class);
+	GDMonoClass *get_class(const StringName &p_namespace, const StringName &p_name);
 	GDMonoClass *get_class(MonoClass *p_mono_class);
 
 	GDMonoClass *get_object_derived_class(const StringName &p_class);

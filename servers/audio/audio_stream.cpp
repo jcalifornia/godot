@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "audio_stream.h"
 
 //////////////////////////////
@@ -45,9 +46,9 @@ void AudioStreamPlaybackResampled::_begin_resample() {
 
 void AudioStreamPlaybackResampled::mix(AudioFrame *p_buffer, float p_rate_scale, int p_frames) {
 
-	float target_rate = AudioServer::get_singleton()->get_mix_rate() * p_rate_scale;
+	float target_rate = AudioServer::get_singleton()->get_mix_rate();
 
-	uint64_t mix_increment = uint64_t((get_stream_sampling_rate() / double(target_rate)) * double(FP_LEN));
+	uint64_t mix_increment = uint64_t(((get_stream_sampling_rate() * p_rate_scale) / double(target_rate)) * double(FP_LEN));
 
 	for (int i = 0; i < p_frames; i++) {
 
@@ -76,11 +77,25 @@ void AudioStreamPlaybackResampled::mix(AudioFrame *p_buffer, float p_rate_scale,
 			internal_buffer[1] = internal_buffer[INTERNAL_BUFFER_LEN + 1];
 			internal_buffer[2] = internal_buffer[INTERNAL_BUFFER_LEN + 2];
 			internal_buffer[3] = internal_buffer[INTERNAL_BUFFER_LEN + 3];
-			_mix_internal(internal_buffer + 4, INTERNAL_BUFFER_LEN);
+			if (is_playing()) {
+				_mix_internal(internal_buffer + 4, INTERNAL_BUFFER_LEN);
+			} else {
+				//fill with silence, not playing
+				for (int i = 0; i < INTERNAL_BUFFER_LEN; ++i) {
+					internal_buffer[i + 4] = AudioFrame(0, 0);
+				}
+			}
 			mix_offset -= (INTERNAL_BUFFER_LEN << FP_BITS);
 		}
 	}
 }
+////////////////////////////////
+
+void AudioStream::_bind_methods() {
+
+	ClassDB::bind_method(D_METHOD("get_length"), &AudioStream::get_length);
+}
+
 ////////////////////////////////
 
 void AudioStreamRandomPitch::set_audio_stream(const Ref<AudioStream> &p_audio_stream) {
@@ -126,6 +141,14 @@ String AudioStreamRandomPitch::get_stream_name() const {
 		return "Random: " + audio_stream->get_name();
 	}
 	return "RandomPitch";
+}
+
+float AudioStreamRandomPitch::get_length() const {
+	if (audio_stream.is_valid()) {
+		return audio_stream->get_length();
+	}
+
+	return 0;
 }
 
 void AudioStreamRandomPitch::_bind_methods() {
@@ -199,14 +222,6 @@ void AudioStreamPlaybackRandomPitch::mix(AudioFrame *p_buffer, float p_rate_scal
 			p_buffer[i] = AudioFrame(0, 0);
 		}
 	}
-}
-
-float AudioStreamPlaybackRandomPitch::get_length() const {
-	if (playing.is_valid()) {
-		return playing->get_length();
-	}
-
-	return 0;
 }
 
 AudioStreamPlaybackRandomPitch::~AudioStreamPlaybackRandomPitch() {

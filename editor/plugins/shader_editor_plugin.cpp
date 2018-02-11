@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "shader_editor_plugin.h"
 
 #include "core/io/resource_loader.h"
@@ -60,71 +61,36 @@ void ShaderTextEditor::_load_theme_settings() {
 
 	get_text_edit()->clear_colors();
 
-	Color background_color = EDITOR_DEF("text_editor/highlighting/background_color", Color(0, 0, 0, 0));
-	Color completion_background_color = EDITOR_DEF("text_editor/highlighting/completion_background_color", Color(0, 0, 0, 0));
-	Color completion_selected_color = EDITOR_DEF("text_editor/highlighting/completion_selected_color", Color::html("434244"));
-	Color completion_existing_color = EDITOR_DEF("text_editor/highlighting/completion_existing_color", Color::html("21dfdfdf"));
-	Color completion_scroll_color = EDITOR_DEF("text_editor/highlighting/completion_scroll_color", Color::html("ffffff"));
-	Color completion_font_color = EDITOR_DEF("text_editor/highlighting/completion_font_color", Color::html("aaaaaa"));
-	Color text_color = EDITOR_DEF("text_editor/highlighting/text_color", Color(0, 0, 0));
-	Color line_number_color = EDITOR_DEF("text_editor/highlighting/line_number_color", Color(0, 0, 0));
-	Color caret_color = EDITOR_DEF("text_editor/highlighting/caret_color", Color(0, 0, 0));
-	Color caret_background_color = EDITOR_DEF("text_editor/highlighting/caret_background_color", Color(0, 0, 0));
-	Color text_selected_color = EDITOR_DEF("text_editor/highlighting/text_selected_color", Color(1, 1, 1));
-	Color selection_color = EDITOR_DEF("text_editor/highlighting/selection_color", Color(0.2, 0.2, 1));
-	Color brace_mismatch_color = EDITOR_DEF("text_editor/highlighting/brace_mismatch_color", Color(1, 0.2, 0.2));
-	Color current_line_color = EDITOR_DEF("text_editor/highlighting/current_line_color", Color(0.3, 0.5, 0.8, 0.15));
-	Color line_length_guideline_color = EDITOR_DEF("text_editor/highlighting/line_length_guideline_color", Color(0, 0, 0));
-	Color word_highlighted_color = EDITOR_DEF("text_editor/highlighting/word_highlighted_color", Color(0.8, 0.9, 0.9, 0.15));
-	Color number_color = EDITOR_DEF("text_editor/highlighting/number_color", Color(0.9, 0.6, 0.0, 2));
-	Color function_color = EDITOR_DEF("text_editor/highlighting/function_color", Color(0.4, 0.6, 0.8));
-	Color member_variable_color = EDITOR_DEF("text_editor/highlighting/member_variable_color", Color(0.9, 0.3, 0.3));
-	Color mark_color = EDITOR_DEF("text_editor/highlighting/mark_color", Color(1.0, 0.4, 0.4, 0.4));
-	Color breakpoint_color = EDITOR_DEF("text_editor/highlighting/breakpoint_color", Color(0.8, 0.8, 0.4, 0.2));
-	Color search_result_color = EDITOR_DEF("text_editor/highlighting/search_result_color", Color(0.05, 0.25, 0.05, 1));
-	Color search_result_border_color = EDITOR_DEF("text_editor/highlighting/search_result_border_color", Color(0.1, 0.45, 0.1, 1));
-	Color symbol_color = EDITOR_DEF("text_editor/highlighting/symbol_color", Color::hex(0x005291ff));
-
-	Color keyword_color = EDITOR_DEF("text_editor/highlighting/keyword_color", Color(0.5, 0.0, 0.2));
-	Color basetype_color = EDITOR_DEF("text_editor/highlighting/base_type_color", Color(0.3, 0.3, 0.0));
-	Color type_color = EDITOR_DEF("text_editor/highlighting/engine_type_color", Color(0.0, 0.2, 0.4));
-	Color comment_color = EDITOR_DEF("text_editor/highlighting/comment_color", Color::hex(0x797e7eff));
-	Color string_color = EDITOR_DEF("text_editor/highlighting/string_color", Color::hex(0x6b6f00ff));
-
-	// Adapt
-	if (EditorSettings::get_singleton()->get("text_editor/theme/color_theme") == "Adaptive") {
-		Ref<Theme> tm = EditorNode::get_singleton()->get_theme_base()->get_theme();
-
-		symbol_color = tm->get_color("text_editor/theme/symbol_color", "Editor");
-		keyword_color = tm->get_color("text_editor/theme/keyword_color", "Editor");
-		basetype_color = tm->get_color("text_editor/theme/basetype_color", "Editor");
-		type_color = tm->get_color("text_editor/theme/type_color", "Editor");
-		comment_color = tm->get_color("text_editor/theme/comment_color", "Editor");
-		string_color = tm->get_color("text_editor/theme/string_color", "Editor");
-		background_color = tm->get_color("text_editor/theme/background_color", "Editor");
-		completion_background_color = tm->get_color("text_editor/theme/completion_background_color", "Editor");
-		completion_selected_color = tm->get_color("text_editor/theme/completion_selected_color", "Editor");
-		completion_existing_color = tm->get_color("text_editor/theme/completion_existing_color", "Editor");
-		completion_scroll_color = tm->get_color("text_editor/theme/completion_scroll_color", "Editor");
-		completion_font_color = tm->get_color("text_editor/theme/completion_font_color", "Editor");
-		text_color = tm->get_color("text_editor/theme/text_color", "Editor");
-		line_number_color = tm->get_color("text_editor/theme/line_number_color", "Editor");
-		caret_color = tm->get_color("text_editor/theme/caret_color", "Editor");
-		caret_background_color = tm->get_color("text_editor/theme/caret_background_color", "Editor");
-		text_selected_color = tm->get_color("text_editor/theme/text_selected_color", "Editor");
-		selection_color = tm->get_color("text_editor/theme/selection_color", "Editor");
-		brace_mismatch_color = tm->get_color("text_editor/theme/brace_mismatch_color", "Editor");
-		current_line_color = tm->get_color("text_editor/theme/current_line_color", "Editor");
-		line_length_guideline_color = tm->get_color("text_editor/theme/line_length_guideline_color", "Editor");
-		word_highlighted_color = tm->get_color("text_editor/theme/word_highlighted_color", "Editor");
-		number_color = tm->get_color("text_editor/theme/number_color", "Editor");
-		function_color = tm->get_color("text_editor/theme/function_color", "Editor");
-		member_variable_color = tm->get_color("text_editor/theme/member_variable_color", "Editor");
-		mark_color = tm->get_color("text_editor/theme/mark_color", "Editor");
-		breakpoint_color = tm->get_color("text_editor/theme/breakpoint_color", "Editor");
-		search_result_color = tm->get_color("text_editor/theme/search_result_color", "Editor");
-		search_result_border_color = tm->get_color("text_editor/theme/search_result_border_color", "Editor");
-	}
+	Color background_color = EDITOR_GET("text_editor/highlighting/background_color");
+	Color completion_background_color = EDITOR_GET("text_editor/highlighting/completion_background_color");
+	Color completion_selected_color = EDITOR_GET("text_editor/highlighting/completion_selected_color");
+	Color completion_existing_color = EDITOR_GET("text_editor/highlighting/completion_existing_color");
+	Color completion_scroll_color = EDITOR_GET("text_editor/highlighting/completion_scroll_color");
+	Color completion_font_color = EDITOR_GET("text_editor/highlighting/completion_font_color");
+	Color text_color = EDITOR_GET("text_editor/highlighting/text_color");
+	Color line_number_color = EDITOR_GET("text_editor/highlighting/line_number_color");
+	Color caret_color = EDITOR_GET("text_editor/highlighting/caret_color");
+	Color caret_background_color = EDITOR_GET("text_editor/highlighting/caret_background_color");
+	Color text_selected_color = EDITOR_GET("text_editor/highlighting/text_selected_color");
+	Color selection_color = EDITOR_GET("text_editor/highlighting/selection_color");
+	Color brace_mismatch_color = EDITOR_GET("text_editor/highlighting/brace_mismatch_color");
+	Color current_line_color = EDITOR_GET("text_editor/highlighting/current_line_color");
+	Color line_length_guideline_color = EDITOR_GET("text_editor/highlighting/line_length_guideline_color");
+	Color word_highlighted_color = EDITOR_GET("text_editor/highlighting/word_highlighted_color");
+	Color number_color = EDITOR_GET("text_editor/highlighting/number_color");
+	Color function_color = EDITOR_GET("text_editor/highlighting/function_color");
+	Color member_variable_color = EDITOR_GET("text_editor/highlighting/member_variable_color");
+	Color mark_color = EDITOR_GET("text_editor/highlighting/mark_color");
+	Color breakpoint_color = EDITOR_GET("text_editor/highlighting/breakpoint_color");
+	Color code_folding_color = EDITOR_GET("text_editor/highlighting/code_folding_color");
+	Color search_result_color = EDITOR_GET("text_editor/highlighting/search_result_color");
+	Color search_result_border_color = EDITOR_GET("text_editor/highlighting/search_result_border_color");
+	Color symbol_color = EDITOR_GET("text_editor/highlighting/symbol_color");
+	Color keyword_color = EDITOR_GET("text_editor/highlighting/keyword_color");
+	Color basetype_color = EDITOR_GET("text_editor/highlighting/base_type_color");
+	Color type_color = EDITOR_GET("text_editor/highlighting/engine_type_color");
+	Color comment_color = EDITOR_GET("text_editor/highlighting/comment_color");
+	Color string_color = EDITOR_GET("text_editor/highlighting/string_color");
 
 	get_text_edit()->add_color_override("background_color", background_color);
 	get_text_edit()->add_color_override("completion_background_color", completion_background_color);
@@ -147,6 +113,7 @@ void ShaderTextEditor::_load_theme_settings() {
 	get_text_edit()->add_color_override("member_variable_color", member_variable_color);
 	get_text_edit()->add_color_override("mark_color", mark_color);
 	get_text_edit()->add_color_override("breakpoint_color", breakpoint_color);
+	get_text_edit()->add_color_override("code_folding_color", code_folding_color);
 	get_text_edit()->add_color_override("search_result_color", search_result_color);
 	get_text_edit()->add_color_override("search_result_border_color", search_result_border_color);
 	get_text_edit()->add_color_override("symbol_color", symbol_color);
@@ -158,7 +125,7 @@ void ShaderTextEditor::_load_theme_settings() {
 
 		for (const Map<StringName, ShaderLanguage::FunctionInfo>::Element *E = ShaderTypes::get_singleton()->get_functions(VisualServer::ShaderMode(shader->get_mode())).front(); E; E = E->next()) {
 
-			for (const Map<StringName, ShaderLanguage::DataType>::Element *F = E->get().built_ins.front(); F; F = F->next()) {
+			for (const Map<StringName, ShaderLanguage::BuiltInInfo>::Element *F = E->get().built_ins.front(); F; F = F->next()) {
 				keywords.push_back(F->key());
 			}
 		}
@@ -376,26 +343,7 @@ void ShaderEditor::_menu_option(int p_option) {
 			if (shader.is_null())
 				return;
 
-			tx->begin_complex_operation();
-			if (tx->is_selection_active()) {
-				tx->indent_selection_left();
-			} else {
-				int begin = tx->cursor_get_line();
-				String line_text = tx->get_line(begin);
-				// begins with tab
-				if (line_text.begins_with("\t")) {
-					line_text = line_text.substr(1, line_text.length());
-					tx->set_line(begin, line_text);
-				}
-				// begins with 4 spaces
-				else if (line_text.begins_with("    ")) {
-					line_text = line_text.substr(4, line_text.length());
-					tx->set_line(begin, line_text);
-				}
-			}
-			tx->end_complex_operation();
-			tx->update();
-			//tx->deselect();
+			tx->indent_left();
 
 		} break;
 		case EDIT_INDENT_RIGHT: {
@@ -404,18 +352,7 @@ void ShaderEditor::_menu_option(int p_option) {
 			if (shader.is_null())
 				return;
 
-			tx->begin_complex_operation();
-			if (tx->is_selection_active()) {
-				tx->indent_selection_right();
-			} else {
-				int begin = tx->cursor_get_line();
-				String line_text = tx->get_line(begin);
-				line_text = '\t' + line_text;
-				tx->set_line(begin, line_text);
-			}
-			tx->end_complex_operation();
-			tx->update();
-			//tx->deselect();
+			tx->indent_right();
 
 		} break;
 		case EDIT_DELETE_LINE: {
@@ -647,14 +584,36 @@ void ShaderEditor::_text_edit_gui_input(const Ref<InputEvent> &ev) {
 
 	if (mb.is_valid()) {
 
-		if (mb->get_button_index() == BUTTON_RIGHT && !mb->is_pressed()) {
+		if (mb->get_button_index() == BUTTON_RIGHT) {
 
 			int col, row;
 			TextEdit *tx = shader_editor->get_text_edit();
 			tx->_get_mouse_pos(mb->get_global_position() - tx->get_global_position(), row, col);
 			Vector2 mpos = mb->get_global_position() - tx->get_global_position();
-			bool have_selection = (tx->get_selection_text().length() > 0);
-			_make_context_menu(have_selection);
+			tx->set_right_click_moves_caret(EditorSettings::get_singleton()->get("text_editor/cursor/right_click_moves_caret"));
+
+			if (tx->is_right_click_moving_caret()) {
+				if (tx->is_selection_active()) {
+
+					int from_line = tx->get_selection_from_line();
+					int to_line = tx->get_selection_to_line();
+					int from_column = tx->get_selection_from_column();
+					int to_column = tx->get_selection_to_column();
+
+					if (row < from_line || row > to_line || (row == from_line && col < from_column) || (row == to_line && col > to_column)) {
+						// Right click is outside the seleted text
+						tx->deselect();
+					}
+				}
+				if (!tx->is_selection_active()) {
+					tx->cursor_set_line(row, true, false);
+					tx->cursor_set_column(col);
+				}
+			}
+
+			if (!mb->is_pressed()) {
+				_make_context_menu(tx->is_selection_active());
+			}
 		}
 	}
 }

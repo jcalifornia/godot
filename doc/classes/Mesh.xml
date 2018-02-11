@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="Mesh" inherits="Resource" category="Core" version="3.0-beta">
+<class name="Mesh" inherits="Resource" category="Core" version="3.0-stable">
 	<brief_description>
 		A [Resource] that contains vertex-array based geometry.
 	</brief_description>
@@ -49,6 +49,10 @@
 			</description>
 		</method>
 	</methods>
+	<members>
+		<member name="lightmap_size_hint" type="Vector2" setter="set_lightmap_size_hint" getter="get_lightmap_size_hint">
+		</member>
+	</members>
 	<constants>
 		<constant name="PRIMITIVE_POINTS" value="0" enum="PrimitiveType">
 			Render array as points (one vertex equals one point).

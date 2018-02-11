@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "gdnative.h"
 
 #include "global_constants.h"
@@ -37,9 +38,12 @@
 
 #include "scene/main/scene_tree.h"
 
-const String init_symbol = "gdnative_init";
-const String terminate_symbol = "gdnative_terminate";
-const String default_symbol_prefix = "godot_";
+static const String init_symbol = "gdnative_init";
+static const String terminate_symbol = "gdnative_terminate";
+static const String default_symbol_prefix = "godot_";
+static const bool default_singleton = false;
+static const bool default_load_once = true;
+static const bool default_reloadable = true;
 
 // Defined in gdnative_api_struct.gen.cpp
 extern const godot_gdnative_core_api_struct api_struct;
@@ -50,6 +54,9 @@ GDNativeLibrary::GDNativeLibrary() {
 	config_file.instance();
 
 	symbol_prefix = default_symbol_prefix;
+	load_once = default_load_once;
+	singleton = default_singleton;
+	reloadable = default_reloadable;
 
 	if (GDNativeLibrary::loaded_libraries == NULL) {
 		GDNativeLibrary::loaded_libraries = memnew((Map<String, Vector<Ref<GDNative> > >));
@@ -68,14 +75,17 @@ void GDNativeLibrary::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("should_load_once"), &GDNativeLibrary::should_load_once);
 	ClassDB::bind_method(D_METHOD("is_singleton"), &GDNativeLibrary::is_singleton);
 	ClassDB::bind_method(D_METHOD("get_symbol_prefix"), &GDNativeLibrary::get_symbol_prefix);
+	ClassDB::bind_method(D_METHOD("is_reloadable"), &GDNativeLibrary::is_reloadable);
 
 	ClassDB::bind_method(D_METHOD("set_load_once", "load_once"), &GDNativeLibrary::set_load_once);
 	ClassDB::bind_method(D_METHOD("set_singleton", "singleton"), &GDNativeLibrary::set_singleton);
 	ClassDB::bind_method(D_METHOD("set_symbol_prefix", "symbol_prefix"), &GDNativeLibrary::set_symbol_prefix);
+	ClassDB::bind_method(D_METHOD("set_reloadable", "reloadable"), &GDNativeLibrary::set_reloadable);
 
 	ADD_PROPERTYNZ(PropertyInfo(Variant::BOOL, "load_once"), "set_load_once", "should_load_once");
 	ADD_PROPERTYNZ(PropertyInfo(Variant::BOOL, "singleton"), "set_singleton", "is_singleton");
 	ADD_PROPERTYNZ(PropertyInfo(Variant::STRING, "symbol_prefix"), "set_symbol_prefix", "get_symbol_prefix");
+	ADD_PROPERTYNZ(PropertyInfo(Variant::BOOL, "reloadable"), "set_reloadable", "is_reloadable");
 }
 
 GDNative::GDNative() {
@@ -130,6 +140,9 @@ bool GDNative::initialize() {
 	// we should pass library name to dlopen(). The library name is flattened
 	// during export.
 	String path = lib_path.get_file();
+#elif defined(UWP_ENABLED)
+	// On UWP we use a relative path from the app
+	String path = lib_path.replace("res://", "");
 #else
 	String path = ProjectSettings::get_singleton()->globalize_path(lib_path);
 #endif
@@ -144,7 +157,7 @@ bool GDNative::initialize() {
 		}
 	}
 
-	Error err = OS::get_singleton()->open_dynamic_library(path, native_handle);
+	Error err = OS::get_singleton()->open_dynamic_library(path, native_handle, true);
 	if (err != OK) {
 		return false;
 	}
@@ -168,13 +181,23 @@ bool GDNative::initialize() {
 	godot_gdnative_init_fn library_init_fpointer;
 	library_init_fpointer = (godot_gdnative_init_fn)library_init;
 
+	static uint64_t core_api_hash = 0;
+	static uint64_t editor_api_hash = 0;
+	static uint64_t no_api_hash = 0;
+
+	if (!(core_api_hash || editor_api_hash || no_api_hash)) {
+		core_api_hash = ClassDB::get_api_hash(ClassDB::API_CORE);
+		editor_api_hash = ClassDB::get_api_hash(ClassDB::API_EDITOR);
+		no_api_hash = ClassDB::get_api_hash(ClassDB::API_NONE);
+	}
+
 	godot_gdnative_init_options options;
 
 	options.api_struct = &api_struct;
 	options.in_editor = Engine::get_singleton()->is_editor_hint();
-	options.core_api_hash = ClassDB::get_api_hash(ClassDB::API_CORE);
-	options.editor_api_hash = ClassDB::get_api_hash(ClassDB::API_EDITOR);
-	options.no_api_hash = ClassDB::get_api_hash(ClassDB::API_NONE);
+	options.core_api_hash = core_api_hash;
+	options.editor_api_hash = editor_api_hash;
+	options.no_api_hash = no_api_hash;
 	options.report_version_mismatch = &_gdnative_report_version_mismatch;
 	options.report_loading_error = &_gdnative_report_loading_error;
 	options.gd_native_library = (godot_object *)(get_library().ptr());
@@ -314,9 +337,10 @@ RES GDNativeLibraryResourceLoader::load(const String &p_path, const String &p_or
 		*r_error = err;
 	}
 
-	lib->set_singleton(config->get_value("general", "singleton", false));
-	lib->set_load_once(config->get_value("general", "load_once", true));
+	lib->set_singleton(config->get_value("general", "singleton", default_singleton));
+	lib->set_load_once(config->get_value("general", "load_once", default_load_once));
 	lib->set_symbol_prefix(config->get_value("general", "symbol_prefix", default_symbol_prefix));
+	lib->set_reloadable(config->get_value("general", "reloadable", default_reloadable));
 
 	String entry_lib_path;
 	{
@@ -412,6 +436,7 @@ Error GDNativeLibraryResourceSaver::save(const String &p_path, const RES &p_reso
 	config->set_value("general", "singleton", lib->is_singleton());
 	config->set_value("general", "load_once", lib->should_load_once());
 	config->set_value("general", "symbol_prefix", lib->get_symbol_prefix());
+	config->set_value("general", "reloadable", lib->is_reloadable());
 
 	return config->save(p_path);
 }

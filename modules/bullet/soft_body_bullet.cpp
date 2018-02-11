@@ -1,13 +1,12 @@
 /*************************************************************************/
 /*  soft_body_bullet.cpp                                                 */
-/*  Author: AndreaCatania                                                */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
-/*                    http://www.godotengine.org                         */
+/*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -30,14 +29,28 @@
 /*************************************************************************/
 
 #include "soft_body_bullet.h"
+
 #include "bullet_types_converter.h"
 #include "bullet_utilities.h"
+#include "scene/3d/immediate_geometry.h"
 #include "space_bullet.h"
 
-#include "scene/3d/immediate_geometry.h"
+/**
+	@author AndreaCatania
+*/
 
-SoftBodyBullet::SoftBodyBullet()
-	: CollisionObjectBullet(CollisionObjectBullet::TYPE_SOFT_BODY), mass(1), simulation_precision(5), stiffness(0.5f), pressure_coefficient(50), damping_coefficient(0.005), drag_coefficient(0.005), bt_soft_body(NULL), soft_shape_type(SOFT_SHAPETYPE_NONE), isScratched(false), soft_body_shape_data(NULL) {
+SoftBodyBullet::SoftBodyBullet() :
+		CollisionObjectBullet(CollisionObjectBullet::TYPE_SOFT_BODY),
+		mass(1),
+		simulation_precision(5),
+		stiffness(0.5f),
+		pressure_coefficient(50),
+		damping_coefficient(0.005),
+		drag_coefficient(0.005),
+		bt_soft_body(NULL),
+		soft_shape_type(SOFT_SHAPETYPE_NONE),
+		isScratched(false),
+		soft_body_shape_data(NULL) {
 
 	test_geometry = memnew(ImmediateGeometry);
 

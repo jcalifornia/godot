@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #ifndef LINE_EDIT_H
 #define LINE_EDIT_H
 
@@ -119,7 +120,6 @@ private:
 	void shift_selection_check_pre(bool);
 	void shift_selection_check_post(bool);
 
-	void selection_clear();
 	void selection_fill_at_cursor();
 	void selection_delete();
 	void set_window_pos(int p_pos);
@@ -155,7 +155,9 @@ public:
 	bool is_context_menu_enabled();
 	PopupMenu *get_menu() const;
 
+	void select(int p_from = 0, int p_to = -1);
 	void select_all();
+	void deselect();
 
 	void delete_char();
 	void delete_text(int p_from_column, int p_to_column);
@@ -189,8 +191,6 @@ public:
 
 	void set_secret(bool p_secret);
 	bool is_secret() const;
-
-	void select(int p_from = 0, int p_to = -1);
 
 	virtual Size2 get_minimum_size() const;
 

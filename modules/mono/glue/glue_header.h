@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,9 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
+#include "builtin_types_glue.h"
+
 #include "../csharp_script.h"
 #include "../mono_gd/gd_mono_class.h"
 #include "../mono_gd/gd_mono_internals.h"
@@ -53,9 +56,11 @@
 	}                                                  \
 	Object *m_instance = ci->creation_func();
 
-void godot_icall_Object_Dtor(Object *ptr) {
-	ERR_FAIL_NULL(ptr);
-	_GodotSharp::get_singleton()->queue_dispose(ptr);
+void godot_icall_Object_Dtor(MonoObject *obj, Object *ptr) {
+#ifdef DEBUG_ENABLED
+	CRASH_COND(ptr == NULL);
+#endif
+	_GodotSharp::get_singleton()->queue_dispose(obj, ptr);
 }
 
 // -- ClassDB --
@@ -88,12 +93,6 @@ MonoString *godot_icall_NodePath_operator_String(NodePath *p_np) {
 	return GDMonoMarshal::mono_string_from_godot(p_np->operator String());
 }
 
-MonoArray *godot_icall_String_md5_buffer(MonoString *p_str) {
-	Vector<uint8_t> ret = GDMonoMarshal::mono_string_to_godot(p_str).md5_buffer();
-	// TODO Check possible Array/Vector<uint8_t> problem?
-	return GDMonoMarshal::Array_to_mono_array(Variant(ret));
-}
-
 // -- RID --
 
 RID *godot_icall_RID_Ctor(Object *p_from) {
@@ -111,6 +110,12 @@ void godot_icall_RID_Dtor(RID *p_ptr) {
 }
 
 // -- String --
+
+MonoArray *godot_icall_String_md5_buffer(MonoString *p_str) {
+	Vector<uint8_t> ret = GDMonoMarshal::mono_string_to_godot(p_str).md5_buffer();
+	// TODO Check possible Array/Vector<uint8_t> problem?
+	return GDMonoMarshal::Array_to_mono_array(Variant(ret));
+}
 
 MonoString *godot_icall_String_md5_text(MonoString *p_str) {
 	String ret = GDMonoMarshal::mono_string_to_godot(p_str).md5_text();
@@ -299,4 +304,8 @@ MonoObject *godot_icall_Godot_weakref(Object *p_obj) {
 	}
 
 	return GDMonoUtils::create_managed_for_godot_object(CACHED_CLASS(WeakRef), Reference::get_class_static(), Object::cast_to<Object>(wref.ptr()));
+}
+
+void godot_register_header_icalls() {
+	godot_register_builtin_type_icalls();
 }

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "polygon_2d_editor_plugin.h"
 
 #include "canvas_item_editor_plugin.h"
@@ -459,8 +460,8 @@ Vector2 Polygon2DEditor::snap_point(Vector2 p_target) const {
 	return p_target;
 }
 
-Polygon2DEditor::Polygon2DEditor(EditorNode *p_editor)
-	: AbstractPolygon2DEditor(p_editor) {
+Polygon2DEditor::Polygon2DEditor(EditorNode *p_editor) :
+		AbstractPolygon2DEditor(p_editor) {
 
 	snap_step = Vector2(10, 10);
 	use_snap = false;
@@ -609,6 +610,6 @@ Polygon2DEditor::Polygon2DEditor(EditorNode *p_editor)
 	uv_edit_draw->set_clip_contents(true);
 }
 
-Polygon2DEditorPlugin::Polygon2DEditorPlugin(EditorNode *p_node)
-	: AbstractPolygon2DEditorPlugin(p_node, memnew(Polygon2DEditor(p_node)), "Polygon2D") {
+Polygon2DEditorPlugin::Polygon2DEditorPlugin(EditorNode *p_node) :
+		AbstractPolygon2DEditorPlugin(p_node, memnew(Polygon2DEditor(p_node)), "Polygon2D") {
 }

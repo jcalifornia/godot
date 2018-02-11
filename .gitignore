@@ -51,6 +51,10 @@ gmon.out
 .cproject
 .settings/
 
+# Geany/geany-plugins files
+*.geany
+.geanyprj
+
 # Misc
 .DS_Store
 logs/
@@ -90,6 +94,9 @@ bld/
 
 # Hints for improving IntelliSense, created together with VS project
 cpp.hint
+
+# Visualizers for the VS debugger
+*.natvis
 
 #NUNIT
 *.VisualState.xml

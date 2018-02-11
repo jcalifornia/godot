@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -39,7 +39,7 @@
 	@author Bastiaan Olij <mux213@gmail.com>
 
 	Base class for all the classes in this file, handles a number of code functions that are shared among all meshes.
-	This class is set appart that it assumes a single surface is always generated for our mesh.
+	This class is set apart that it assumes a single surface is always generated for our mesh.
 */
 class PrimitiveMesh : public Mesh {
 

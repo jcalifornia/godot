@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "color_ramp.h"
 #include "core_string_names.h"
 
@@ -70,8 +71,8 @@ void Gradient::_bind_methods() {
 	ClassDB::bind_method(D_METHOD(COLOR_RAMP_SET_COLORS, "colors"), &Gradient::set_colors);
 	ClassDB::bind_method(D_METHOD(COLOR_RAMP_GET_COLORS), &Gradient::get_colors);
 
-	ADD_PROPERTY(PropertyInfo(Variant::REAL, "offsets"), COLOR_RAMP_SET_OFFSETS, COLOR_RAMP_GET_OFFSETS);
-	ADD_PROPERTY(PropertyInfo(Variant::REAL, "colors"), COLOR_RAMP_SET_COLORS, COLOR_RAMP_GET_COLORS);
+	ADD_PROPERTY(PropertyInfo(Variant::POOL_REAL_ARRAY, "offsets"), COLOR_RAMP_SET_OFFSETS, COLOR_RAMP_GET_OFFSETS);
+	ADD_PROPERTY(PropertyInfo(Variant::POOL_COLOR_ARRAY, "colors"), COLOR_RAMP_SET_COLORS, COLOR_RAMP_GET_COLORS);
 }
 
 Vector<float> Gradient::get_offsets() const {

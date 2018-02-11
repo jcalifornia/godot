@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "editor_about.h"
 #include "editor_node.h"
 
@@ -44,8 +45,8 @@ void EditorAbout::_notification(int p_what) {
 		case NOTIFICATION_THEME_CHANGED: {
 
 			Ref<Font> font = EditorNode::get_singleton()->get_gui_base()->get_font("source", "EditorFonts");
-			_tpl_text->add_font_override("font", font);
-			_license_text->add_font_override("font", font);
+			_tpl_text->add_font_override("normal_font", font);
+			_license_text->add_font_override("normal_font", font);
 		} break;
 	}
 }
@@ -53,7 +54,6 @@ void EditorAbout::_notification(int p_what) {
 void EditorAbout::_license_tree_selected() {
 
 	TreeItem *selected = _tpl_tree->get_selected();
-	_tpl_text->select(0, 0, 0, 0);
 	_tpl_text->set_text(selected->get_metadata(0));
 }
 
@@ -132,7 +132,8 @@ EditorAbout::EditorAbout() {
 
 	Label *about_text = memnew(Label);
 	about_text->set_v_size_flags(Control::SIZE_SHRINK_CENTER);
-	about_text->set_text(VERSION_FULL_NAME + hash + String::utf8("\n\xc2\xa9 2007-2017 Juan Linietsky, Ariel Manzur.\n\xc2\xa9 2014-2017 ") +
+	about_text->set_text(VERSION_FULL_NAME + hash +
+						 String::utf8("\n\xc2\xa9 2007-2018 Juan Linietsky, Ariel Manzur.\n\xc2\xa9 2014-2018 ") +
 						 TTR("Godot Engine contributors") + "\n");
 	hbc->add_child(about_text);
 
@@ -146,7 +147,7 @@ EditorAbout::EditorAbout() {
 	List<String> dev_sections;
 	dev_sections.push_back(TTR("Project Founders"));
 	dev_sections.push_back(TTR("Lead Developer"));
-	dev_sections.push_back(TTR("Project Manager"));
+	dev_sections.push_back(TTR("Project Manager ")); // " " appended to distinguish between 'project supervisor' and 'project list'
 	dev_sections.push_back(TTR("Developers"));
 	const char **dev_src[] = { dev_founders, dev_lead, dev_manager, dev_names };
 	tc->add_child(_populate_list(TTR("Authors"), dev_sections, dev_src, 1));
@@ -165,12 +166,10 @@ EditorAbout::EditorAbout() {
 
 	// License
 
-	_license_text = memnew(TextEdit);
+	_license_text = memnew(RichTextLabel);
 	_license_text->set_name(TTR("License"));
 	_license_text->set_h_size_flags(Control::SIZE_EXPAND_FILL);
 	_license_text->set_v_size_flags(Control::SIZE_EXPAND_FILL);
-	_license_text->set_wrap(true);
-	_license_text->set_readonly(true);
 	_license_text->set_text(String::utf8(about_license));
 	tc->add_child(_license_text);
 
@@ -239,11 +238,9 @@ EditorAbout::EditorAbout() {
 	tpl_ti_all->set_metadata(0, long_text);
 	tpl_hbc->add_child(_tpl_tree);
 
-	_tpl_text = memnew(TextEdit);
+	_tpl_text = memnew(RichTextLabel);
 	_tpl_text->set_h_size_flags(Control::SIZE_EXPAND_FILL);
 	_tpl_text->set_v_size_flags(Control::SIZE_EXPAND_FILL);
-	_tpl_text->set_wrap(true);
-	_tpl_text->set_readonly(true);
 	tpl_hbc->add_child(_tpl_text);
 
 	_tpl_tree->connect("item_selected", this, "_license_tree_selected");

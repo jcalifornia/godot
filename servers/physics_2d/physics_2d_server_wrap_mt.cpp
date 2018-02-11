@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "physics_2d_server_wrap_mt.h"
 
 #include "os/os.h"
@@ -151,8 +152,8 @@ void Physics2DServerWrapMT::finish() {
 		memdelete(step_sem);
 }
 
-Physics2DServerWrapMT::Physics2DServerWrapMT(Physics2DServer *p_contained, bool p_create_thread)
-	: command_queue(p_create_thread) {
+Physics2DServerWrapMT::Physics2DServerWrapMT(Physics2DServer *p_contained, bool p_create_thread) :
+		command_queue(p_create_thread) {
 
 	physics_2d_server = p_contained;
 	create_thread = p_create_thread;

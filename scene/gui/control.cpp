@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "control.h"
 #include "project_settings.h"
 #include "scene/main/canvas_layer.h"
@@ -860,6 +861,8 @@ Ref<StyleBox> Control::get_stylebox(const StringName &p_name, const StringName &
 			class_name = ClassDB::get_parent_class_nocheck(class_name);
 		}
 
+		class_name = type;
+
 		Control *parent = Object::cast_to<Control>(theme_owner->get_parent());
 
 		if (parent)
@@ -867,8 +870,6 @@ Ref<StyleBox> Control::get_stylebox(const StringName &p_name, const StringName &
 		else
 			theme_owner = NULL;
 	}
-
-	class_name = type;
 
 	while (class_name != StringName()) {
 		if (Theme::get_default()->has_stylebox(p_name, class_name))
@@ -1324,7 +1325,7 @@ float Control::_get_parent_range(int p_idx) const {
 
 	if (!is_inside_tree()) {
 
-		return 1.0;
+		return 0;
 	}
 	if (data.parent_canvas_item) {
 
@@ -1333,7 +1334,7 @@ float Control::_get_parent_range(int p_idx) const {
 		return get_viewport()->get_visible_rect().size[p_idx & 1];
 	}
 
-	return 1.0;
+	return 0;
 }
 
 float Control::_get_range(int p_idx) const {
@@ -1356,24 +1357,32 @@ float Control::_a2s(float p_val, float p_anchor, float p_range) const {
 }
 
 void Control::set_anchor(Margin p_margin, float p_anchor, bool p_keep_margin, bool p_push_opposite_anchor) {
-	bool pushed = false;
+	float parent_range = _get_parent_range((p_margin == MARGIN_LEFT || p_margin == MARGIN_RIGHT) ? 0 : 1);
+	float previous_margin_pos = data.margin[p_margin] + data.anchor[p_margin] * parent_range;
+	float previous_opposite_margin_pos = data.margin[(p_margin + 2) % 4] + data.anchor[(p_margin + 2) % 4] * parent_range;
+
 	data.anchor[p_margin] = CLAMP(p_anchor, 0.0, 1.0);
 
 	if (((p_margin == MARGIN_LEFT || p_margin == MARGIN_TOP) && data.anchor[p_margin] > data.anchor[(p_margin + 2) % 4]) ||
 			((p_margin == MARGIN_RIGHT || p_margin == MARGIN_BOTTOM) && data.anchor[p_margin] < data.anchor[(p_margin + 2) % 4])) {
 		if (p_push_opposite_anchor) {
 			data.anchor[(p_margin + 2) % 4] = data.anchor[p_margin];
-			pushed = true;
 		} else {
 			data.anchor[p_margin] = data.anchor[(p_margin + 2) % 4];
 		}
 	}
 
-	if (is_inside_tree()) {
-		if (p_keep_margin) {
-			_size_changed();
+	if (!p_keep_margin) {
+		data.margin[p_margin] = _s2a(previous_margin_pos, data.anchor[p_margin], parent_range);
+		if (p_push_opposite_anchor) {
+			data.margin[(p_margin + 2) % 4] = _s2a(previous_opposite_margin_pos, data.anchor[(p_margin + 2) % 4], parent_range);
 		}
 	}
+
+	if (is_inside_tree()) {
+		_size_changed();
+	}
+
 	update();
 	_change_notify();
 }
@@ -2004,7 +2013,7 @@ Control *Control::find_prev_valid_focus() const {
 
 		if (from->is_set_as_toplevel() || !Object::cast_to<Control>(from->get_parent())) {
 
-			//find last of the childs
+			//find last of the children
 
 			prev_child = _prev_control(from);
 
@@ -2154,6 +2163,7 @@ void Control::set_theme(const Ref<Theme> &p_theme) {
 	data.theme = p_theme;
 	if (!p_theme.is_null()) {
 
+		data.theme_owner = this;
 		_propagate_theme_changed(this, this);
 	} else {
 
@@ -2470,6 +2480,16 @@ Control::MouseFilter Control::get_mouse_filter() const {
 	return data.mouse_filter;
 }
 
+void Control::set_pass_on_modal_close_click(bool p_pass_on) {
+
+	data.pass_on_modal_close_click = p_pass_on;
+}
+
+bool Control::pass_on_modal_close_click() const {
+
+	return data.pass_on_modal_close_click;
+}
+
 Control *Control::get_focus_owner() const {
 
 	ERR_FAIL_COND_V(!is_inside_tree(), NULL);
@@ -2727,7 +2747,7 @@ void Control::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("add_icon_override", "name", "texture"), &Control::add_icon_override);
 	ClassDB::bind_method(D_METHOD("add_shader_override", "name", "shader"), &Control::add_shader_override);
-	ClassDB::bind_method(D_METHOD("add_style_override", "name", "stylebox"), &Control::add_style_override);
+	ClassDB::bind_method(D_METHOD("add_stylebox_override", "name", "stylebox"), &Control::add_style_override);
 	ClassDB::bind_method(D_METHOD("add_font_override", "name", "font"), &Control::add_font_override);
 	ClassDB::bind_method(D_METHOD("add_color_override", "name", "color"), &Control::add_color_override);
 	ClassDB::bind_method(D_METHOD("add_constant_override", "name", "constant"), &Control::add_constant_override);
@@ -2739,6 +2759,7 @@ void Control::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_constant", "name", "type"), &Control::get_constant, DEFVAL(""));
 
 	ClassDB::bind_method(D_METHOD("has_icon_override", "name"), &Control::has_icon_override);
+	ClassDB::bind_method(D_METHOD("has_shader_override", "name"), &Control::has_shader_override);
 	ClassDB::bind_method(D_METHOD("has_stylebox_override", "name"), &Control::has_stylebox_override);
 	ClassDB::bind_method(D_METHOD("has_font_override", "name"), &Control::has_font_override);
 	ClassDB::bind_method(D_METHOD("has_color_override", "name"), &Control::has_color_override);
@@ -2820,12 +2841,13 @@ void Control::_bind_methods() {
 
 	ADD_GROUP("Rect", "rect_");
 	ADD_PROPERTYNZ(PropertyInfo(Variant::VECTOR2, "rect_position", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR), "set_position", "get_position");
+	ADD_PROPERTYNZ(PropertyInfo(Variant::VECTOR2, "rect_global_position", PROPERTY_HINT_NONE, "", 0), "set_global_position", "get_global_position");
 	ADD_PROPERTYNZ(PropertyInfo(Variant::VECTOR2, "rect_size", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR), "set_size", "get_size");
 	ADD_PROPERTYNZ(PropertyInfo(Variant::VECTOR2, "rect_min_size"), "set_custom_minimum_size", "get_custom_minimum_size");
 	ADD_PROPERTYNZ(PropertyInfo(Variant::REAL, "rect_rotation", PROPERTY_HINT_RANGE, "-1080,1080,0.01"), "set_rotation_degrees", "get_rotation_degrees");
 	ADD_PROPERTYNO(PropertyInfo(Variant::VECTOR2, "rect_scale"), "set_scale", "get_scale");
 	ADD_PROPERTYNO(PropertyInfo(Variant::VECTOR2, "rect_pivot_offset"), "set_pivot_offset", "get_pivot_offset");
-	ADD_PROPERTYNO(PropertyInfo(Variant::BOOL, "rect_clip_content"), "set_clip_contents", "is_clipping_contents");
+	ADD_PROPERTYNZ(PropertyInfo(Variant::BOOL, "rect_clip_content"), "set_clip_contents", "is_clipping_contents");
 
 	ADD_GROUP("Hint", "hint_");
 	ADD_PROPERTYNZ(PropertyInfo(Variant::STRING, "hint_tooltip", PROPERTY_HINT_MULTILINE_TEXT), "set_tooltip", "_get_tooltip");
@@ -2837,9 +2859,11 @@ void Control::_bind_methods() {
 	ADD_PROPERTYINZ(PropertyInfo(Variant::NODE_PATH, "focus_neighbour_bottom"), "set_focus_neighbour", "get_focus_neighbour", MARGIN_BOTTOM);
 	ADD_PROPERTYNZ(PropertyInfo(Variant::NODE_PATH, "focus_next"), "set_focus_next", "get_focus_next");
 	ADD_PROPERTYNZ(PropertyInfo(Variant::NODE_PATH, "focus_previous"), "set_focus_previous", "get_focus_previous");
+	ADD_PROPERTYNZ(PropertyInfo(Variant::INT, "focus_mode", PROPERTY_HINT_ENUM, "None,Click,All"), "set_focus_mode", "get_focus_mode");
 
 	ADD_GROUP("Mouse", "mouse_");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "mouse_filter", PROPERTY_HINT_ENUM, "Stop,Pass,Ignore"), "set_mouse_filter", "get_mouse_filter");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "mouse_default_cursor_shape", PROPERTY_HINT_ENUM, "Arrow,Ibeam,Pointing hand,Cross,Wait,Busy,Drag,Can drop,Forbidden,Vertical resize,Horizontal resize,Secondary diagonal resize,Main diagonal resize,Move,Vertial split,Horizontal split,Help"), "set_default_cursor_shape", "get_default_cursor_shape");
 
 	ADD_GROUP("Size Flags", "size_flags_");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "size_flags_horizontal", PROPERTY_HINT_FLAGS, "Fill,Expand,Shrink Center,Shrink End"), "set_h_size_flags", "get_h_size_flags");
@@ -2934,6 +2958,7 @@ Control::Control() {
 	data.parent = NULL;
 
 	data.mouse_filter = MOUSE_FILTER_STOP;
+	data.pass_on_modal_close_click = true;
 
 	data.SI = NULL;
 	data.MI = NULL;

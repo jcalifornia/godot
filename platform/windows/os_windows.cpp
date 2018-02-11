@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -34,19 +34,19 @@
 #include "drivers/windows/dir_access_windows.h"
 #include "drivers/windows/file_access_windows.h"
 #include "drivers/windows/mutex_windows.h"
+#include "drivers/windows/packet_peer_udp_winsock.h"
 #include "drivers/windows/rw_lock_windows.h"
 #include "drivers/windows/semaphore_windows.h"
+#include "drivers/windows/stream_peer_tcp_winsock.h"
+#include "drivers/windows/tcp_server_winsock.h"
 #include "drivers/windows/thread_windows.h"
 #include "io/marshalls.h"
 #include "joypad.h"
 #include "lang_table.h"
 #include "main/main.h"
-#include "packet_peer_udp_winsock.h"
 #include "servers/audio_server.h"
 #include "servers/visual/visual_server_raster.h"
 #include "servers/visual/visual_server_wrap_mt.h"
-#include "stream_peer_winsock.h"
-#include "tcp_server_winsock.h"
 #include "version_generated.gen.h"
 #include "windows_terminal_logger.h"
 
@@ -68,6 +68,19 @@ __attribute__((visibility("default"))) DWORD NvOptimusEnablement = 0x00000001;
 #ifndef WM_TOUCH
 #define WM_TOUCH 576
 #endif
+
+static String format_error_message(DWORD id) {
+
+	LPWSTR messageBuffer = NULL;
+	size_t size = FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+			NULL, id, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPWSTR)&messageBuffer, 0, NULL);
+
+	String msg = "Error " + itos(id) + ": " + String(messageBuffer, size);
+
+	LocalFree(messageBuffer);
+
+	return msg;
+}
 
 extern HINSTANCE godot_hinstance;
 
@@ -183,7 +196,7 @@ void OS_Windows::initialize_core() {
 	DirAccess::make_default<DirAccessWindows>(DirAccess::ACCESS_FILESYSTEM);
 
 	TCPServerWinsock::make_default();
-	StreamPeerWinsock::make_default();
+	StreamPeerTCPWinsock::make_default();
 	PacketPeerUDPWinsock::make_default();
 
 	// We need to know how often the clock is updated
@@ -210,7 +223,17 @@ bool OS_Windows::can_draw() const {
 #define SIGNATURE_MASK 0xFFFFFF00
 #define IsPenEvent(dw) (((dw)&SIGNATURE_MASK) == MI_WP_SIGNATURE)
 
-void OS_Windows::_touch_event(bool p_pressed, int p_x, int p_y, int idx) {
+void OS_Windows::_touch_event(bool p_pressed, float p_x, float p_y, int idx) {
+
+	// Defensive
+	if (touch_state.has(idx) == p_pressed)
+		return;
+
+	if (p_pressed) {
+		touch_state.insert(idx, Vector2(p_x, p_y));
+	} else {
+		touch_state.erase(idx);
+	}
 
 	Ref<InputEventScreenTouch> event;
 	event.instance();
@@ -223,7 +246,17 @@ void OS_Windows::_touch_event(bool p_pressed, int p_x, int p_y, int idx) {
 	}
 };
 
-void OS_Windows::_drag_event(int p_x, int p_y, int idx) {
+void OS_Windows::_drag_event(float p_x, float p_y, int idx) {
+
+	Map<int, Vector2>::Element *curr = touch_state.find(idx);
+	// Defensive
+	if (!curr)
+		return;
+
+	if (curr->get() == Vector2(p_x, p_y))
+		return;
+
+	curr->get() = Vector2(p_x, p_y);
 
 	Ref<InputEventScreenDrag> event;
 	event.instance();
@@ -253,6 +286,13 @@ LRESULT OS_Windows::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 			if (mouse_mode == MOUSE_MODE_CAPTURED || mouse_mode == MOUSE_MODE_CONFINED) {
 				ReleaseCapture();
 			}
+
+			// Release every touch to avoid sticky points
+			for (Map<int, Vector2>::Element *E = touch_state.front(); E; E = E->next()) {
+				_touch_event(false, E->get().x, E->get().y, E->key());
+			}
+			touch_state.clear();
+
 			break;
 		}
 		case WM_ACTIVATE: // Watch For Window Activate Message
@@ -376,6 +416,7 @@ LRESULT OS_Windows::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 			/*mm->get_button_mask()|=(wParam&MK_XBUTTON1)?(1<<5):0;
 			mm->get_button_mask()|=(wParam&MK_XBUTTON2)?(1<<6):0;*/
 			mm->set_position(Vector2(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)));
+			mm->set_global_position(Vector2(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)));
 
 			if (mouse_mode == MOUSE_MODE_CAPTURED) {
 
@@ -421,6 +462,7 @@ LRESULT OS_Windows::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 		case WM_MOUSEWHEEL:
 		case WM_MOUSEHWHEEL:
 		case WM_LBUTTONDBLCLK:
+		case WM_MBUTTONDBLCLK:
 		case WM_RBUTTONDBLCLK:
 			/*case WM_XBUTTONDOWN:
 		case WM_XBUTTONUP: */ {
@@ -477,6 +519,12 @@ LRESULT OS_Windows::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 
 						mb->set_pressed(true);
 						mb->set_button_index(2);
+						mb->set_doubleclick(true);
+					} break;
+					case WM_MBUTTONDBLCLK: {
+
+						mb->set_pressed(true);
+						mb->set_button_index(3);
 						mb->set_doubleclick(true);
 					} break;
 					case WM_MOUSEWHEEL: {
@@ -540,7 +588,7 @@ LRESULT OS_Windows::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 					mb->set_position(Vector2(old_x, old_y));
 				}
 
-				if (uMsg != WM_MOUSEWHEEL) {
+				if (uMsg != WM_MOUSEWHEEL && uMsg != WM_MOUSEHWHEEL) {
 					if (mb->is_pressed()) {
 
 						if (++pressrc > 0)
@@ -656,7 +704,6 @@ LRESULT OS_Windows::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 			print_line("input lang change");
 		} break;
 
-#if WINVER >= 0x0601 // for windows 7
 		case WM_TOUCH: {
 
 			BOOL bHandled = FALSE;
@@ -669,10 +716,10 @@ LRESULT OS_Windows::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 						//do something with each touch input entry
 						if (ti.dwFlags & TOUCHEVENTF_MOVE) {
 
-							_drag_event(ti.x / 100, ti.y / 100, ti.dwID);
+							_drag_event(ti.x / 100.0f, ti.y / 100.0f, ti.dwID);
 						} else if (ti.dwFlags & (TOUCHEVENTF_UP | TOUCHEVENTF_DOWN)) {
 
-							_touch_event(ti.dwFlags & TOUCHEVENTF_DOWN != 0, ti.x / 100, ti.y / 100, ti.dwID);
+							_touch_event(ti.dwFlags & TOUCHEVENTF_DOWN, ti.x / 100.0f, ti.y / 100.0f, ti.dwID);
 						};
 					}
 					bHandled = TRUE;
@@ -690,7 +737,6 @@ LRESULT OS_Windows::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 
 		} break;
 
-#endif
 		case WM_DEVICECHANGE: {
 
 			joypad->probe_joypads();
@@ -891,7 +937,7 @@ typedef enum _SHC_PROCESS_DPI_AWARENESS {
 	SHC_PROCESS_PER_MONITOR_DPI_AWARE = 2
 } SHC_PROCESS_DPI_AWARENESS;
 
-void OS_Windows::initialize(const VideoMode &p_desired, int p_video_driver, int p_audio_driver) {
+Error OS_Windows::initialize(const VideoMode &p_desired, int p_video_driver, int p_audio_driver) {
 
 	main_loop = NULL;
 	outside = true;
@@ -937,7 +983,7 @@ void OS_Windows::initialize(const VideoMode &p_desired, int p_video_driver, int 
 
 	if (!RegisterClassExW(&wc)) {
 		MessageBox(NULL, "Failed To Register The Window Class.", "ERROR", MB_OK | MB_ICONEXCLAMATION);
-		return; // Return
+		return ERR_UNAVAILABLE;
 	}
 
 	pre_fs_valid = true;
@@ -1007,7 +1053,7 @@ void OS_Windows::initialize(const VideoMode &p_desired, int p_video_driver, int 
 		RECT rect;
 		if (!GetClientRect(hWnd, &rect)) {
 			MessageBoxW(NULL, L"Window Creation Error.", L"ERROR", MB_OK | MB_ICONEXCLAMATION);
-			return; // Return FALSE
+			return ERR_UNAVAILABLE;
 		};
 		video_mode.width = rect.right;
 		video_mode.height = rect.bottom;
@@ -1025,7 +1071,7 @@ void OS_Windows::initialize(const VideoMode &p_desired, int p_video_driver, int 
 				NULL, NULL, hInstance, NULL);
 		if (!hWnd) {
 			MessageBoxW(NULL, L"Window Creation Error.", L"ERROR", MB_OK | MB_ICONEXCLAMATION);
-			return; // Return FALSE
+			return ERR_UNAVAILABLE;
 		}
 	};
 
@@ -1036,6 +1082,8 @@ void OS_Windows::initialize(const VideoMode &p_desired, int p_video_driver, int 
 	RasterizerGLES3::register_config();
 
 	RasterizerGLES3::make_current();
+
+	gl_context->set_use_vsync(video_mode.use_vsync);
 #endif
 
 	visual_server = memnew(VisualServerRaster);
@@ -1074,7 +1122,7 @@ void OS_Windows::initialize(const VideoMode &p_desired, int p_video_driver, int 
 	tme.dwHoverTime = HOVER_DEFAULT;
 	TrackMouseEvent(&tme);
 
-	//RegisterTouchWindow(hWnd, 0); // Windows 7
+	RegisterTouchWindow(hWnd, 0);
 
 	_ensure_user_data_dir();
 
@@ -1087,6 +1135,8 @@ void OS_Windows::initialize(const VideoMode &p_desired, int p_video_driver, int 
 		SetForegroundWindow(hWnd); // Slightly Higher Priority
 		SetFocus(hWnd); // Sets Keyboard Focus To
 	}
+
+	return OK;
 }
 
 void OS_Windows::set_clipboard(const String &p_text) {
@@ -1188,6 +1238,7 @@ void OS_Windows::finalize() {
 
 	memdelete(joypad);
 	memdelete(input);
+	touch_state.clear();
 
 	visual_server->finish();
 	memdelete(visual_server);
@@ -1212,7 +1263,7 @@ void OS_Windows::finalize_core() {
 	memdelete(process_map);
 
 	TCPServerWinsock::cleanup();
-	StreamPeerWinsock::cleanup();
+	StreamPeerTCPWinsock::cleanup();
 }
 
 void OS_Windows::alert(const String &p_alert, const String &p_title) {
@@ -1557,7 +1608,7 @@ bool OS_Windows::is_window_maximized() const {
 	return maximized;
 }
 
-void OS_Windows::set_borderless_window(int p_borderless) {
+void OS_Windows::set_borderless_window(bool p_borderless) {
 	if (video_mode.borderless_window == p_borderless)
 		return;
 
@@ -1588,10 +1639,36 @@ void OS_Windows::_update_window_style(bool repaint) {
 	}
 }
 
-Error OS_Windows::open_dynamic_library(const String p_path, void *&p_library_handle) {
-	p_library_handle = (void *)LoadLibrary(p_path.utf8().get_data());
+Error OS_Windows::open_dynamic_library(const String p_path, void *&p_library_handle, bool p_also_set_library_path) {
+
+	String path = p_path;
+
+	if (!FileAccess::exists(path)) {
+		//this code exists so gdnative can load .dll files from within the executable path
+		path = get_executable_path().get_base_dir().plus_file(p_path.get_file());
+	}
+
+	typedef DLL_DIRECTORY_COOKIE(WINAPI * PAddDllDirectory)(PCWSTR);
+	typedef BOOL(WINAPI * PRemoveDllDirectory)(DLL_DIRECTORY_COOKIE);
+
+	PAddDllDirectory add_dll_directory = (PAddDllDirectory)GetProcAddress(GetModuleHandle("kernel32.dll"), "AddDllDirectory");
+	PRemoveDllDirectory remove_dll_directory = (PRemoveDllDirectory)GetProcAddress(GetModuleHandle("kernel32.dll"), "RemoveDllDirectory");
+
+	bool has_dll_directory_api = ((add_dll_directory != NULL) && (remove_dll_directory != NULL));
+	DLL_DIRECTORY_COOKIE cookie = NULL;
+
+	if (p_also_set_library_path && has_dll_directory_api) {
+		cookie = add_dll_directory(path.get_base_dir().c_str());
+	}
+
+	p_library_handle = (void *)LoadLibraryExW(path.c_str(), NULL, (p_also_set_library_path && has_dll_directory_api) ? LOAD_LIBRARY_SEARCH_DEFAULT_DIRS : 0);
+
+	if (cookie) {
+		remove_dll_directory(cookie);
+	}
+
 	if (!p_library_handle) {
-		ERR_EXPLAIN("Can't open dynamic library: " + p_path + ". Error: " + String::num(GetLastError()));
+		ERR_EXPLAIN("Can't open dynamic library: " + p_path + ". Error: " + format_error_message(GetLastError()));
 		ERR_FAIL_V(ERR_CANT_OPEN);
 	}
 	return OK;
@@ -1784,8 +1861,123 @@ void OS_Windows::set_cursor_shape(CursorShape p_shape) {
 		IDC_HELP
 	};
 
-	SetCursor(LoadCursor(hInstance, win_cursors[p_shape]));
+	if (cursors[p_shape] != NULL) {
+		SetCursor(cursors[p_shape]);
+	} else {
+		SetCursor(LoadCursor(hInstance, win_cursors[p_shape]));
+	}
 	cursor_shape = p_shape;
+}
+
+void OS_Windows::set_custom_mouse_cursor(const RES &p_cursor, CursorShape p_shape, const Vector2 &p_hotspot) {
+	if (p_cursor.is_valid()) {
+		Ref<Texture> texture = p_cursor;
+		Ref<Image> image = texture->get_data();
+
+		UINT image_size = 32 * 32;
+		UINT size = sizeof(UINT) * image_size;
+
+		ERR_FAIL_COND(texture->get_width() != 32 || texture->get_height() != 32);
+
+		// Create the BITMAP with alpha channel
+		COLORREF *buffer = (COLORREF *)malloc(sizeof(COLORREF) * image_size);
+
+		image->lock();
+		for (UINT index = 0; index < image_size; index++) {
+			int column_index = floor(index / 32);
+			int row_index = index % 32;
+
+			Color pcColor = image->get_pixel(row_index, column_index);
+			*(buffer + index) = image->get_pixel(row_index, column_index).to_argb32();
+		}
+		image->unlock();
+
+		// Using 4 channels, so 4 * 8 bits
+		HBITMAP bitmap = CreateBitmap(32, 32, 1, 4 * 8, buffer);
+		COLORREF clrTransparent = -1;
+
+		// Create the AND and XOR masks for the bitmap
+		HBITMAP hAndMask = NULL;
+		HBITMAP hXorMask = NULL;
+
+		GetMaskBitmaps(bitmap, clrTransparent, hAndMask, hXorMask);
+
+		if (NULL == hAndMask || NULL == hXorMask) {
+			return;
+		}
+
+		// Finally, create the icon
+		ICONINFO iconinfo = { 0 };
+		iconinfo.fIcon = FALSE;
+		iconinfo.xHotspot = p_hotspot.x;
+		iconinfo.yHotspot = p_hotspot.y;
+		iconinfo.hbmMask = hAndMask;
+		iconinfo.hbmColor = hXorMask;
+
+		cursors[p_shape] = CreateIconIndirect(&iconinfo);
+
+		if (p_shape == CURSOR_ARROW) {
+			SetCursor(cursors[p_shape]);
+		}
+
+		if (hAndMask != NULL) {
+			DeleteObject(hAndMask);
+		}
+
+		if (hXorMask != NULL) {
+			DeleteObject(hXorMask);
+		}
+	}
+}
+
+void OS_Windows::GetMaskBitmaps(HBITMAP hSourceBitmap, COLORREF clrTransparent, OUT HBITMAP &hAndMaskBitmap, OUT HBITMAP &hXorMaskBitmap) {
+
+	// Get the system display DC
+	HDC hDC = GetDC(NULL);
+
+	// Create helper DC
+	HDC hMainDC = CreateCompatibleDC(hDC);
+	HDC hAndMaskDC = CreateCompatibleDC(hDC);
+	HDC hXorMaskDC = CreateCompatibleDC(hDC);
+
+	// Get the dimensions of the source bitmap
+	BITMAP bm;
+	GetObject(hSourceBitmap, sizeof(BITMAP), &bm);
+
+	// Create the mask bitmaps
+	hAndMaskBitmap = CreateCompatibleBitmap(hDC, bm.bmWidth, bm.bmHeight); // color
+	hXorMaskBitmap = CreateCompatibleBitmap(hDC, bm.bmWidth, bm.bmHeight); // color
+
+	// Release the system display DC
+	ReleaseDC(NULL, hDC);
+
+	// Select the bitmaps to helper DC
+	HBITMAP hOldMainBitmap = (HBITMAP)SelectObject(hMainDC, hSourceBitmap);
+	HBITMAP hOldAndMaskBitmap = (HBITMAP)SelectObject(hAndMaskDC, hAndMaskBitmap);
+	HBITMAP hOldXorMaskBitmap = (HBITMAP)SelectObject(hXorMaskDC, hXorMaskBitmap);
+
+	// Assign the monochrome AND mask bitmap pixels so that a pixels of the source bitmap
+	// with 'clrTransparent' will be white pixels of the monochrome bitmap
+	SetBkColor(hMainDC, clrTransparent);
+	BitBlt(hAndMaskDC, 0, 0, bm.bmWidth, bm.bmHeight, hMainDC, 0, 0, SRCCOPY);
+
+	// Assign the color XOR mask bitmap pixels so that a pixels of the source bitmap
+	// with 'clrTransparent' will be black and rest the pixels same as corresponding
+	// pixels of the source bitmap
+	SetBkColor(hXorMaskDC, RGB(0, 0, 0));
+	SetTextColor(hXorMaskDC, RGB(255, 255, 255));
+	BitBlt(hXorMaskDC, 0, 0, bm.bmWidth, bm.bmHeight, hAndMaskDC, 0, 0, SRCCOPY);
+	BitBlt(hXorMaskDC, 0, 0, bm.bmWidth, bm.bmHeight, hMainDC, 0, 0, SRCAND);
+
+	// Deselect bitmaps from the helper DC
+	SelectObject(hMainDC, hOldMainBitmap);
+	SelectObject(hAndMaskDC, hOldAndMaskBitmap);
+	SelectObject(hXorMaskDC, hOldXorMaskBitmap);
+
+	// Delete the helper DC
+	DeleteDC(hXorMaskDC);
+	DeleteDC(hAndMaskDC);
+	DeleteDC(hMainDC);
 }
 
 Error OS_Windows::execute(const String &p_path, const List<String> &p_arguments, bool p_blocking, ProcessID *r_child_id, String *r_pipe, int *r_exitcode, bool read_stderr) {
@@ -1954,7 +2146,7 @@ void OS_Windows::set_icon(const Ref<Image> &p_icon) {
 
 bool OS_Windows::has_environment(const String &p_var) const {
 
-	return getenv(p_var.utf8().get_data()) != NULL;
+	return _wgetenv(p_var.c_str()) != NULL;
 };
 
 String OS_Windows::get_environment(const String &p_var) const {
@@ -2017,6 +2209,36 @@ String OS_Windows::get_locale() const {
 		return neutral;
 
 	return "en";
+}
+
+// We need this because GetSystemInfo() is unreliable on WOW64
+// see https://msdn.microsoft.com/en-us/library/windows/desktop/ms724381(v=vs.85).aspx
+// Taken from MSDN
+typedef BOOL(WINAPI *LPFN_ISWOW64PROCESS)(HANDLE, PBOOL);
+LPFN_ISWOW64PROCESS fnIsWow64Process;
+
+BOOL is_wow64() {
+	BOOL wow64 = FALSE;
+
+	fnIsWow64Process = (LPFN_ISWOW64PROCESS)GetProcAddress(GetModuleHandle(TEXT("kernel32")), "IsWow64Process");
+
+	if (fnIsWow64Process) {
+		if (!fnIsWow64Process(GetCurrentProcess(), &wow64)) {
+			wow64 = FALSE;
+		}
+	}
+
+	return wow64;
+}
+
+int OS_Windows::get_processor_count() const {
+	SYSTEM_INFO sysinfo;
+	if (is_wow64())
+		GetNativeSystemInfo(&sysinfo);
+	else
+		GetSystemInfo(&sysinfo);
+
+	return sysinfo.dwNumberOfProcessors;
 }
 
 OS::LatinKeyboardVariant OS_Windows::get_latin_keyboard_variant() const {
@@ -2094,6 +2316,10 @@ void OS_Windows::make_rendering_thread() {
 void OS_Windows::swap_buffers() {
 
 	gl_context->swap_buffers();
+}
+
+void OS_Windows::force_process_input() {
+	process_events(); // get rid of pending events
 }
 
 void OS_Windows::run() {
@@ -2224,19 +2450,19 @@ String OS_Windows::get_joy_guid(int p_device) const {
 	return input->get_joy_guid_remapped(p_device);
 }
 
-void OS_Windows::set_use_vsync(bool p_enable) {
+void OS_Windows::_set_use_vsync(bool p_enable) {
 
 	if (gl_context)
 		gl_context->set_use_vsync(p_enable);
 }
-
+/*
 bool OS_Windows::is_vsync_enabled() const {
 
 	if (gl_context)
 		return gl_context->is_using_vsync();
 
 	return true;
-}
+}*/
 
 OS::PowerState OS_Windows::get_power_state() {
 	return power_manager->get_power_state();

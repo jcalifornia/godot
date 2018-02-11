@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #ifndef CANVAS_ITEM_H
 #define CANVAS_ITEM_H
 
@@ -122,6 +123,8 @@ public:
 	static void flush_changes();
 
 	RID get_shader_rid() const;
+
+	virtual Shader::Mode get_shader_mode() const;
 
 	CanvasItemMaterial();
 	virtual ~CanvasItemMaterial();
@@ -227,6 +230,7 @@ public:
 	// Used to resize/move/select the node
 	virtual void _edit_set_rect(const Rect2 &p_rect){};
 	virtual Rect2 _edit_get_rect() const { return Rect2(-32, -32, 64, 64); };
+	virtual bool _edit_is_selected_on_click(const Point2 &p_point, double p_tolerance) const { return true; }
 	Rect2 _edit_get_item_and_children_rect() const;
 	virtual bool _edit_use_rect() const { return false; };
 
@@ -266,6 +270,8 @@ public:
 	void draw_line(const Point2 &p_from, const Point2 &p_to, const Color &p_color, float p_width = 1.0, bool p_antialiased = false);
 	void draw_polyline(const Vector<Point2> &p_points, const Color &p_color, float p_width = 1.0, bool p_antialiased = false);
 	void draw_polyline_colors(const Vector<Point2> &p_points, const Vector<Color> &p_colors, float p_width = 1.0, bool p_antialiased = false);
+	void draw_multiline(const Vector<Point2> &p_points, const Color &p_color, float p_width = 1.0, bool p_antialiased = false);
+	void draw_multiline_colors(const Vector<Point2> &p_points, const Vector<Color> &p_colors, float p_width = 1.0, bool p_antialiased = false);
 	void draw_rect(const Rect2 &p_rect, const Color &p_color, bool p_filled = true);
 	void draw_circle(const Point2 &p_pos, float p_radius, const Color &p_color);
 	void draw_texture(const Ref<Texture> &p_texture, const Point2 &p_pos, const Color &p_modulate = Color(1, 1, 1, 1), const Ref<Texture> &p_normal_map = Ref<Texture>());

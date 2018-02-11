@@ -1,13 +1,12 @@
 /*************************************************************************/
-/*  body_bullet.h                                                        */
-/*  Author: AndreaCatania                                                */
+/*  rigid_body_bullet.h                                                  */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
-/*                    http://www.godotengine.org                         */
+/*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -32,10 +31,15 @@
 #ifndef BODYBULLET_H
 #define BODYBULLET_H
 
-#include "BulletCollision/BroadphaseCollision/btCollisionAlgorithm.h"
-#include "LinearMath/btTransform.h"
 #include "collision_object_bullet.h"
 #include "space_bullet.h"
+
+#include <BulletCollision/BroadphaseCollision/btCollisionAlgorithm.h>
+#include <LinearMath/btTransform.h>
+
+/**
+	@author AndreaCatania
+*/
 
 class AreaBullet;
 class SpaceBullet;
@@ -44,11 +48,11 @@ class GodotMotionState;
 class BulletPhysicsDirectBodyState;
 
 /// This class could be used in multi thread with few changes but currently
-/// is setted to be only in one single thread.
+/// is set to be only in one single thread.
 ///
 /// In the system there is only one object at a time that manage all bodies and is
 /// created by BulletPhysicsServer and is held by the "singleton" variable of this class
-/// Each time something require it, the body must be setted again.
+/// Each time something require it, the body must be set again.
 class BulletPhysicsDirectBodyState : public PhysicsDirectBodyState {
 	GDCLASS(BulletPhysicsDirectBodyState, PhysicsDirectBodyState)
 
@@ -156,8 +160,8 @@ public:
 		class btConvexShape *shape;
 		btTransform transform;
 
-		KinematicShape()
-			: shape(NULL) {}
+		KinematicShape() :
+				shape(NULL) {}
 		const bool is_active() const { return shape; }
 	};
 
@@ -184,9 +188,9 @@ private:
 	KinematicUtilities *kinematic_utilities;
 
 	PhysicsServer::BodyMode mode;
-	PhysicsServer::BodyAxisLock axis_lock;
 	GodotMotionState *godotMotionState;
 	btRigidBody *btBody;
+	uint16_t locked_axis;
 	real_t mass;
 	real_t gravity_scale;
 	real_t linearDamp;
@@ -207,6 +211,7 @@ private:
 	bool isScratchedSpaceOverrideModificator;
 
 	bool isTransformChanged;
+	bool previousActiveState; // Last check state
 
 	ForceIntegrationCallback *force_integration_callback;
 
@@ -257,20 +262,21 @@ public:
 	Variant get_state(PhysicsServer::BodyState p_state) const;
 
 	void apply_impulse(const Vector3 &p_pos, const Vector3 &p_impulse);
-	void apply_central_impulse(const Vector3 &p_force);
+	void apply_central_impulse(const Vector3 &p_impulse);
 	void apply_torque_impulse(const Vector3 &p_impulse);
 
 	void apply_force(const Vector3 &p_force, const Vector3 &p_pos);
 	void apply_central_force(const Vector3 &p_force);
-	void apply_torque(const Vector3 &p_force);
+	void apply_torque(const Vector3 &p_torque);
 
 	void set_applied_force(const Vector3 &p_force);
 	Vector3 get_applied_force() const;
 	void set_applied_torque(const Vector3 &p_torque);
 	Vector3 get_applied_torque() const;
 
-	void set_axis_lock(PhysicsServer::BodyAxisLock p_lock);
-	PhysicsServer::BodyAxisLock get_axis_lock() const;
+	void set_axis_lock(PhysicsServer::BodyAxis p_axis, bool lock);
+	bool is_axis_locked(PhysicsServer::BodyAxis p_axis) const;
+	void reload_axis_lock();
 
 	/// Doc:
 	/// http://www.bulletphysics.org/mediawiki-1.5.8/index.php?title=Anti_tunneling_by_Motion_Clamping

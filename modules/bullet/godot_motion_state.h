@@ -1,13 +1,12 @@
 /*************************************************************************/
 /*  godot_motion_state.h                                                 */
-/*  Author: AndreaCatania                                                */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
-/*                    http://www.godotengine.org                         */
+/*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -32,12 +31,17 @@
 #ifndef GODOT_MOTION_STATE_H
 #define GODOT_MOTION_STATE_H
 
-#include "LinearMath/btMotionState.h"
 #include "rigid_body_bullet.h"
+
+#include <LinearMath/btMotionState.h>
+
+/**
+	@author AndreaCatania
+*/
 
 class RigidBodyBullet;
 
-// This clas is responsible to move kinematic actor
+// This class is responsible to move kinematic actor
 // and sincronize rendering engine with Bullet
 /// DOC:
 /// http://www.bulletphysics.org/mediawiki-1.5.8/index.php/MotionStates#What.27s_a_MotionState.3F
@@ -51,10 +55,10 @@ class GodotMotionState : public btMotionState {
 	RigidBodyBullet *owner;
 
 public:
-	GodotMotionState(RigidBodyBullet *p_owner)
-		: bodyKinematicWorldTransf(btMatrix3x3(1., 0., 0., 0., 1., 0., 0., 0., 1.), btVector3(0., 0., 0.)),
-		  bodyCurrentWorldTransform(btMatrix3x3(1., 0., 0., 0., 1., 0., 0., 0., 1.), btVector3(0., 0., 0.)),
-		  owner(p_owner) {}
+	GodotMotionState(RigidBodyBullet *p_owner) :
+			bodyKinematicWorldTransf(btMatrix3x3(1., 0., 0., 0., 1., 0., 0., 0., 1.), btVector3(0., 0., 0.)),
+			bodyCurrentWorldTransform(btMatrix3x3(1., 0., 0., 0., 1., 0., 0., 0., 1.), btVector3(0., 0., 0.)),
+			owner(p_owner) {}
 
 	/// IMPORTANT DON'T USE THIS FUNCTION TO KNOW THE CURRENT BODY TRANSFORM
 	/// This class is used internally by Bullet

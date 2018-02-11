@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "visual_script.h"
 
 #include "os/os.h"
@@ -129,7 +130,7 @@ void VisualScriptNode::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("_set_default_input_values", "values"), &VisualScriptNode::_set_default_input_values);
 	ClassDB::bind_method(D_METHOD("_get_default_input_values"), &VisualScriptNode::_get_default_input_values);
 
-	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "_default_input_values", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR), "_set_default_input_values", "_get_default_input_values");
+	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "_default_input_values", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR | PROPERTY_USAGE_INTERNAL), "_set_default_input_values", "_get_default_input_values");
 	ADD_SIGNAL(MethodInfo("ports_changed"));
 }
 
@@ -1318,7 +1319,7 @@ void VisualScript::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("_set_data", "data"), &VisualScript::_set_data);
 	ClassDB::bind_method(D_METHOD("_get_data"), &VisualScript::_get_data);
 
-	ADD_PROPERTY(PropertyInfo(Variant::DICTIONARY, "data", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR), "_set_data", "_get_data");
+	ADD_PROPERTY(PropertyInfo(Variant::DICTIONARY, "data", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR | PROPERTY_USAGE_INTERNAL), "_set_data", "_get_data");
 
 	ADD_SIGNAL(MethodInfo("node_ports_changed", PropertyInfo(Variant::STRING, "function"), PropertyInfo(Variant::INT, "id")));
 }
@@ -2047,6 +2048,7 @@ void VisualScriptInstance::create(const Ref<VisualScript> &p_script, Object *p_o
 			function.argument_count = func_node->get_argument_count();
 			function.max_stack += function.argument_count;
 			function.flow_stack_size = func_node->is_stack_less() ? 0 : func_node->get_stack_size();
+			max_input_args = MAX(max_input_args, function.argument_count);
 		}
 
 		//multiple passes are required to set up this complex thing..
@@ -2289,7 +2291,7 @@ void VisualScriptFunctionState::connect_to_signal(Object *p_obj, const String &p
 		binds.push_back(p_binds[i]);
 	}
 	binds.push_back(Ref<VisualScriptFunctionState>(this)); //add myself on the back to avoid dying from unreferencing
-	p_obj->connect(p_signal, this, "_signal_callback", binds);
+	p_obj->connect(p_signal, this, "_signal_callback", binds, CONNECT_ONESHOT);
 }
 
 bool VisualScriptFunctionState::is_valid() const {

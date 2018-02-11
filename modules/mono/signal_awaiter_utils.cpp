@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "signal_awaiter_utils.h"
 
 #include "csharp_script.h"
@@ -62,7 +63,7 @@ Error connect_signal_awaiter(Object *p_source, const String &p_signal, Object *p
 
 	return err;
 }
-}
+} // namespace SignalAwaiterUtils
 
 Variant SignalAwaiterHandle::_signal_callback(const Variant **p_args, int p_argcount, Variant::CallError &r_error) {
 
@@ -101,7 +102,7 @@ Variant SignalAwaiterHandle::_signal_callback(const Variant **p_args, int p_argc
 	GDMonoUtils::SignalAwaiter_SignalCallback thunk = CACHED_METHOD_THUNK(SignalAwaiter, SignalCallback);
 
 	MonoObject *ex = NULL;
-	thunk(get_target(), &signal_args, &ex);
+	thunk(get_target(), signal_args, &ex);
 
 	if (ex) {
 		mono_print_unhandled_exception(ex);
@@ -116,8 +117,8 @@ void SignalAwaiterHandle::_bind_methods() {
 	ClassDB::bind_vararg_method(METHOD_FLAGS_DEFAULT, "_signal_callback", &SignalAwaiterHandle::_signal_callback, MethodInfo("_signal_callback"));
 }
 
-SignalAwaiterHandle::SignalAwaiterHandle(uint32_t p_managed_handle)
-	: MonoGCHandle(p_managed_handle) {
+SignalAwaiterHandle::SignalAwaiterHandle(uint32_t p_managed_handle) :
+		MonoGCHandle(p_managed_handle) {
 
 #ifdef DEBUG_ENABLED
 	conn_target_id = 0;

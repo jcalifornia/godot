@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "scroll_container.h"
 #include "os/os.h"
 bool ScrollContainer::clips_input() const {
@@ -354,6 +355,7 @@ void ScrollContainer::update_scrollbars() {
 	if (!scroll_v || min.height <= size.height - hmin.height) {
 
 		v_scroll->hide();
+		v_scroll->set_max(0);
 		scroll.y = 0;
 	} else {
 
@@ -366,6 +368,7 @@ void ScrollContainer::update_scrollbars() {
 	if (!scroll_h || min.width <= size.width - vmin.width) {
 
 		h_scroll->hide();
+		h_scroll->set_max(0);
 		scroll.x = 0;
 	} else {
 
@@ -459,14 +462,16 @@ void ScrollContainer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_enable_v_scroll", "enable"), &ScrollContainer::set_enable_v_scroll);
 	ClassDB::bind_method(D_METHOD("is_v_scroll_enabled"), &ScrollContainer::is_v_scroll_enabled);
 	ClassDB::bind_method(D_METHOD("_update_scrollbar_position"), &ScrollContainer::_update_scrollbar_position);
-	ClassDB::bind_method(D_METHOD("set_h_scroll", "val"), &ScrollContainer::set_h_scroll);
+	ClassDB::bind_method(D_METHOD("set_h_scroll", "value"), &ScrollContainer::set_h_scroll);
 	ClassDB::bind_method(D_METHOD("get_h_scroll"), &ScrollContainer::get_h_scroll);
-	ClassDB::bind_method(D_METHOD("set_v_scroll", "val"), &ScrollContainer::set_v_scroll);
+	ClassDB::bind_method(D_METHOD("set_v_scroll", "value"), &ScrollContainer::set_v_scroll);
 	ClassDB::bind_method(D_METHOD("get_v_scroll"), &ScrollContainer::get_v_scroll);
 
 	ADD_GROUP("Scroll", "scroll_");
-	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "scroll_horizontal"), "set_enable_h_scroll", "is_h_scroll_enabled");
-	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "scroll_vertical"), "set_enable_v_scroll", "is_v_scroll_enabled");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "scroll_horizontal_enabled"), "set_enable_h_scroll", "is_h_scroll_enabled");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "scroll_horizontal"), "set_h_scroll", "get_h_scroll");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "scroll_vertical_enabled"), "set_enable_v_scroll", "is_v_scroll_enabled");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "scroll_vertical"), "set_v_scroll", "get_v_scroll");
 };
 
 ScrollContainer::ScrollContainer() {

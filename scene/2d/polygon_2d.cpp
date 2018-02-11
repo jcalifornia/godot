@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,7 +27,9 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "polygon_2d.h"
+#include "core/math/geometry.h"
 
 Rect2 Polygon2D::_edit_get_rect() const {
 
@@ -42,11 +44,15 @@ Rect2 Polygon2D::_edit_get_rect() const {
 			else
 				item_rect.expand_to(pos);
 		}
-		item_rect = item_rect.grow(20);
 		rect_cache_dirty = false;
 	}
 
 	return item_rect;
+}
+
+bool Polygon2D::_edit_is_selected_on_click(const Point2 &p_point, double p_tolerance) const {
+
+	return Geometry::is_point_in_polygon(p_point, Variant(polygon));
 }
 
 void Polygon2D::_edit_set_pivot(const Point2 &p_pivot) {
@@ -377,7 +383,8 @@ void Polygon2D::_bind_methods() {
 	ADD_GROUP("Texture", "texture_");
 	ADD_PROPERTY(PropertyInfo(Variant::VECTOR2, "texture_offset"), "set_texture_offset", "get_texture_offset");
 	ADD_PROPERTY(PropertyInfo(Variant::VECTOR2, "texture_scale"), "set_texture_scale", "get_texture_scale");
-	ADD_PROPERTY(PropertyInfo(Variant::REAL, "texture_rotation", PROPERTY_HINT_RANGE, "-1440,1440,0.1"), "set_texture_rotation_degrees", "get_texture_rotation_degrees");
+	ADD_PROPERTY(PropertyInfo(Variant::REAL, "texture_rotation_degrees", PROPERTY_HINT_RANGE, "-1440,1440,0.1"), "set_texture_rotation_degrees", "get_texture_rotation_degrees");
+	ADD_PROPERTY(PropertyInfo(Variant::REAL, "texture_rotation", PROPERTY_HINT_NONE, "", 0), "set_texture_rotation", "get_texture_rotation");
 
 	ADD_GROUP("Invert", "invert_");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "invert_enable"), "set_invert", "get_invert");

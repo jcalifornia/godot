@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,9 +27,11 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "gd_mono_utils.h"
 
 #include "os/dir_access.h"
+#include "os/os.h"
 #include "project_settings.h"
 #include "reference.h"
 
@@ -42,16 +44,20 @@ namespace GDMonoUtils {
 
 MonoCache mono_cache;
 
-#define CACHE_AND_CHECK(m_var, m_val)                                                        \
-	{                                                                                        \
-		m_var = m_val;                                                                       \
-		if (!m_var) ERR_PRINT("Mono Cache: Member " #m_var " is null. This is really bad!"); \
+#define CACHE_AND_CHECK(m_var, m_val)                             \
+	{                                                             \
+		m_var = m_val;                                            \
+		if (!m_var) {                                             \
+			ERR_EXPLAIN("Mono Cache: Member " #m_var " is null"); \
+			ERR_FAIL();                                           \
+		}                                                         \
 	}
 
 #define CACHE_CLASS_AND_CHECK(m_class, m_val) CACHE_AND_CHECK(GDMonoUtils::mono_cache.class_##m_class, m_val)
 #define CACHE_NS_CLASS_AND_CHECK(m_ns, m_class, m_val) CACHE_AND_CHECK(GDMonoUtils::mono_cache.class_##m_ns##_##m_class, m_val)
 #define CACHE_RAW_MONO_CLASS_AND_CHECK(m_class, m_val) CACHE_AND_CHECK(GDMonoUtils::mono_cache.rawclass_##m_class, m_val)
 #define CACHE_FIELD_AND_CHECK(m_class, m_field, m_val) CACHE_AND_CHECK(GDMonoUtils::mono_cache.field_##m_class##_##m_field, m_val)
+#define CACHE_METHOD_AND_CHECK(m_class, m_method, m_val) CACHE_AND_CHECK(GDMonoUtils::mono_cache.method_##m_class##_##m_method, m_val)
 #define CACHE_METHOD_THUNK_AND_CHECK(m_class, m_method, m_val) CACHE_AND_CHECK(GDMonoUtils::mono_cache.methodthunk_##m_class##_##m_method, m_val)
 
 void MonoCache::clear_members() {
@@ -70,6 +76,13 @@ void MonoCache::clear_members() {
 	class_double = NULL;
 	class_String = NULL;
 	class_IntPtr = NULL;
+
+#ifdef DEBUG_ENABLED
+	class_System_Diagnostics_StackTrace = NULL;
+	methodthunk_System_Diagnostics_StackTrace_GetFrames = NULL;
+	method_System_Diagnostics_StackTrace_ctor_bool = NULL;
+	method_System_Diagnostics_StackTrace_ctor_Exception_bool = NULL;
+#endif
 
 	rawclass_Dictionary = NULL;
 
@@ -93,9 +106,14 @@ void MonoCache::clear_members() {
 	class_WeakRef = NULL;
 	class_MarshalUtils = NULL;
 
+#ifdef DEBUG_ENABLED
+	class_DebuggingUtils = NULL;
+	methodthunk_DebuggingUtils_GetStackFrameInfo = NULL;
+#endif
+
 	class_ExportAttribute = NULL;
 	field_ExportAttribute_hint = NULL;
-	field_ExportAttribute_hint_string = NULL;
+	field_ExportAttribute_hintString = NULL;
 	class_ToolAttribute = NULL;
 	class_RemoteAttribute = NULL;
 	class_SyncAttribute = NULL;
@@ -118,6 +136,12 @@ void MonoCache::clear_members() {
 	task_scheduler_handle = Ref<MonoGCHandle>();
 }
 
+void MonoCache::cleanup() {
+
+	corlib_cache_updated = false;
+	godot_api_cache_updated = false;
+}
+
 #define GODOT_API_CLASS(m_class) (GDMono::get_singleton()->get_api_assembly()->get_class(BINDINGS_NAMESPACE, #m_class))
 
 void update_corlib_cache() {
@@ -136,6 +160,15 @@ void update_corlib_cache() {
 	CACHE_CLASS_AND_CHECK(double, GDMono::get_singleton()->get_corlib_assembly()->get_class(mono_get_double_class()));
 	CACHE_CLASS_AND_CHECK(String, GDMono::get_singleton()->get_corlib_assembly()->get_class(mono_get_string_class()));
 	CACHE_CLASS_AND_CHECK(IntPtr, GDMono::get_singleton()->get_corlib_assembly()->get_class(mono_get_intptr_class()));
+
+#ifdef DEBUG_ENABLED
+	CACHE_CLASS_AND_CHECK(System_Diagnostics_StackTrace, GDMono::get_singleton()->get_corlib_assembly()->get_class("System.Diagnostics", "StackTrace"));
+	CACHE_METHOD_THUNK_AND_CHECK(System_Diagnostics_StackTrace, GetFrames, (StackTrace_GetFrames)CACHED_CLASS(System_Diagnostics_StackTrace)->get_method("GetFrames")->get_thunk());
+	CACHE_METHOD_AND_CHECK(System_Diagnostics_StackTrace, ctor_bool, CACHED_CLASS(System_Diagnostics_StackTrace)->get_method_with_desc("System.Diagnostics.StackTrace:.ctor(bool)", true));
+	CACHE_METHOD_AND_CHECK(System_Diagnostics_StackTrace, ctor_Exception_bool, CACHED_CLASS(System_Diagnostics_StackTrace)->get_method_with_desc("System.Diagnostics.StackTrace:.ctor(System.Exception,bool)", true));
+#endif
+
+	mono_cache.corlib_cache_updated = true;
 }
 
 void update_godot_api_cache() {
@@ -151,7 +184,7 @@ void update_godot_api_cache() {
 	CACHE_CLASS_AND_CHECK(Color, GODOT_API_CLASS(Color));
 	CACHE_CLASS_AND_CHECK(Plane, GODOT_API_CLASS(Plane));
 	CACHE_CLASS_AND_CHECK(NodePath, GODOT_API_CLASS(NodePath));
-	CACHE_CLASS_AND_CHECK(RID, GODOT_API_CLASS(NodePath));
+	CACHE_CLASS_AND_CHECK(RID, GODOT_API_CLASS(RID));
 	CACHE_CLASS_AND_CHECK(GodotObject, GODOT_API_CLASS(Object));
 	CACHE_CLASS_AND_CHECK(GodotReference, GODOT_API_CLASS(Reference));
 	CACHE_CLASS_AND_CHECK(Node, GODOT_API_CLASS(Node));
@@ -160,10 +193,14 @@ void update_godot_api_cache() {
 	CACHE_CLASS_AND_CHECK(WeakRef, GODOT_API_CLASS(WeakRef));
 	CACHE_CLASS_AND_CHECK(MarshalUtils, GODOT_API_CLASS(MarshalUtils));
 
+#ifdef DEBUG_ENABLED
+	CACHE_CLASS_AND_CHECK(DebuggingUtils, GODOT_API_CLASS(DebuggingUtils));
+#endif
+
 	// Attributes
 	CACHE_CLASS_AND_CHECK(ExportAttribute, GODOT_API_CLASS(ExportAttribute));
 	CACHE_FIELD_AND_CHECK(ExportAttribute, hint, CACHED_CLASS(ExportAttribute)->get_field("hint"));
-	CACHE_FIELD_AND_CHECK(ExportAttribute, hint_string, CACHED_CLASS(ExportAttribute)->get_field("hint_string"));
+	CACHE_FIELD_AND_CHECK(ExportAttribute, hintString, CACHED_CLASS(ExportAttribute)->get_field("hintString"));
 	CACHE_CLASS_AND_CHECK(ToolAttribute, GODOT_API_CLASS(ToolAttribute));
 	CACHE_CLASS_AND_CHECK(RemoteAttribute, GODOT_API_CLASS(RemoteAttribute));
 	CACHE_CLASS_AND_CHECK(SyncAttribute, GODOT_API_CLASS(SyncAttribute));
@@ -182,6 +219,10 @@ void update_godot_api_cache() {
 	CACHE_METHOD_THUNK_AND_CHECK(SignalAwaiter, FailureCallback, (SignalAwaiter_FailureCallback)GODOT_API_CLASS(SignalAwaiter)->get_method("FailureCallback", 0)->get_thunk());
 	CACHE_METHOD_THUNK_AND_CHECK(GodotTaskScheduler, Activate, (GodotTaskScheduler_Activate)GODOT_API_CLASS(GodotTaskScheduler)->get_method("Activate", 0)->get_thunk());
 
+#ifdef DEBUG_ENABLED
+	CACHE_METHOD_THUNK_AND_CHECK(DebuggingUtils, GetStackFrameInfo, (DebugUtils_StackFrameInfo)GODOT_API_CLASS(DebuggingUtils)->get_method("GetStackFrameInfo", 4)->get_thunk());
+#endif
+
 	{
 		/*
 		 * TODO Right now we only support Dictionary<object, object>.
@@ -198,9 +239,11 @@ void update_godot_api_cache() {
 		CACHE_RAW_MONO_CLASS_AND_CHECK(Dictionary, mono_class_from_mono_type(dict_type));
 	}
 
-	MonoObject *task_scheduler = mono_object_new(SCRIPTS_DOMAIN, GODOT_API_CLASS(GodotTaskScheduler)->get_raw());
+	MonoObject *task_scheduler = mono_object_new(SCRIPTS_DOMAIN, GODOT_API_CLASS(GodotTaskScheduler)->get_mono_ptr());
 	mono_runtime_object_init(task_scheduler);
 	mono_cache.task_scheduler_handle = MonoGCHandle::create_strong(task_scheduler);
+
+	mono_cache.corlib_cache_updated = true;
 }
 
 void clear_cache() {
@@ -298,7 +341,7 @@ MonoObject *create_managed_for_godot_object(GDMonoClass *p_class, const StringNa
 		ERR_FAIL_V(NULL);
 	}
 
-	MonoObject *mono_object = mono_object_new(SCRIPTS_DOMAIN, p_class->get_raw());
+	MonoObject *mono_object = mono_object_new(SCRIPTS_DOMAIN, p_class->get_mono_ptr());
 	ERR_FAIL_NULL_V(mono_object, NULL);
 
 	CACHED_FIELD(GodotObject, ptr)->set_value_raw(mono_object, p_object);
@@ -364,4 +407,51 @@ String get_exception_name_and_message(MonoObject *p_ex) {
 
 	return res;
 }
+
+void print_unhandled_exception(MonoObject *p_exc) {
+	print_unhandled_exception(p_exc, false);
+}
+
+void print_unhandled_exception(MonoObject *p_exc, bool p_recursion_caution) {
+	mono_print_unhandled_exception(p_exc);
+#ifdef DEBUG_ENABLED
+	if (!ScriptDebugger::get_singleton())
+		return;
+
+	GDMonoClass *st_klass = CACHED_CLASS(System_Diagnostics_StackTrace);
+	MonoObject *stack_trace = mono_object_new(mono_domain_get(), st_klass->get_mono_ptr());
+
+	MonoBoolean need_file_info = true;
+	void *ctor_args[2] = { p_exc, &need_file_info };
+
+	MonoObject *unexpected_exc = NULL;
+	CACHED_METHOD(System_Diagnostics_StackTrace, ctor_Exception_bool)->invoke_raw(stack_trace, ctor_args, &unexpected_exc);
+
+	if (unexpected_exc != NULL) {
+		mono_print_unhandled_exception(unexpected_exc);
+
+		if (p_recursion_caution) {
+			// Called from CSharpLanguage::get_current_stack_info,
+			// so printing an error here could result in endless recursion
+			OS::get_singleton()->printerr("Mono: Method GDMonoUtils::print_unhandled_exception failed");
+			return;
+		} else {
+			ERR_FAIL();
+		}
+	}
+
+	Vector<ScriptLanguage::StackInfo> si;
+	if (stack_trace != NULL && !p_recursion_caution)
+		si = CSharpLanguage::get_singleton()->stack_trace_get_info(stack_trace);
+
+	String file = si.size() ? si[0].file : __FILE__;
+	String func = si.size() ? si[0].func : FUNCTION_STR;
+	int line = si.size() ? si[0].line : __LINE__;
+	String error_msg = "Unhandled exception";
+	String exc_msg = GDMonoUtils::get_exception_name_and_message(p_exc);
+
+	ScriptDebugger::get_singleton()->send_error(func, file, line, error_msg, exc_msg, ERR_HANDLER_ERROR, si);
+#endif
+}
+
 } // namespace GDMonoUtils

@@ -1,13 +1,12 @@
 /*************************************************************************/
 /*  godot_result_callbacks.cpp                                           */
-/*  Author: AndreaCatania                                                */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
-/*                    http://www.godotengine.org                         */
+/*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -30,9 +29,14 @@
 /*************************************************************************/
 
 #include "godot_result_callbacks.h"
+
 #include "bullet_types_converter.h"
 #include "collision_object_bullet.h"
 #include "rigid_body_bullet.h"
+
+/**
+	@author AndreaCatania
+*/
 
 bool GodotFilterCallback::test_collision_filters(uint32_t body0_collision_layer, uint32_t body0_collision_mask, uint32_t body1_collision_layer, uint32_t body1_collision_mask) {
 	return body0_collision_layer & body1_collision_mask || body1_collision_layer & body0_collision_mask;
@@ -142,6 +146,9 @@ bool GodotAllContactResultCallback::needsCollision(btBroadphaseProxy *proxy0) co
 
 btScalar GodotAllContactResultCallback::addSingleResult(btManifoldPoint &cp, const btCollisionObjectWrapper *colObj0Wrap, int partId0, int index0, const btCollisionObjectWrapper *colObj1Wrap, int partId1, int index1) {
 
+	if (m_count >= m_resultMax)
+		return cp.getDistance();
+
 	if (cp.getDistance() <= 0) {
 
 		PhysicsDirectSpaceState::ShapeResult &result = m_results[m_count];
@@ -165,7 +172,7 @@ btScalar GodotAllContactResultCallback::addSingleResult(btManifoldPoint &cp, con
 		++m_count;
 	}
 
-	return m_count < m_resultMax;
+	return cp.getDistance();
 }
 
 bool GodotContactPairContactResultCallback::needsCollision(btBroadphaseProxy *proxy0) const {

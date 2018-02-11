@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "gd_mono_assembly.h"
 
 #include <mono/metadata/mono-debug.h>
@@ -113,6 +114,37 @@ MonoAssembly *GDMonoAssembly::_preload_hook(MonoAssemblyName *aname, char **asse
 				++assemblies_path;
 			}
 		}
+	}
+
+	String name = mono_assembly_name_get_name(aname);
+	bool has_extension = name.ends_with(".dll");
+
+	if (has_extension ? name == "mscorlib.dll" : name == "mscorlib") {
+		GDMonoAssembly **stored_assembly = GDMono::get_singleton()->get_loaded_assembly(has_extension ? name.get_basename() : name);
+		if (stored_assembly) return (*stored_assembly)->get_assembly();
+
+		String path;
+		MonoAssembly *res = NULL;
+
+		for (int i = 0; i < search_dirs.size(); i++) {
+			const String &search_dir = search_dirs[i];
+
+			if (has_extension) {
+				path = search_dir.plus_file(name);
+				if (FileAccess::exists(path)) {
+					res = _load_assembly_from(name.get_basename(), path);
+					break;
+				}
+			} else {
+				path = search_dir.plus_file(name + ".dll");
+				if (FileAccess::exists(path)) {
+					res = _load_assembly_from(name, path);
+					break;
+				}
+			}
+		}
+
+		if (res) return res;
 	}
 
 	return NULL;
@@ -318,7 +350,7 @@ GDMonoClass *GDMonoAssembly::get_object_derived_class(const StringName &p_class)
 				void *iter = NULL;
 
 				while (true) {
-					MonoClass *raw_nested = mono_class_get_nested_types(current_nested->get_raw(), &iter);
+					MonoClass *raw_nested = mono_class_get_nested_types(current_nested->get_mono_ptr(), &iter);
 
 					if (!raw_nested)
 						break;

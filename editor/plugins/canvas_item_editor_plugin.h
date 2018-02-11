@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #ifndef CONTROL_EDITOR_PLUGIN_H
 #define CONTROL_EDITOR_PLUGIN_H
 
@@ -252,10 +253,10 @@ class CanvasItemEditor : public VBoxContainer {
 	struct _SelectResult {
 
 		CanvasItem *item;
-		float z;
+		float z_index;
 		bool has_z;
 		_FORCE_INLINE_ bool operator<(const _SelectResult &p_rr) const {
-			return has_z && p_rr.has_z ? p_rr.z < z : p_rr.has_z;
+			return has_z && p_rr.has_z ? p_rr.z_index < z_index : p_rr.has_z;
 		}
 	};
 
@@ -575,9 +576,11 @@ class CanvasItemEditorViewport : public Control {
 	void _remove_preview();
 
 	bool _cyclical_dependency_exists(const String &p_target_scene_path, Node *p_desired_node);
+	bool _only_packed_scenes_selected() const;
 	void _create_nodes(Node *parent, Node *child, String &path, const Point2 &p_point);
 	bool _create_instance(Node *parent, String &path, const Point2 &p_point);
 	void _perform_drop_data();
+	void _show_resource_type_selector();
 
 	static void _bind_methods();
 

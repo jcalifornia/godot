@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "gl_context_egl.h"
 
 #include "EGL/eglext.h"
@@ -108,7 +109,8 @@ Error ContextEGL::initialize() {
 			EGL_NONE,*/
 			// These are the default display attributes, used to request ANGLE's D3D11 renderer.
 			// eglInitialize will only succeed with these attributes if the hardware supports D3D11 Feature Level 10_0+.
-			EGL_PLATFORM_ANGLE_TYPE_ANGLE, EGL_PLATFORM_ANGLE_TYPE_D3D11_ANGLE,
+			EGL_PLATFORM_ANGLE_TYPE_ANGLE,
+			EGL_PLATFORM_ANGLE_TYPE_D3D11_ANGLE,
 
 			// EGL_ANGLE_DISPLAY_ALLOW_RENDER_TO_BACK_BUFFER is an optimization that can have large performance benefits on mobile devices.
 			// Its syntax is subject to change, though. Please update your Visual Studio templates if you experience compilation issues with it.
@@ -117,7 +119,8 @@ Error ContextEGL::initialize() {
 			// EGL_PLATFORM_ANGLE_ENABLE_AUTOMATIC_TRIM_ANGLE is an option that enables ANGLE to automatically call
 			// the IDXGIDevice3::Trim method on behalf of the application when it gets suspended.
 			// Calling IDXGIDevice3::Trim when an application is suspended is a Windows Store application certification requirement.
-			EGL_PLATFORM_ANGLE_ENABLE_AUTOMATIC_TRIM_ANGLE, EGL_TRUE,
+			EGL_PLATFORM_ANGLE_ENABLE_AUTOMATIC_TRIM_ANGLE,
+			EGL_TRUE,
 			EGL_NONE,
 		};
 
@@ -190,10 +193,10 @@ void ContextEGL::cleanup() {
 	}
 };
 
-ContextEGL::ContextEGL(CoreWindow ^ p_window)
-	: mEglDisplay(EGL_NO_DISPLAY),
-	  mEglContext(EGL_NO_CONTEXT),
-	  mEglSurface(EGL_NO_SURFACE) {
+ContextEGL::ContextEGL(CoreWindow ^ p_window) :
+		mEglDisplay(EGL_NO_DISPLAY),
+		mEglContext(EGL_NO_CONTEXT),
+		mEglSurface(EGL_NO_SURFACE) {
 
 	window = p_window;
 };

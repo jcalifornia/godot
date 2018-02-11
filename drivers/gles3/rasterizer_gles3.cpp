@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "rasterizer_gles3.h"
 
 #include "gl_context/context_gl.h"
@@ -338,6 +339,15 @@ void RasterizerGLES3::blit_render_target_to_screen(RID p_render_target, const Re
 	RasterizerStorageGLES3::RenderTarget *rt = storage->render_target_owner.getornull(p_render_target);
 	ERR_FAIL_COND(!rt);
 
+#if 1
+
+	Size2 win_size = OS::get_singleton()->get_window_size();
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, rt->fbo);
+	glReadBuffer(GL_COLOR_ATTACHMENT0);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, RasterizerStorageGLES3::system_fbo);
+	glBlitFramebuffer(0, 0, rt->width, rt->height, p_screen_rect.position.x, win_size.height - p_screen_rect.position.y - p_screen_rect.size.height, p_screen_rect.position.x + p_screen_rect.size.width, win_size.height - p_screen_rect.position.y, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+#else
 	canvas->canvas_begin();
 	glDisable(GL_BLEND);
 	glBindFramebuffer(GL_FRAMEBUFFER, RasterizerStorageGLES3::system_fbo);
@@ -350,51 +360,15 @@ void RasterizerGLES3::blit_render_target_to_screen(RID p_render_target, const Re
 	canvas->draw_generic_textured_rect(p_screen_rect, Rect2(0, 0, 1, -1));
 	glBindTexture(GL_TEXTURE_2D, 0);
 	canvas->canvas_end();
+#endif
 }
 
 void RasterizerGLES3::end_frame(bool p_swap_buffers) {
 
-#if 0
-	canvas->canvas_begin();
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D,storage->resources.white_tex);
-	glDisable(GL_BLEND);
-	glDisable(GL_DEPTH_TEST);
-	glDisable(GL_CULL_FACE);
-
-
-	float vtx[8]={0,0,
-	0,1,
-	1,1,
-	1,0
-	};
-
-	glBindBuffer(GL_ARRAY_BUFFER,0);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0);
-
-	glEnableVertexAttribArray(VS::ARRAY_VERTEX);
-	glVertexAttribPointer( VS::ARRAY_VERTEX, 2 ,GL_FLOAT, false, 0, vtx );
-
-
-	//glBindBuffer(GL_ARRAY_BUFFER,canvas->data.canvas_quad_vertices);
-	//glEnableVertexAttribArray(VS::ARRAY_VERTEX);
-	//glVertexAttribPointer( VS::ARRAY_VERTEX, 2 ,GL_FLOAT, false, 0, 0 );
-
-	glBindVertexArray(canvas->data.canvas_quad_array);
-
-	canvas->draw_generic_textured_rect(Rect2(0,0,15,15),Rect2(0,0,1,1));
-#endif
 	if (p_swap_buffers)
 		OS::get_singleton()->swap_buffers();
 	else
 		glFinish();
-
-	/*	print_line("objects: "+itos(storage->info.render_object_count));
-	print_line("material chages: "+itos(storage->info.render_material_switch_count));
-	print_line("surface changes: "+itos(storage->info.render_surface_switch_count));
-	print_line("shader changes: "+itos(storage->info.render_shader_rebind_count));
-	print_line("vertices: "+itos(storage->info.render_vertices_count));
-*/
 }
 
 void RasterizerGLES3::finalize() {

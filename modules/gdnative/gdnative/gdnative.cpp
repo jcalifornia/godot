@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2017 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2017 Godot Engine contributors (cf. AUTHORS.md)    */
+/* Copyright (c) 2007-2018 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2018 Godot Engine contributors (cf. AUTHORS.md)    */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,7 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
 #include "gdnative/gdnative.h"
 
 #include "class_db.h"
@@ -51,10 +52,6 @@ void GDAPI godot_object_destroy(godot_object *p_o) {
 godot_object GDAPI *godot_global_get_singleton(char *p_name) {
 	return (godot_object *)Engine::get_singleton()->get_singleton_object(String(p_name));
 } // result shouldn't be freed
-
-void GDAPI *godot_get_stack_bottom() {
-	return OS::get_singleton()->get_stack_bottom();
-}
 
 // MethodBind API
 
