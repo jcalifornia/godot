@@ -57,7 +57,7 @@ public:
 	
 
 private:
-	TreecursionQueue<TreecursionWriteTask, 4096> game_queue;
+	TreecursionQueue<TreecursionWriteTask, 1000000> game_queue;
 	void write_packet(TreecursionWriteTask * packet);
 	TreecursionTestWriter *treecursion;
 };

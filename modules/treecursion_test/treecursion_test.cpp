@@ -86,8 +86,8 @@ Error TreecursionTestStorage::init(){
 
 void TreecursionTestStorage::thread_func(void *p_udata){
 	TreecursionTestStorage *ac = (TreecursionTestStorage *) p_udata;
-	//every half second.
-	uint64_t usdelay = 500000;
+	//every 20 ms
+	uint64_t usdelay = 20000;
 	while(!ac -> _exit_thread){
 		if(ac->treecursion != nullptr){
 			ac->flush();

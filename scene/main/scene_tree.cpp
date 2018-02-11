@@ -1816,7 +1816,8 @@ void SceneTree::_rpc(Node *p_from, int p_to, bool p_unreliable, bool p_set, cons
 		ofs += len;
 
 		String path_name = String(p_from->get_path().get_sname());
-		TreecursionSetTask remote_set_packet(String(p_name), path_name, *p_arg[0], packet_time, network_peer->get_unique_id());
+		TreecursionSetTask *remote_set_packet = memnew(TreecursionSetTask(String(p_name), path_name, *p_arg[0], packet_time, network_peer->get_unique_id()));
+		TreecursionTestStorage::get_singleton()->enqueue(remote_set_packet);
 		//print_line(remote_set_packet.toString());
 	} else {
 		Vector<Variant> varArgs;
@@ -1833,7 +1834,8 @@ void SceneTree::_rpc(Node *p_from, int p_to, bool p_unreliable, bool p_set, cons
 			varArgs.push_back(*p_arg[i]);
 		}
 		String path_name = String(p_from->get_path().get_sname());
-		TreecursionCallTask remote_call_packet( String(p_name), path_name, varArgs, packet_time, network_peer->get_unique_id());
+		TreecursionCallTask *remote_call_packet = memnew(TreecursionCallTask( String(p_name), path_name, varArgs, packet_time, network_peer->get_unique_id()));
+		TreecursionTestStorage::get_singleton()->enqueue(remote_call_packet);
 		//print_line(remote_call_packet.toString());
 	}
 	
