@@ -13,11 +13,16 @@ enum AUDIO_CODEC { OPUS, RAW };
 
 class TreecursionWriteTask : public Reference {
 	GDCLASS(TreecursionWriteTask, Reference);
+
+public:
+	enum Types {
+		SET_TASK = 1,
+		CALL_TASK,
+		VOICE_TASK,
+		HEADER_TASK
+	};
 protected:
-	const uint64_t time;
-	const uint64_t user_id;
-protected:
-	TreecursionWriteTask( uint64_t t, uint64_t u ) : time(t), user_id(u){
+	TreecursionWriteTask( uint64_t t, uint64_t u, Types ty ) : time(t), user_id(u), type(ty){
 
 	}
 	String _string2Json(String key, String value) const {
@@ -34,14 +39,22 @@ protected:
 		VariantWriter::write_to_string(v, var);
 		String("\"") + key + String("\": ") + _addQuotes(var); 
 	}
+	
+
 
 public:
+
+	
 	uint64_t get_user_id() const { return user_id; }
 	uint64_t get_time() const { return time; }
 	virtual String toJson() const { 
 		return String("");
 	}
-	
+	Types get_type() const { return type; }
+protected:
+	const Types type;
+	const uint64_t time;
+	const uint64_t user_id;
 
 
 };
@@ -50,10 +63,11 @@ protected:
 	const String node_path;
 	const String name;
 public:
-	TreecursionCommandTask(const String &n, const String &node, uint64_t t, uint64_t u ) 
-		: TreecursionWriteTask(t, u), node_path(node), name(n){
+	TreecursionCommandTask(const String &n, const String &node, uint64_t t, uint64_t u, Types ty) 
+		: TreecursionWriteTask(t, u, ty), node_path(node), name(n){
 
 	}
+
 	String get_node_path() const { return node_path; }
 	String get_name() const { return name; }
 	virtual String toJson() const { 
@@ -65,11 +79,15 @@ class TreecursionSetTask : public TreecursionCommandTask {
 	const Variant value;
 public:
 	TreecursionSetTask( const String n, const String &node, Variant v, uint64_t t, uint64_t u) 
-		: TreecursionCommandTask( n, node, t, u ), value(v) {
+		: TreecursionCommandTask( n, node, t, u, SET_TASK ), value(v) {
 	}
 	TreecursionSetTask( const TreecursionSetTask& other ) 
-		: TreecursionCommandTask( other.get_name(), other.get_node_path(), other.get_time(), other.get_user_id() ), 
+		: TreecursionCommandTask( other.get_name(), other.get_node_path(), other.get_time(), other.get_user_id(), other.get_type() ), 
 		value(other.get_value()) {
+	}
+	TreecursionSetTask( const Dictionary& map ) 
+		: TreecursionCommandTask( map["name"], map["node"], map["time"], map["user_id"], SET_TASK ), 
+		value(map["value"]) {
 	}
 
 	bool get_value() const { return value; }
@@ -88,6 +106,7 @@ public:
 		dict["node"] = node_path;
 		dict["user_id"] = user_id;
 		dict["name"] = name;
+		dict["type"] = type;
 		JSON a;
 		String ret = a.print(dict);
 		return ret;
@@ -107,11 +126,15 @@ class TreecursionCallTask : public TreecursionCommandTask {
 	const Vector<Variant> args;
 public:
 	TreecursionCallTask( const String n, const String &node, const Vector<Variant> &a, uint64_t t, uint64_t u) 
-		: TreecursionCommandTask( n, node, t, u ), args(a) {
+		: TreecursionCommandTask( n, node, t, u, CALL_TASK ), args(a) {
 	}
 
 	TreecursionCallTask( const TreecursionCallTask& other) 
-		: TreecursionCommandTask( other.get_name(), other.get_node_path(), other.get_time(), other.get_user_id() ), args( other.args) {
+		: TreecursionCommandTask( other.get_name(), other.get_node_path(), other.get_time(), other.get_user_id(), CALL_TASK ), args( other.args) {
+	}
+
+	TreecursionCallTask(  const Dictionary& map ) 
+		: TreecursionCommandTask( map["name"], map["node"], map["time"], map["user_id"], CALL_TASK ), args( map["args"]) {
 	}
 
 	Vector<Variant> get_args() const { return args; }
@@ -132,6 +155,7 @@ public:
 		dict["node"] = node_path;
 		dict["user_id"] = user_id;
 		dict["name"] = name;
+		dict["type"] = type;
 		JSON a;
 		String ret = a.print(dict);
 		return ret;

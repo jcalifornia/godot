@@ -57,11 +57,11 @@ public:
 
 		T *ptr = _buffer[tail % Q_SIZE].load();
 		//compare the past point to the current one
-		//if equal then loop again
 		if ( _tail_last == ptr) {
 			return false;
 		} else {
 			*ret = ptr;
+			//finally increment tail
 			_tail.store(tail+1);
 			return true;
 		}
