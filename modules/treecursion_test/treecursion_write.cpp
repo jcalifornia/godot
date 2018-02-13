@@ -20,4 +20,5 @@ TreecursionTestWriter::TreecursionTestWriter(){
 
 TreecursionTestWriter::~TreecursionTestWriter(){
 	close();
+	
 }

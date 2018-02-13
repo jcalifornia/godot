@@ -57,6 +57,7 @@ public:
 	
 
 private:
+	uint64_t write_counter;
 	TreecursionQueue<TreecursionWriteTask, 1000000> game_queue;
 	void write_packet(TreecursionWriteTask * packet);
 	TreecursionTestWriter *treecursion;

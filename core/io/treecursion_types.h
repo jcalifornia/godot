@@ -106,7 +106,7 @@ public:
 		dict["node"] = node_path;
 		dict["user_id"] = user_id;
 		dict["name"] = name;
-		dict["type"] = type;
+		dict["type"] = int32_t(type);
 		JSON a;
 		String ret = a.print(dict);
 		return ret;
@@ -155,7 +155,7 @@ public:
 		dict["node"] = node_path;
 		dict["user_id"] = user_id;
 		dict["name"] = name;
-		dict["type"] = type;
+		dict["type"] = int32_t(type);
 		JSON a;
 		String ret = a.print(dict);
 		return ret;

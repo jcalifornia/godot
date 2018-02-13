@@ -1,10 +1,18 @@
 #include "register_types.h"
 #include "treecursion_test.h"
+#include "treecursion_loader.h"
 #include "engine.h"
 
 _TreecursionTestStorage *treecursion_writer = nullptr;
 TreecursionTestStorage *treecursion_thread = nullptr;
+
+static ResourceFormatTreecursionTestStorage *treecursion_test_loader = nullptr;
+
 void register_treecursion_test_types(){
+
+	treecursion_test_loader = memnew(ResourceFormatTreecursionTestStorage);
+    ResourceLoader::add_resource_format_loader(treecursion_test_loader);
+
 	treecursion_thread = memnew(TreecursionTestStorage);;
 	treecursion_thread->set_singleton();
 	

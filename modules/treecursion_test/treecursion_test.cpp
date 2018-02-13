@@ -54,6 +54,7 @@ void TreecursionTestStorage::startRecord(){
 }
 void TreecursionTestStorage::write_packet(TreecursionWriteTask *packet){
 	treecursion -> write_packet(*packet);
+	write_counter++;
 }
 
 void TreecursionTestStorage::enqueue(TreecursionWriteTask * packet ){
@@ -76,6 +77,7 @@ bool TreecursionTestStorage::is_running(){
 Error TreecursionTestStorage::init(){
 	_thread_exited = false;
 	treecursion = nullptr;
+	write_counter = 0;
 	_mutex = Mutex::create();
 	_thread = Thread::create(TreecursionTestStorage::thread_func, this);
 	return OK;
@@ -103,6 +105,11 @@ void TreecursionTestStorage::finish() {
 	Thread::wait_to_finish(_thread);
 	if(treecursion)
 		close_file();
+
+	uint64_t push_counter = game_queue.get_push_counter();
+	ERR_FAIL_COND(push_counter != write_counter);
+	//print_line("write_counter: " + itos(write_counter));
+	game_queue.clear();
 
 	memdelete(_thread);
 	if (_mutex)

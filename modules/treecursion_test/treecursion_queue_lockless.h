@@ -23,7 +23,7 @@ class TreecursionQueue : public Reference{
 private:
 	const uint32_t _n_producers;
 	std::atomic<uint64_t> _head;
-	std::atomic<uint64_t> _head_last;
+	//std::atomic<uint64_t> _head_last;
 	std::atomic<uint64_t> _tail;
 	std::array<std::atomic<T*>, Q_SIZE> _buffer = {};
 	T* _tail_last;
@@ -66,17 +66,29 @@ public:
 			return true;
 		}
 	}
+	void clear() {
+		_tail_last = nullptr;
+		for( auto &e : _buffer ){
+			e.store(nullptr);
+		}
+		_head.store(0);
+		//_head_last.store(0);
+		_tail.store(0);
+	}
 	bool is_empty() {
 		return this -> _head.load() == this -> _tail.load();
 	}
+	uint64_t get_push_counter(){
+		return _head.load();
+	}
 	TreecursionQueue(uint64_t producers) : _n_producers(producers), _tail_last(nullptr) {
 		_head.store(0);
-		_head_last.store(0);
+		//_head_last.store(0);
 		_tail.store(0);
 	};
 	TreecursionQueue() : _n_producers(2), _tail_last(nullptr) {
 		_head.store(0);
-		_head_last.store(0);
+		//_head_last.store(0);
 		_tail.store(0);
 	};
 };

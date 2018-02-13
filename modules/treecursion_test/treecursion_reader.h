@@ -16,6 +16,9 @@ public:
     Error set_file(const String &p_file);
 	Ref<TreecursionWriteTask> next();
     TreecursionTestReader();
+	bool eof_reached(){
+		return _file->eof_reached();
+	}
 
 protected:
     static void _bind_methods();
