@@ -8,7 +8,7 @@
 #include "io/json.h"
 #include "dictionary.h"
 
-enum AUDIO_CODEC { OPUS, RAW };
+enum AUDIO_CODEC { OPUS = 1, RAW };
 
 
 class TreecursionWriteTask : public Reference {
@@ -39,9 +39,6 @@ protected:
 		VariantWriter::write_to_string(v, var);
 		String("\"") + key + String("\": ") + _addQuotes(var); 
 	}
-	
-
-
 public:
 
 	
@@ -183,5 +180,16 @@ class TreecursionHeaderTask : public TreecursionWriteTask {
 	int frame_size;
 	int version_major;
 	int version_minor;
+	Dictionary init_vars;
+
+	TreecursionHeaderTask(  const Dictionary& map )
+		: TreecursionWriteTask( map["time"], map["user_id"], HEADER_TASK), init_vars(map) {
+	}
+	virtual String toJson() const {
+		Dictionary dict(init_vars);
+		JSON a;
+		String ret = a.print(dict);
+		return ret;
+	}
 };
 #endif

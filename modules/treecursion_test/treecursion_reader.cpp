@@ -22,6 +22,7 @@ Error TreecursionTestReader::set_file(const String &p_file) {
 
 Ref<TreecursionWriteTask> TreecursionTestReader::next(){
 	if(this->_file -> eof_reached()){
+		_file->close();
 		return Ref<TreecursionWriteTask>(nullptr);
 	}
 	String line = this->_file->get_line();
@@ -53,7 +54,28 @@ Ref<TreecursionWriteTask> TreecursionTestReader::next(){
 
 }
 
+/*
+ * just a test module.
+ */
+Variant TreecursionTestInit::get_dict(){
+	return Variant(&dict);
+}
 
+TreecursionTestInit::TreecursionTestInit() : dict(){
+
+}
+void TreecursionTestInit::_bind_methods(){
+	ClassDB::bind_method(D_METHOD("get_dictionary"), &TreecursionTestInit::get_dict);
+}
+
+TreecursionTestInit::TreecursionTestInit(const Dictionary &d) : dict(d){
+
+}
+TreecursionTestInit::~TreecursionTestInit(){
+
+}
 TreecursionTestReader::TreecursionTestReader() {
     
+}
+TreecursionTestReader::~TreecursionTestReader() {
 }
