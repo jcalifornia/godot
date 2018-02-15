@@ -17,7 +17,7 @@ void register_treecursion_test_types(){
     ResourceLoader::add_resource_format_loader(treecursion_test_init_loader);
 
 	ClassDB::register_class<TreecursionTestInit>();
-
+	ClassDB::register_class<TreecursionInitWriter>();
 	treecursion_test_loader = memnew(ResourceFormatTreecursionTestStorage);
     ResourceLoader::add_resource_format_loader(treecursion_test_loader);
 

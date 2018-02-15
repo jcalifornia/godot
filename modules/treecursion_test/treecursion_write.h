@@ -1,3 +1,6 @@
+#ifndef TREECURSION_TEST_WRITER_H
+#define TREECURSION_TEST_WRITER_H
+
 #include "object.h"
 #include "os/file_access.h"
 #include "ustring.h"
@@ -21,3 +24,19 @@ public:
 	~TreecursionTestWriter();
 	
 };
+
+class TreecursionInitWriter : public Object {
+	GDCLASS(TreecursionInitWriter, Object);
+
+protected:
+	static void _bind_methods();
+
+public:
+	void write_packet(const Variant & packet);
+	void close();
+	TreecursionInitWriter();
+	~TreecursionInitWriter();
+	
+};
+
+#endif

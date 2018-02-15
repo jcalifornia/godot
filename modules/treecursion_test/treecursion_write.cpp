@@ -22,3 +22,27 @@ TreecursionTestWriter::~TreecursionTestWriter(){
 	close();
 	
 }
+
+
+void TreecursionInitWriter::_bind_methods(){
+	ClassDB::bind_method(D_METHOD("write_header", "header"), &TreecursionInitWriter::write_packet);
+}
+
+
+void TreecursionInitWriter::write_packet(const Variant & var){
+	Dictionary *packet = memnew(Dictionary(var));
+	Variant *t = packet->getptr("os_time");
+	FileAccess *file = FileAccess::open( itos(uint64_t(*t))+".tmeta", FileAccess::WRITE);
+	JSON a;
+	String ret = a.print(*packet);
+	file->store_line(ret);
+	file->close();
+	memdelete(packet);
+}
+TreecursionInitWriter::TreecursionInitWriter(){
+
+}
+TreecursionInitWriter::~TreecursionInitWriter(){
+
+}
+	
