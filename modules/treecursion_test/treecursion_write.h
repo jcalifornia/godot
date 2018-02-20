@@ -21,6 +21,7 @@ public:
 	void write_packet(TreecursionWriteTask & packet);
 	void close();
 	TreecursionTestWriter();
+	TreecursionTestWriter(String fname);
 	~TreecursionTestWriter();
 	
 };

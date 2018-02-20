@@ -17,6 +17,10 @@ TreecursionTestWriter::TreecursionTestWriter(){
 	_outfile_name = itos(current_time) + ".tjson";
 	_fout = FileAccess::open(_outfile_name, FileAccess::WRITE);
 }
+TreecursionTestWriter::TreecursionTestWriter(String fname){
+	_outfile_name = fname + ".tjson";
+	_fout = FileAccess::open(_outfile_name, FileAccess::WRITE);
+}
 
 TreecursionTestWriter::~TreecursionTestWriter(){
 	close();

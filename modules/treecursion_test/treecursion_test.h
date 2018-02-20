@@ -46,6 +46,7 @@ public:
 	void stopRecording();
 	bool is_empty();
 	void new_file();
+	void set_file_name(String name);
 	void close_file();
 	void flush();
 	void enqueue(TreecursionWriteTask * packet);
@@ -57,6 +58,7 @@ public:
 	
 
 private:
+	String fname;
 	uint64_t write_counter;
 	TreecursionQueue<TreecursionWriteTask, 1000000> game_queue;
 	void write_packet(TreecursionWriteTask * packet);
@@ -76,6 +78,7 @@ protected:
 public:
 	static _TreecursionTestStorage *get_singleton() { return _singleton; }
 	void start_recording();
+	void set_file_name(String name);
 	_TreecursionTestStorage();
 	~_TreecursionTestStorage();
 };

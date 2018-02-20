@@ -20,7 +20,13 @@ void TreecursionTestStorage::set_singleton() {
 	_singleton = this;
 }
 void TreecursionTestStorage::new_file(){
-	treecursion = memnew(TreecursionTestWriter);
+	if( fname == String("")){
+		treecursion = memnew(TreecursionTestWriter);
+	} else
+		treecursion = memnew(TreecursionTestWriter(fname));
+}
+void TreecursionTestStorage::set_file_name(String name){
+	fname = name;
 }
 void TreecursionTestStorage::flush(){
 	while(!this->is_empty()){
@@ -77,6 +83,7 @@ bool TreecursionTestStorage::is_running(){
 Error TreecursionTestStorage::init(){
 	_thread_exited = false;
 	treecursion = nullptr;
+	fname = "";
 	write_counter = 0;
 	_mutex = Mutex::create();
 	_thread = Thread::create(TreecursionTestStorage::thread_func, this);
@@ -130,11 +137,15 @@ TreecursionTestStorage::~TreecursionTestStorage() {
 _TreecursionTestStorage *_TreecursionTestStorage::_singleton = nullptr;
 
 void _TreecursionTestStorage::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("set_file_name", "file_name"), &_TreecursionTestStorage::set_file_name);
 	ClassDB::bind_method(D_METHOD("start_recording"), &_TreecursionTestStorage::start_recording);
 	
 }
 void _TreecursionTestStorage::start_recording(){
 	TreecursionTestStorage::get_singleton()->new_file();
+}
+void _TreecursionTestStorage::set_file_name(String name){
+	TreecursionTestStorage::get_singleton()->set_file_name(name);
 }
 _TreecursionTestStorage::_TreecursionTestStorage() {
 	_singleton = this;
