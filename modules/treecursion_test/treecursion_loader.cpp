@@ -1,5 +1,6 @@
 #include "treecursion_loader.h"
 #include "treecursion_reader.h"
+#include "io/treecursion_types.h"
 #include "os/file_access.h"
 
 ResourceFormatTreecursionTestStorage::ResourceFormatTreecursionTestStorage() {
@@ -8,9 +9,9 @@ RES ResourceFormatTreecursionTestStorage::load(const String &p_path, const Strin
 	if (r_error)
 		*r_error = OK;
 
-	TreecursionTestReader *treecursion = memnew(TreecursionTestReader);
+	TreecursionTestData *treecursion = memnew(TreecursionTestData);
 	treecursion->set_file(p_path);
-	return Ref<TreecursionTestReader>(treecursion);
+	return Ref<TreecursionTestData>(treecursion);
 }
 
 void ResourceFormatTreecursionTestStorage::get_recognized_extensions(List<String> *p_extensions) const {

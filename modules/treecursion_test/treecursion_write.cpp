@@ -35,6 +35,7 @@ void TreecursionInitWriter::_bind_methods(){
 
 void TreecursionInitWriter::write_packet(const Variant & var){
 	Dictionary *packet = memnew(Dictionary(var));
+	(*packet)["p_time"] = OS::get_singleton()->get_ticks_usec();
 	Variant *t = packet->getptr("os_time");
 	FileAccess *file = FileAccess::open( itos(uint64_t(*t))+".tmeta", FileAccess::WRITE);
 	JSON a;

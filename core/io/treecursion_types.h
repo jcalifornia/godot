@@ -192,4 +192,32 @@ class TreecursionHeaderTask : public TreecursionWriteTask {
 		return ret;
 	}
 };
+
+class TreecursionTestData : public Resource{
+    GDCLASS(TreecursionTestData, Resource);
+    
+public:
+    bool eof_reached(){
+		return _file->eof_reached();
+	}
+    Error set_file(const String &p_file);
+	
+    TreecursionWriteTask *next();
+    TreecursionWriteTask *peek();
+    bool has_next();
+    TreecursionTestData();
+    ~TreecursionTestData();
+	
+
+protected:
+    static void _bind_methods();
+
+private:
+    Vector<TreecursionWriteTask *> commands;
+    int counter;
+    String file;
+    FileAccess *_file;
+    Ref<TreecursionWriteTask> current;
+    TreecursionWriteTask *next_command(FileAccess *f);
+};
 #endif
