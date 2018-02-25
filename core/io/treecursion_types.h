@@ -16,6 +16,7 @@ class TreecursionWriteTask : public Reference {
 
 public:
 	enum Types {
+		ERROR = 0,
 		SET_TASK = 1,
 		CALL_TASK,
 		VOICE_TASK,
@@ -87,7 +88,7 @@ public:
 		value(map["value"]) {
 	}
 
-	bool get_value() const { return value; }
+	Variant get_value() const { return value; }
 
 	String toString() const {
 		String var;
@@ -202,8 +203,8 @@ public:
 	}
     Error set_file(const String &p_file);
 	
-    TreecursionWriteTask *next();
-    TreecursionWriteTask *peek();
+    Ref<TreecursionWriteTask> next();
+    Ref<TreecursionWriteTask> peek();
     bool has_next();
     TreecursionTestData();
     ~TreecursionTestData();
@@ -213,11 +214,11 @@ protected:
     static void _bind_methods();
 
 private:
-    Vector<TreecursionWriteTask *> commands;
+    Vector< Ref<TreecursionWriteTask> > commands;
     int counter;
     String file;
     FileAccess *_file;
     Ref<TreecursionWriteTask> current;
-    TreecursionWriteTask *next_command(FileAccess *f);
+    Ref<TreecursionWriteTask> next_command(FileAccess *f);
 };
 #endif

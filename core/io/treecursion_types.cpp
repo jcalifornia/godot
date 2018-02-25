@@ -22,7 +22,11 @@ Error TreecursionTestData::set_file(const String &p_file) {
 	
 	while(!f->eof_reached()){
 		// nullptr would crash if nullptr are are pushed
-		commands.push_back(next_command(f));
+		Ref<TreecursionWriteTask> cmd = next_command(f);
+		if(cmd.is_valid()){
+			commands.push_back(cmd);
+			print_line(cmd->toJson());
+		}
 	}
 	f-> close();
 	return OK;
@@ -33,7 +37,7 @@ Error TreecursionTestData::set_file(const String &p_file) {
  *  doesnt really make much sense really.
  *  Needs cleanup
  */
-TreecursionWriteTask *TreecursionTestData::next_command(FileAccess *f){
+Ref<TreecursionWriteTask> TreecursionTestData::next_command(FileAccess *f){
 	String line =  f->get_line();
 	String err_string;
 	int err_line;
@@ -42,12 +46,12 @@ TreecursionWriteTask *TreecursionTestData::next_command(FileAccess *f){
 	Error err = cmd.parse( line, ret, err_string, err_line);
 	Dictionary dict  = Dictionary(ret);
 	switch( int64_t(dict["type"])){
-		case TreecursionWriteTask::CALL_TASK:{
-			return memnew(TreecursionCallTask(dict));
+		case TreecursionWriteTask::SET_TASK:{
+			return Ref<TreecursionSetTask>(memnew(TreecursionSetTask(dict)));
 			break;
 		}
-		case TreecursionWriteTask::SET_TASK:{
-			return memnew(TreecursionSetTask(dict));
+		case TreecursionWriteTask::CALL_TASK:{
+			return Ref<TreecursionCallTask>(memnew(TreecursionCallTask(dict)));
 			break;
 		}
 		case TreecursionWriteTask::VOICE_TASK:{
@@ -59,22 +63,20 @@ TreecursionWriteTask *TreecursionTestData::next_command(FileAccess *f){
 			break;
 		}
 	}
-	return nullptr;
+	return Ref<TreecursionWriteTask>(nullptr);
 
 }
-TreecursionWriteTask *TreecursionTestData::peek(){
-	return commands[counter];
+Ref<TreecursionWriteTask> TreecursionTestData::peek(){
+	Ref<TreecursionWriteTask> ret = commands[counter];
+	return ret;
 }
-TreecursionWriteTask *TreecursionTestData::next(){
-	return commands[counter++];
+Ref<TreecursionWriteTask> TreecursionTestData::next(){
+	return Ref<TreecursionWriteTask>(commands[counter++]);
 }
 bool TreecursionTestData::has_next(){
 	return counter < commands.size();
 }
 TreecursionTestData::~TreecursionTestData(){
-	for(int i = 0; i < commands.size(); i++){
-		memdelete( commands[i] );
-	}
 }
 TreecursionTestData::TreecursionTestData(): counter(0) {
     

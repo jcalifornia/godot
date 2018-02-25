@@ -2174,13 +2174,23 @@ void SceneTree::_network_poll() {
 }
 void SceneTree::_execute_treecursion(TreecursionWriteTask *cmd) {
 	Node *node = NULL;
+	print_line(cmd->toJson());
+	//print_line(itos(cmd->get_type()));
 	switch(cmd->get_type()){
+		case TreecursionWriteTask::SET_TASK: {
+			TreecursionSetTask *st = (TreecursionSetTask *)cmd;
+			node = get_root()->get_node(st -> get_node_path());
+
+			bool valid;
+			node->set(st->get_name(), st->get_value(), &valid);
+			ERR_FAIL_COND(!valid);
+		}
 		case TreecursionWriteTask::CALL_TASK: {
 			TreecursionCallTask *ct = (TreecursionCallTask *)cmd;
 			node = get_root()->get_node(ct -> get_node_path());
 
 			Variant::CallError ce;
-			Vector<Variant> args = ct->get_args();
+			Vector<Variant> args(ct->get_args());
 			Vector<const Variant *> argp;
 			int argc = args.size();
 			argp.resize(argc);
@@ -2193,14 +2203,6 @@ void SceneTree::_execute_treecursion(TreecursionWriteTask *cmd) {
 				error = "RPC - " + error;
 				ERR_PRINTS(error);
 			}
-		}
-		case TreecursionWriteTask::SET_TASK: {
-			TreecursionSetTask *st = (TreecursionSetTask *)cmd;
-			node = get_root()->get_node(st -> get_node_path());
-
-			bool valid;
-			node->set(st->get_name(), st->get_value(), &valid);
-			ERR_FAIL_COND(valid);
 		}
 		default:
 			ERR_PRINT("incorrect treecursionwritetask in scenetree");
@@ -2215,11 +2217,11 @@ void SceneTree::_treecursion_poll() {
 
 	uint64_t current_time = OS::get_singleton()->get_ticks_usec();
 	while(treecursion_replay_data->has_next()){
-		TreecursionWriteTask *cmd = treecursion_replay_data->peek();
+		Ref<TreecursionWriteTask> cmd = treecursion_replay_data->peek();
 		uint64_t cmd_time = cmd->get_time();
-		if( cmd_time > current_time){
+		if( cmd_time < current_time){
 			treecursion_replay_data -> next();
-			
+			_execute_treecursion(cmd.ptr());
 		}else
 			break;
 	}
