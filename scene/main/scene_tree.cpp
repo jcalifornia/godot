@@ -2183,7 +2183,9 @@ void SceneTree::_execute_treecursion(TreecursionWriteTask *cmd) {
 
 			bool valid;
 			node->set(st->get_name(), st->get_value(), &valid);
+			print_line(itos(st->get_value().get_type()));
 			ERR_FAIL_COND(!valid);
+			break;
 		}
 		case TreecursionWriteTask::CALL_TASK: {
 			TreecursionCallTask *ct = (TreecursionCallTask *)cmd;
@@ -2203,6 +2205,7 @@ void SceneTree::_execute_treecursion(TreecursionWriteTask *cmd) {
 				error = "RPC - " + error;
 				ERR_PRINTS(error);
 			}
+			break;
 		}
 		default:
 			ERR_PRINT("incorrect treecursionwritetask in scenetree");
