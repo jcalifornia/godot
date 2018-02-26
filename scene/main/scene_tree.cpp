@@ -2174,8 +2174,6 @@ void SceneTree::_network_poll() {
 }
 void SceneTree::_execute_treecursion(TreecursionWriteTask *cmd) {
 	Node *node = NULL;
-	print_line(cmd->toJson());
-	//print_line(itos(cmd->get_type()));
 	switch(cmd->get_type()){
 		case TreecursionWriteTask::SET_TASK: {
 			TreecursionSetTask *st = (TreecursionSetTask *)cmd;
@@ -2183,7 +2181,6 @@ void SceneTree::_execute_treecursion(TreecursionWriteTask *cmd) {
 
 			bool valid;
 			node->set(st->get_name(), st->get_value(), &valid);
-			print_line(itos(st->get_value().get_type()));
 			ERR_FAIL_COND(!valid);
 			break;
 		}

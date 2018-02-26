@@ -31,7 +31,6 @@ Error TreecursionTestData::set_file(const String &p_file) {
 		Ref<TreecursionWriteTask> cmd = variant2write_task(ret);
 		if(cmd.is_valid()){
 			commands.push_back(cmd);
-			print_line(cmd->toJson());
 		}
 	}
 	f-> close();
