@@ -16,11 +16,11 @@ RES ResourceFormatTreecursionTestStorage::load(const String &p_path, const Strin
 
 void ResourceFormatTreecursionTestStorage::get_recognized_extensions(List<String> *p_extensions) const {
 
-	p_extensions->push_back("tjson");
+	p_extensions->push_back("tcommand");
 }
 String ResourceFormatTreecursionTestStorage::get_resource_type(const String &p_path) const {
 
-	if (p_path.get_extension().to_lower() == "tjson")
+	if (p_path.get_extension().to_lower() == "tcommand")
 		return "TreecursionTest";
 	return "";
 }

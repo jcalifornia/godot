@@ -2202,13 +2202,13 @@ void SceneTree::_execute_treecursion(TreecursionWriteTask *cmd) {
 			node->call(ct->get_name(), (const Variant **) argp.ptr(), argc, ce);
 			if (ce.error != Variant::CallError::CALL_OK) {
 				String error = Variant::get_call_error_text(node, ct->get_name(), (const Variant **)argp.ptr(), argc, ce);
-				error = "RPC - " + error;
+				error = "Treecursion Scenetree - " + error;
 				ERR_PRINTS(error);
 			}
 			break;
 		}
 		default:
-			ERR_PRINT("incorrect treecursionwritetask in scenetree");
+			ERR_PRINT("Treecursion Scenetree - incorrect treecursionwritetask type");
 			break;
 	}
 	

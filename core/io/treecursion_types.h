@@ -26,20 +26,7 @@ protected:
 	TreecursionWriteTask( uint64_t t, uint64_t u, Types ty ) : time(t), user_id(u), type(ty){
 
 	}
-	String _string2Json(String key, String value) const {
-		return String("\"") + key + String("\": \"") + value.json_escape() + String("\""); 
-	}
-	String _int2Json(String key, uint64_t value) const {
-		return String("\"") + key + String("\": ") + itos(value); 
-	}
-	String _addQuotes(String s) const {
-		return String("\"") + s.json_escape() + String("\"");
-	}
-	String _variant2Json(String key, Variant v) const {
-		String var;
-		VariantWriter::write_to_string(v, var);
-		String("\"") + key + String("\": ") + _addQuotes(var); 
-	}
+
 public:
 
 	
@@ -48,18 +35,21 @@ public:
 	virtual String toJson() const { 
 		return String("");
 	}
+	virtual String toString() const { 
+		return String("");
+	}
 	Types get_type() const { return type; }
 protected:
-	const Types type;
-	const uint64_t time;
-	const uint64_t user_id;
+	Types type;
+	uint64_t time;
+	uint64_t user_id;
 
 
 };
 class TreecursionCommandTask : public TreecursionWriteTask {
 protected:
-	const String node_path;
-	const String name;
+	String node_path;
+	String name;
 public:
 	TreecursionCommandTask(const String &n, const String &node, uint64_t t, uint64_t u, Types ty) 
 		: TreecursionWriteTask(t, u, ty), node_path(node), name(n){
@@ -71,10 +61,14 @@ public:
 	virtual String toJson() const { 
 		return String("");
 	}
+	virtual String toString() const { 
+		return String("");
+	}
 };
 
+
 class TreecursionSetTask : public TreecursionCommandTask {
-	const Variant value;
+	Variant value;
 public:
 	TreecursionSetTask( const String n, const String &node, Variant v, uint64_t t, uint64_t u) 
 		: TreecursionCommandTask( n, node, t, u, SET_TASK ), value(v) {
@@ -86,17 +80,11 @@ public:
 	TreecursionSetTask( const Dictionary& map ) 
 		: TreecursionCommandTask( map["name"], map["node"], map["time"], map["user_id"], SET_TASK ), 
 		value(map["value"]) {
+			
 	}
 
 	Variant get_value() const { return value; }
 
-	String toString() const {
-		String var;
-		VariantWriter::write_to_string(value, var);
-		String ret = String("time: ") + itos(time) + String(", user_id : ") + itos(user_id) + String(", name : ") + name + String(", node : ") + node_path;
-		ret += String(", value: ")  + value;
-		return ret;
-	}
 	virtual String toJson() const {
 		Dictionary dict;
 		dict["time"] = time;
@@ -109,19 +97,26 @@ public:
 		String ret = a.print(dict);
 		return ret;
 	}
-/*
-	virtual String toJson() const { 
-		return String("{") + _string2Json("name", name) + String(",")
-			 + _string2Json("path", node_path) + String(",")
-			 + _variant2Json("value", value) + String(",")
-			 + _int2Json("time", time) + String(",") 
-			 + _int2Json("user_id", user_id) + String("}");
+
+	virtual String toString() const{
+		Dictionary dict;
+
+		dict["time"] = time;
+		dict["value"] = value;
+		dict["node"] = node_path;
+		dict["user_id"] = user_id;
+		dict["name"] = name;
+		dict["type"] = int32_t(type);
+
+		VariantWriter w;
+		String ret;
+		Error err = w.write_to_string(dict, ret);
+		return ret;
 	}
-*/
 };
 
 class TreecursionCallTask : public TreecursionCommandTask {
-	const Vector<Variant> args;
+	Vector<Variant> args;
 public:
 	TreecursionCallTask( const String n, const String &node, const Vector<Variant> &a, uint64_t t, uint64_t u) 
 		: TreecursionCommandTask( n, node, t, u, CALL_TASK ), args(a) {
@@ -137,15 +132,6 @@ public:
 
 	Vector<Variant> get_args() const { return args; }
 
-	String toString() const {
-		String ret = String("time: ") + itos(time) + String(", user_id : ") + itos(user_id) + String(", name : ") + name + String(", node : ") + node_path;
-		for( int i = 0; i < args.size(); i++){
-			String var;
-			VariantWriter::write_to_string(args[i], var);
-			ret += String(", args : ") + var;
-		}
-		return ret;
-	}
 	virtual String toJson() const {
 		Dictionary dict;
 		dict["time"] = time;
@@ -158,15 +144,22 @@ public:
 		String ret = a.print(dict);
 		return ret;
 	}
-/*
-	virtual String toJson() const { 
-		return String("{") + _string2Json("name", name) + String(",")
-			 + _string2Json("path", node_path) + String(",")
-			 + _variant2Json("args", args) + String(",")
-			 + _int2Json("time", time) + String(",") 
-			 + _int2Json("user_id", user_id) + String("}");
+
+	virtual String toString() const{
+		Dictionary dict;
+
+		dict["time"] = time;
+		dict["args"] = args;
+		dict["node"] = node_path;
+		dict["user_id"] = user_id;
+		dict["name"] = name;
+		dict["type"] = int32_t(type);
+
+		VariantWriter w;
+		String ret;
+		Error err = w.write_to_string(dict, ret);
+		return ret;
 	}
-*/
 };
 
 
@@ -190,6 +183,15 @@ class TreecursionHeaderTask : public TreecursionWriteTask {
 		Dictionary dict(init_vars);
 		JSON a;
 		String ret = a.print(dict);
+		return ret;
+	}
+
+	virtual String toString() const{
+		Dictionary dict(init_vars);
+
+		VariantWriter w;
+		String ret;
+		Error err = w.write_to_string(dict, ret);
 		return ret;
 	}
 };
@@ -219,6 +221,6 @@ private:
     String file;
     FileAccess *_file;
     Ref<TreecursionWriteTask> current;
-    Ref<TreecursionWriteTask> next_command(FileAccess *f);
+    Ref<TreecursionWriteTask> variant2write_task(const Variant & cmd);
 };
 #endif

@@ -19,10 +19,16 @@ Error TreecursionTestData::set_file(const String &p_file) {
 	if (err) {
 		ERR_FAIL_COND_V(err, err);
 	}
-	
-	while(!f->eof_reached()){
+	VariantParser::StreamFile sf;
+	sf.f = f;
+	while(!sf.is_eof()){
+		VariantParser parser;
+		Variant ret;
+		String err_string;
+		int err_line;
+		Error err_ret = parser.parse(&sf, ret, err_string, err_line);
 		// nullptr would crash if nullptr are are pushed
-		Ref<TreecursionWriteTask> cmd = next_command(f);
+		Ref<TreecursionWriteTask> cmd = variant2write_task(ret);
 		if(cmd.is_valid()){
 			commands.push_back(cmd);
 			print_line(cmd->toJson());
@@ -37,14 +43,8 @@ Error TreecursionTestData::set_file(const String &p_file) {
  *  doesnt really make much sense really.
  *  Needs cleanup
  */
-Ref<TreecursionWriteTask> TreecursionTestData::next_command(FileAccess *f){
-	String line =  f->get_line();
-	String err_string;
-	int err_line;
-	JSON cmd;
-	Variant ret;
-	Error err = cmd.parse( line, ret, err_string, err_line);
-	Dictionary dict  = Dictionary(ret);
+Ref<TreecursionWriteTask> TreecursionTestData::variant2write_task(const Variant & cmd){
+	Dictionary dict  = Dictionary(cmd);
 	switch( int64_t(dict["type"])){
 		case TreecursionWriteTask::SET_TASK:{
 			return Ref<TreecursionSetTask>(memnew(TreecursionSetTask(dict)));

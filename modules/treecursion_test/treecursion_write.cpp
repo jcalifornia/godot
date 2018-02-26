@@ -10,15 +10,15 @@ void TreecursionTestWriter::close(){
 	_fout->close();
 }
 void TreecursionTestWriter::write_packet(TreecursionWriteTask & packet){
-	_fout->store_line(packet.toJson());
+	_fout->store_line(packet.toString());
 }
 TreecursionTestWriter::TreecursionTestWriter(){
 	int current_time = OS::get_singleton()->get_unix_time();
-	_outfile_name = itos(current_time) + ".tjson";
+	_outfile_name = itos(current_time) + ".tcommand";
 	_fout = FileAccess::open(_outfile_name, FileAccess::WRITE);
 }
 TreecursionTestWriter::TreecursionTestWriter(String fname){
-	_outfile_name = fname + ".tjson";
+	_outfile_name = fname + ".tcommand";
 	_fout = FileAccess::open(_outfile_name, FileAccess::WRITE);
 }
 
