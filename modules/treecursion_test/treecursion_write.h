@@ -4,6 +4,7 @@
 #include "object.h"
 #include "os/file_access.h"
 #include "ustring.h"
+#include "core/hash_map.h"
 
 #include "io/treecursion_types.h"
 
@@ -14,6 +15,8 @@ class TreecursionTestWriter : public Object {
 private:
 	FileAccess *_fout;
 	String _outfile_name;
+	HashMap<String, Variant> last_value;
+
 protected:
 	static void _bind_methods();
 

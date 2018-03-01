@@ -10,7 +10,26 @@ void TreecursionTestWriter::close(){
 	_fout->close();
 }
 void TreecursionTestWriter::write_packet(TreecursionWriteTask & packet){
-	_fout->store_line(packet.toString());
+	//remove duplicate rset commands
+	switch(packet.get_type()){
+		case TreecursionWriteTask::SET_TASK:{
+			TreecursionSetTask *st = (TreecursionSetTask *) &packet;
+			if(last_value.has(st->get_node_path())){
+				Variant value = last_value.get(st->get_node_path());
+				if(value == st->get_value()){
+					break;
+				}
+			}
+			last_value[st->get_node_path()] = st -> get_value();
+			_fout->store_line(packet.toString());
+			break;
+		}
+		default: {
+			_fout->store_line(packet.toString());
+			break;
+		}
+	}
+	
 }
 TreecursionTestWriter::TreecursionTestWriter(){
 	int current_time = OS::get_singleton()->get_unix_time();
