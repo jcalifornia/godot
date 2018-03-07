@@ -9,7 +9,7 @@ SDL2AudioCapture *SDL2AudioCapture::get_singleton() {
 void SDL2AudioCapture::thread_func(void *p_udata){
 	SDL2AudioCapture *ac = (SDL2AudioCapture *) p_udata;
 
-	uint64_t usdelay = 16000;
+	uint64_t usdelay = 20000;
 	while(!ac -> exit_thread){
 		if(ac->recording()){
 			ac->lock();
