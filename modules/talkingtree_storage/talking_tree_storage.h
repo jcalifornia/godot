@@ -61,4 +61,22 @@ private:
 
 };
 
+class _TalkingTreeStorage : public Object {
+	GDCLASS(_TalkingTreeStorage, Object);
+
+	friend class TalkingTreeStorage;
+
+	static _TalkingTreeStorage *_singleton;
+protected:
+	
+	static void _bind_methods();
+	
+public:
+	static _TalkingTreeStorage *get_singleton() { return _singleton; }
+	void start_recording();
+	void set_file_name(String name);
+	_TalkingTreeStorage();
+	~_TalkingTreeStorage();
+};
+
 #endif

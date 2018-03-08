@@ -90,3 +90,25 @@ TalkingTreeStorage::TalkingTreeStorage() {
 TalkingTreeStorage::~TalkingTreeStorage() {
 	
 }
+
+_TalkingTreeStorage *_TalkingTreeStorage::_singleton = nullptr;
+
+void _TalkingTreeStorage::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("set_file_name", "file_name"), &_TalkingTreeStorage::set_file_name);
+	ClassDB::bind_method(D_METHOD("start_recording"), &_TalkingTreeStorage::start_recording);
+	
+}
+void _TalkingTreeStorage::start_recording(){
+	//TalkingTreeStorage::get_singleton()->new_file();
+}
+void _TalkingTreeStorage::set_file_name(String name){
+	//TalkingTreeStorage::get_singleton()->set_file_name(name);
+}
+_TalkingTreeStorage::_TalkingTreeStorage() {
+	_singleton = this;
+	TalkingTreeStorage::get_singleton()->init();
+	
+}
+_TalkingTreeStorage::~_TalkingTreeStorage() {
+	_singleton = nullptr;
+}
