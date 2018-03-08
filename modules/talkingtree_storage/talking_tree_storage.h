@@ -16,19 +16,20 @@
 #include "ogg/ogg.h"
 #include "treecursion_writer.h"
 
-
-#include <opus.h>
-#include <opus_multistream.h>
+#include "treecursion_queue_lockless.h"
+#include "io/treecursion_types.h"
+//#include <opus.h>
+//#include <opus_multistream.h>
 
 class TalkingTreeStorage : public Object {
-    GDCLASS(TalkingTreeStorage, Object);
+	GDCLASS(TalkingTreeStorage, Object);
 
-    static TalkingTreeStorage *_singleton;
+	static TalkingTreeStorage *_singleton;
 	static void thread_func(void *p_udata);
 public:
-    static TalkingTreeStorage *get_singleton();
-    void set_singleton();
-    void lock();
+	static TalkingTreeStorage *get_singleton();
+	void set_singleton();
+	void lock();
 	void unlock();
 	void finish();
 	Error init();
@@ -36,29 +37,47 @@ public:
 private:
 	bool _thread_exited;
 	mutable bool _exit_thread;
-    Thread *_thread;
+	Thread *_thread;
 	Mutex *_mutex;
 
 protected:
-    static void _bind_methods();
+	static void _bind_methods();
 
 public:
-    void new_file();
-    void write_header();
-    void close_file();
-    TalkingTreeStorage();
-    ~TalkingTreeStorage();
+	bool is_empty() const;
+	Ref<TreecursionWriteTask> dequeue();
+	void enqueue(TreecursionWriteTask * write);
+	void flush();
+	void new_file();
+	void start_recording();
+	void set_active(bool);
+	void write_engine_init(const Dictionary & dict);
+	void close_file();
+	bool is_running() const;
+	TalkingTreeStorage();
+	~TalkingTreeStorage();
 
 private:
-    enum{
-        //https://mf4.xiph.org/jenkins/view/opus/job/opus/ws/doc/html/group__opus__multistream.html
-        SAMPLE_RATE = 48000,
+	TreecursionQueue<TreecursionWriteTask, 1000000> game_queue;
+	//void write_packet(TreecursionWriteTask * packet);
+	enum {
+		//https://mf4.xiph.org/jenkins/view/opus/job/opus/ws/doc/html/group__opus__multistream.html
+		SAMPLE_RATE = 48000,
+	};
 
-    };
-    OpusMSEncoder *opusEncoder;
-    TreecursionWriter *treecursion;
+	enum recording_state {
+		INIT,
+		RECORDING,
+		STOPPED,
+		FINISHED,
+		ERROR
+	};
 
+	enum recording_state _recording_state;
 
+	//OpusMSEncoder *_opusEncoder;
+	TreecursionWriter *_treecursion;
+	void write_task(const TreecursionWriteTask *write);
 };
 
 class _TalkingTreeStorage : public Object {
@@ -74,7 +93,9 @@ protected:
 public:
 	static _TalkingTreeStorage *get_singleton() { return _singleton; }
 	void start_recording();
+	void write_engine_init(const Dictionary & dict);
 	void set_file_name(String name);
+	void new_file();
 	_TalkingTreeStorage();
 	~_TalkingTreeStorage();
 };

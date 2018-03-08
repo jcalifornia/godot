@@ -51,7 +51,8 @@
 #include <stdio.h>
 
 #include "io/treecursion_types.h"
-#include "modules/treecursion_test/treecursion_test.h"
+#include "modules/talkingtree_storage/talking_tree_storage.h"
+
 
 void SceneTreeTimer::_bind_methods() {
 
@@ -847,6 +848,7 @@ void SceneTree::set_pause(bool p_enabled) {
 	pause = p_enabled;
 	PhysicsServer::get_singleton()->set_active(!p_enabled);
 	Physics2DServer::get_singleton()->set_active(!p_enabled);
+	//TalkingTreeStorage::get_singleton()->set_active(!p_enabled);
 	if (get_root())
 		get_root()->propagate_notification(p_enabled ? Node::NOTIFICATION_PAUSED : Node::NOTIFICATION_UNPAUSED);
 }
@@ -1828,10 +1830,10 @@ void SceneTree::_rpc(Node *p_from, int p_to, bool p_unreliable, bool p_set, cons
 		encode_variant(*p_arg[0], &packet_cache[ofs], len);
 		ofs += len;
 
-		if(TreecursionTestStorage::get_singleton()->is_running() && !is_paused()){
+		if(TalkingTreeStorage::get_singleton()->is_running() ){
 			String path_name = String(p_from->get_path().get_sname());
 			TreecursionSetTask *remote_set_packet = memnew(TreecursionSetTask(String(p_name), path_name, *p_arg[0], packet_time, network_peer->get_unique_id()));
-			TreecursionTestStorage::get_singleton()->enqueue(remote_set_packet);
+			TalkingTreeStorage::get_singleton()->enqueue(remote_set_packet);
 		}
 		//print_line(remote_set_packet.toString());
 	} else {
@@ -1848,10 +1850,10 @@ void SceneTree::_rpc(Node *p_from, int p_to, bool p_unreliable, bool p_set, cons
 			ofs += len;
 			varArgs.push_back(*p_arg[i]);
 		}
-		if( TreecursionTestStorage::get_singleton()->is_running() && !is_paused()){
+		if( TalkingTreeStorage::get_singleton()->is_running() ){
 			String path_name = String(p_from->get_path().get_sname());
 			TreecursionCallTask *remote_call_packet = memnew(TreecursionCallTask( String(p_name), path_name, varArgs, packet_time, network_peer->get_unique_id()));
-			TreecursionTestStorage::get_singleton()->enqueue(remote_call_packet);
+			TalkingTreeStorage::get_singleton()->enqueue(remote_call_packet);
 		}
 		//print_line(remote_call_packet.toString());
 	}
@@ -2055,9 +2057,9 @@ void SceneTree::_network_process_packet(int p_from, const uint8_t *p_packet, int
 					error = "RPC - " + error;
 					ERR_PRINTS(error);
 				} else {
-					if(TreecursionTestStorage::get_singleton()->is_running() && !is_paused() ) {
+					if(TalkingTreeStorage::get_singleton()->is_running() ) {
 						TreecursionCallTask *remote_call_packet = memnew(TreecursionCallTask( name, paths, args, packet_time, p_from));
-						TreecursionTestStorage::get_singleton()->enqueue(remote_call_packet);
+						TalkingTreeStorage::get_singleton()->enqueue(remote_call_packet);
 					}
 					//print_line(remote_call_packet.toString());
 				}
@@ -2082,9 +2084,9 @@ void SceneTree::_network_process_packet(int p_from, const uint8_t *p_packet, int
 					String error = "Error setting remote property '" + String(name) + "', not found in object of type " + node->get_class();
 					ERR_PRINTS(error);
 				}else{
-					if(TreecursionTestStorage::get_singleton()->is_running() && !is_paused()) {
+					if(TalkingTreeStorage::get_singleton()->is_running() ) {
 						TreecursionSetTask *remote_set_packet = memnew(TreecursionSetTask( name, paths, value, packet_time, p_from ));
-						TreecursionTestStorage::get_singleton()->enqueue(remote_set_packet);
+						TalkingTreeStorage::get_singleton()->enqueue(remote_set_packet);
 					}
 				}
 
