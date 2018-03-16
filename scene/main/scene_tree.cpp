@@ -621,6 +621,8 @@ void SceneTree::_notification(int p_notification) {
 			}
 		} break;
 		case NOTIFICATION_OS_MEMORY_WARNING:
+		case NOTIFICATION_WM_MOUSE_ENTER:
+		case NOTIFICATION_WM_MOUSE_EXIT:
 		case NOTIFICATION_WM_FOCUS_IN:
 		case NOTIFICATION_WM_FOCUS_OUT: {
 
@@ -1794,7 +1796,7 @@ void SceneTree::_rpc(Node *p_from, int p_to, bool p_unreliable, bool p_set, cons
 		psc->id = last_send_cache_id++;
 	}
 
-	//create base packet, lots of harcode because it must be tight
+	//create base packet, lots of hardcode because it must be tight
 
 	int ofs = 0;
 

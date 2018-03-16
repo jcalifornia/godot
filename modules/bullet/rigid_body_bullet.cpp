@@ -114,8 +114,16 @@ Transform BulletPhysicsDirectBodyState::get_transform() const {
 	return body->get_transform();
 }
 
+void BulletPhysicsDirectBodyState::add_central_force(const Vector3 &p_force) {
+	body->apply_central_force(p_force);
+}
+
 void BulletPhysicsDirectBodyState::add_force(const Vector3 &p_force, const Vector3 &p_pos) {
 	body->apply_force(p_force, p_pos);
+}
+
+void BulletPhysicsDirectBodyState::add_torque(const Vector3 &p_torque) {
+	body->apply_torque(p_torque);
 }
 
 void BulletPhysicsDirectBodyState::apply_impulse(const Vector3 &p_pos, const Vector3 &p_j) {
@@ -247,6 +255,7 @@ RigidBodyBullet::RigidBodyBullet() :
 		linearDamp(0),
 		angularDamp(0),
 		can_sleep(true),
+		omit_forces_integration(false),
 		force_integration_callback(NULL),
 		isTransformChanged(false),
 		previousActiveState(true),
@@ -325,6 +334,9 @@ void RigidBodyBullet::set_space(SpaceBullet *p_space) {
 void RigidBodyBullet::dispatch_callbacks() {
 	/// The check isTransformChanged is necessary in order to call integrated forces only when the first transform is sent
 	if ((btBody->isActive() || previousActiveState != btBody->isActive()) && force_integration_callback && isTransformChanged) {
+
+		if (omit_forces_integration)
+			btBody->clearForces();
 
 		BulletPhysicsDirectBodyState *bodyDirect = BulletPhysicsDirectBodyState::get_singleton(this);
 
@@ -427,6 +439,10 @@ void RigidBodyBullet::set_activation_state(bool p_active) {
 
 bool RigidBodyBullet::is_active() const {
 	return btBody->isActive();
+}
+
+void RigidBodyBullet::set_omit_forces_integration(bool p_omit) {
+	omit_forces_integration = p_omit;
 }
 
 void RigidBodyBullet::set_param(PhysicsServer::BodyParameter p_param, real_t p_value) {
@@ -832,7 +848,8 @@ void RigidBodyBullet::on_exit_area(AreaBullet *p_area) {
 
 void RigidBodyBullet::reload_space_override_modificator() {
 
-	if (!is_active())
+	// Make sure that kinematic bodies have their total gravity calculated
+	if (!is_active() && PhysicsServer::BODY_MODE_KINEMATIC != mode)
 		return;
 
 	Vector3 newGravity(space->get_gravity_direction() * space->get_gravity_magnitude());

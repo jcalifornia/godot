@@ -30,6 +30,7 @@
 
 #include "os_windows.h"
 
+#include "drivers/gles2/rasterizer_gles2.h"
 #include "drivers/gles3/rasterizer_gles3.h"
 #include "drivers/windows/dir_access_windows.h"
 #include "drivers/windows/file_access_windows.h"
@@ -149,26 +150,6 @@ void RedirectIOToConsole() {
 	// make cout, wcout, cin, wcin, wcerr, cerr, wclog and clog
 
 	// point to console as well
-}
-
-int OS_Windows::get_video_driver_count() const {
-
-	return 1;
-}
-const char *OS_Windows::get_video_driver_name(int p_driver) const {
-
-	return "GLES3";
-}
-
-int OS_Windows::get_audio_driver_count() const {
-
-	return AudioDriverManager::get_driver_count();
-}
-const char *OS_Windows::get_audio_driver_name(int p_driver) const {
-
-	AudioDriver *driver = AudioDriverManager::get_driver(p_driver);
-	ERR_FAIL_COND_V(!driver, "");
-	return AudioDriverManager::get_driver(p_driver)->get_name();
 }
 
 void OS_Windows::initialize_core() {
@@ -632,7 +613,16 @@ LRESULT OS_Windows::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 				video_mode.width = window_w;
 				video_mode.height = window_h;
 			}
-			//return 0;								// Jump Back
+			if (wParam == SIZE_MAXIMIZED) {
+				maximized = true;
+				minimized = false;
+			} else if (wParam == SIZE_MINIMIZED) {
+				maximized = false;
+				minimized = true;
+			} else if (wParam == SIZE_RESTORED) {
+				maximized = false;
+				minimized = false;
+			}
 		} break;
 
 		case WM_ENTERSIZEMOVE: {
@@ -1075,13 +1065,24 @@ Error OS_Windows::initialize(const VideoMode &p_desired, int p_video_driver, int
 		}
 	};
 
+	if (video_mode.always_on_top) {
+		SetWindowPos(hWnd, video_mode.always_on_top ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+	}
+
 #if defined(OPENGL_ENABLED)
-	gl_context = memnew(ContextGL_Win(hWnd, true));
-	gl_context->initialize();
+	if (p_video_driver == VIDEO_DRIVER_GLES2) {
+		gl_context = memnew(ContextGL_Win(hWnd, false));
+		gl_context->initialize();
 
-	RasterizerGLES3::register_config();
+		RasterizerGLES2::register_config();
+		RasterizerGLES2::make_current();
+	} else {
+		gl_context = memnew(ContextGL_Win(hWnd, true));
+		gl_context->initialize();
 
-	RasterizerGLES3::make_current();
+		RasterizerGLES3::register_config();
+		RasterizerGLES3::make_current();
+	}
 
 	gl_context->set_use_vsync(video_mode.use_vsync);
 #endif
@@ -1487,6 +1488,12 @@ Size2 OS_Windows::get_window_size() const {
 	GetClientRect(hWnd, &r);
 	return Vector2(r.right - r.left, r.bottom - r.top);
 }
+Size2 OS_Windows::get_real_window_size() const {
+
+	RECT r;
+	GetWindowRect(hWnd, &r);
+	return Vector2(r.right - r.left, r.bottom - r.top);
+}
 void OS_Windows::set_window_size(const Size2 p_size) {
 
 	video_mode.width = p_size.width;
@@ -1608,6 +1615,19 @@ bool OS_Windows::is_window_maximized() const {
 	return maximized;
 }
 
+void OS_Windows::set_window_always_on_top(bool p_enabled) {
+	if (video_mode.always_on_top == p_enabled)
+		return;
+
+	video_mode.always_on_top = p_enabled;
+
+	_update_window_style();
+}
+
+bool OS_Windows::is_window_always_on_top() const {
+	return video_mode.always_on_top;
+}
+
 void OS_Windows::set_borderless_window(bool p_borderless) {
 	if (video_mode.borderless_window == p_borderless)
 		return;
@@ -1631,6 +1651,8 @@ void OS_Windows::_update_window_style(bool repaint) {
 			SetWindowLongPtr(hWnd, GWL_STYLE, WS_CAPTION | WS_MINIMIZEBOX | WS_POPUPWINDOW | WS_VISIBLE);
 		}
 	}
+
+	SetWindowPos(hWnd, video_mode.always_on_top ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 
 	if (repaint) {
 		RECT rect;
@@ -2440,6 +2462,24 @@ String OS_Windows::get_user_data_dir() const {
 	}
 
 	return ProjectSettings::get_singleton()->get_resource_path();
+}
+
+String OS_Windows::get_unique_id() const {
+
+	HW_PROFILE_INFO HwProfInfo;
+	ERR_FAIL_COND_V(!GetCurrentHwProfile(&HwProfInfo), "");
+	return String(HwProfInfo.szHwProfileGuid);
+}
+
+void OS_Windows::set_ime_position(const Point2 &p_pos) {
+
+	HIMC himc = ImmGetContext(hWnd);
+	COMPOSITIONFORM cps;
+	cps.dwStyle = CFS_FORCE_POSITION;
+	cps.ptCurrentPos.x = p_pos.x;
+	cps.ptCurrentPos.y = p_pos.y;
+	ImmSetCompositionWindow(himc, &cps);
+	ImmReleaseContext(hWnd, himc);
 }
 
 bool OS_Windows::is_joy_known(int p_device) {

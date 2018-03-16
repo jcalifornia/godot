@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="Vector2" category="Built-In Types" version="3.0-stable">
+<class name="Vector2" category="Built-In Types" version="3.1">
 	<brief_description>
 		Vector used for 2D Math.
 	</brief_description>
@@ -79,6 +79,15 @@
 			</argument>
 			<description>
 				Returns the vector with a maximum length.
+			</description>
+		</method>
+		<method name="cross">
+			<return type="float">
+			</return>
+			<argument index="0" name="b" type="Vector2">
+			</argument>
+			<description>
+				Returns the 2-dimensional analog of the cross product with [code]b[/code].
 			</description>
 		</method>
 		<method name="cubic_interpolate">

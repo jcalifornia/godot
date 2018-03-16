@@ -153,7 +153,7 @@ void AudioDriverManager::initialize(int p_driver) {
 		ERR_PRINT("AudioDriverManager: all drivers failed, falling back to dummy driver");
 		dummy_driver.set_singleton();
 	} else {
-		ERR_PRINT("AudioDriverManager: dummy driver faild to init()");
+		ERR_PRINT("AudioDriverManager: dummy driver failed to init()");
 	}
 }
 
@@ -518,6 +518,8 @@ void AudioServer::remove_bus(int p_index) {
 	memdelete(buses[p_index]);
 	buses.remove(p_index);
 	unlock();
+
+	emit_signal("bus_layout_changed");
 }
 
 void AudioServer::add_bus(int p_at_pos) {
@@ -571,6 +573,8 @@ void AudioServer::add_bus(int p_at_pos) {
 		buses.push_back(bus);
 	else
 		buses.insert(p_at_pos, bus);
+
+	emit_signal("bus_layout_changed");
 }
 
 void AudioServer::move_bus(int p_bus, int p_to_pos) {
@@ -593,6 +597,8 @@ void AudioServer::move_bus(int p_bus, int p_to_pos) {
 	} else {
 		buses.insert(p_to_pos - 1, bus);
 	}
+
+	emit_signal("bus_layout_changed");
 }
 
 int AudioServer::get_bus_count() const {
@@ -858,7 +864,7 @@ void AudioServer::init() {
 
 	channel_disable_threshold_db = GLOBAL_DEF("audio/channel_disable_threshold_db", -60.0);
 	channel_disable_frames = float(GLOBAL_DEF("audio/channel_disable_time", 2.0)) * get_mix_rate();
-	buffer_size = 1024; //harcoded for now
+	buffer_size = 1024; //hardcoded for now
 
 	temp_buffer.resize(get_channel_count());
 

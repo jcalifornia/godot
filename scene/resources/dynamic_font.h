@@ -64,10 +64,20 @@ public:
 		}
 	};
 
+	enum Hinting {
+		HINTING_NONE,
+		HINTING_LIGHT,
+		HINTING_NORMAL
+	};
+
+	Hinting get_hinting() const;
+	void set_hinting(Hinting p_hinting);
+
 private:
 	const uint8_t *font_mem;
 	int font_mem_size;
 	bool force_autohinter;
+	Hinting hinting;
 
 	String font_path;
 	Map<CacheID, DynamicFontAtSize *> size_cache;
@@ -91,6 +101,8 @@ public:
 	~DynamicFontData();
 };
 
+VARIANT_ENUM_CAST(DynamicFontData::Hinting);
+
 class DynamicFontAtSize : public Reference {
 
 	GDCLASS(DynamicFontAtSize, Reference)
@@ -106,6 +118,7 @@ class DynamicFontAtSize : public Reference {
 	float linegap;
 	float rect_margin;
 	float oversampling;
+	float scale_color_font;
 
 	uint32_t texture_flags;
 

@@ -80,6 +80,14 @@ void DynamicFontData::set_force_autohinter(bool p_force) {
 void DynamicFontData::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_font_path", "path"), &DynamicFontData::set_font_path);
 	ClassDB::bind_method(D_METHOD("get_font_path"), &DynamicFontData::get_font_path);
+	ClassDB::bind_method(D_METHOD("set_hinting", "mode"), &DynamicFontData::set_hinting);
+	ClassDB::bind_method(D_METHOD("get_hinting"), &DynamicFontData::get_hinting);
+
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "hinting", PROPERTY_HINT_ENUM, "None,Light,Normal"), "set_hinting", "get_hinting");
+
+	BIND_ENUM_CONSTANT(HINTING_NONE);
+	BIND_ENUM_CONSTANT(HINTING_LIGHT);
+	BIND_ENUM_CONSTANT(HINTING_NORMAL);
 
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "font_path", PROPERTY_HINT_FILE, "*.ttf,*.otf"), "set_font_path", "get_font_path");
 }
@@ -87,6 +95,7 @@ void DynamicFontData::_bind_methods() {
 DynamicFontData::DynamicFontData() {
 
 	force_autohinter = false;
+	hinting = DynamicFontData::HINTING_NORMAL;
 	font_mem = NULL;
 	font_mem_size = 0;
 }
@@ -186,18 +195,31 @@ Error DynamicFontAtSize::_load() {
 		ERR_FAIL_COND_V( error, ERR_INVALID_PARAMETER );
 	}*/
 
-	error = FT_Set_Pixel_Sizes(face, 0, id.size * oversampling);
+	if (FT_HAS_COLOR(face)) {
+		int best_match = 0;
+		int diff = ABS(id.size - face->available_sizes[0].width);
+		scale_color_font = float(id.size) / face->available_sizes[0].width;
+		for (int i = 1; i < face->num_fixed_sizes; i++) {
+			int ndiff = ABS(id.size - face->available_sizes[i].width);
+			if (ndiff < diff) {
+				best_match = i;
+				diff = ndiff;
+				scale_color_font = float(id.size) / face->available_sizes[i].width;
+			}
+		}
+		error = FT_Select_Size(face, best_match);
+	} else {
+		error = FT_Set_Pixel_Sizes(face, 0, id.size * oversampling);
+	}
 
-	ascent = (face->size->metrics.ascender >> 6) / oversampling;
-	descent = (-face->size->metrics.descender >> 6) / oversampling;
+	ascent = (face->size->metrics.ascender >> 6) / oversampling * scale_color_font;
+	descent = (-face->size->metrics.descender >> 6) / oversampling * scale_color_font;
 	linegap = 0;
 	texture_flags = 0;
 	if (id.mipmaps)
 		texture_flags |= Texture::FLAG_MIPMAPS;
 	if (id.filter)
 		texture_flags |= Texture::FLAG_FILTER;
-
-	//print_line("ASCENT: "+itos(ascent)+" descent "+itos(descent)+" hinted: "+itos(face->face_flags&FT_FACE_FLAG_HINTER));
 
 	valid = true;
 	return OK;
@@ -286,7 +308,6 @@ Size2 DynamicFontAtSize::get_char_size(CharType p_char, CharType p_next, const V
 			ret.x += (delta.x >> 6) / oversampling;
 		}
 	}
-
 	return ret;
 }
 
@@ -328,14 +349,18 @@ float DynamicFontAtSize::draw_char(RID p_canvas_item, const Point2 &p_pos, CharT
 
 			if (!ch->found)
 				continue;
-
 			Point2 cpos = p_pos;
 			cpos.x += ch->h_align;
-			cpos.y -= get_ascent();
+			cpos.y -= fb->get_ascent();
 			cpos.y += ch->v_align;
 			ERR_FAIL_COND_V(ch->texture_idx < -1 || ch->texture_idx >= fb->textures.size(), 0);
-			if (ch->texture_idx != -1)
-				VisualServer::get_singleton()->canvas_item_add_texture_rect_region(p_canvas_item, Rect2(cpos, ch->rect.size), fb->textures[ch->texture_idx].texture->get_rid(), ch->rect_uv, p_modulate, false, RID(), false);
+			if (ch->texture_idx != -1) {
+				Color modulate = p_modulate;
+				if (FT_HAS_COLOR(fb->face)) {
+					modulate.r = modulate.g = modulate.b = 1;
+				}
+				VisualServer::get_singleton()->canvas_item_add_texture_rect_region(p_canvas_item, Rect2(cpos, ch->rect.size * Vector2(fb->scale_color_font, fb->scale_color_font)), fb->textures[ch->texture_idx].texture->get_rid(), ch->rect_uv, modulate, false, RID(), false);
+			}
 			advance = ch->advance;
 			used_fallback = true;
 			break;
@@ -356,8 +381,13 @@ float DynamicFontAtSize::draw_char(RID p_canvas_item, const Point2 &p_pos, CharT
 		cpos.y -= get_ascent();
 		cpos.y += c->v_align;
 		ERR_FAIL_COND_V(c->texture_idx < -1 || c->texture_idx >= textures.size(), 0);
-		if (c->texture_idx != -1)
-			VisualServer::get_singleton()->canvas_item_add_texture_rect_region(p_canvas_item, Rect2(cpos, c->rect.size), textures[c->texture_idx].texture->get_rid(), c->rect_uv, p_modulate, false, RID(), false);
+		if (c->texture_idx != -1) {
+			Color modulate = p_modulate;
+			if (FT_HAS_COLOR(face)) {
+				modulate.r = modulate.g = modulate.b = 1;
+			}
+			VisualServer::get_singleton()->canvas_item_add_texture_rect_region(p_canvas_item, Rect2(cpos, c->rect.size * Vector2(scale_color_font, scale_color_font)), textures[c->texture_idx].texture->get_rid(), c->rect_uv, modulate, false, RID(), false);
+		}
 		advance = c->advance;
 		//textures[c->texture_idx].texture->draw(p_canvas_item,Vector2());
 	}
@@ -431,15 +461,28 @@ void DynamicFontAtSize::_update_char(CharType p_char) {
 		char_map[p_char] = ch;
 		return;
 	}
-	int error = FT_Load_Char(face, p_char, FT_LOAD_RENDER | (font->force_autohinter ? FT_LOAD_FORCE_AUTOHINT : 0));
+
+	int ft_hinting;
+
+	switch (font->hinting) {
+		case DynamicFontData::HINTING_NONE:
+			ft_hinting = FT_LOAD_NO_HINTING;
+			break;
+		case DynamicFontData::HINTING_LIGHT:
+			ft_hinting = FT_LOAD_TARGET_LIGHT;
+			break;
+		default:
+			ft_hinting = FT_LOAD_TARGET_NORMAL;
+			break;
+	}
+
+	int error = FT_Load_Char(face, p_char, FT_HAS_COLOR(face) ? FT_LOAD_COLOR : FT_LOAD_DEFAULT | (font->force_autohinter ? FT_LOAD_FORCE_AUTOHINT : 0) | ft_hinting);
 	if (!error) {
-		error = FT_Render_Glyph(face->glyph, ft_render_mode_normal);
+		error = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL);
 	}
 	if (error) {
 
 		int advance = 0;
-		//stbtt_GetCodepointHMetrics(&font->info, p_char, &advance, 0);
-		//print_line("char has no bitmap: "+itos(p_char)+" but advance is "+itos(advance*scale));
 		Character ch;
 		ch.texture_idx = -1;
 		ch.advance = advance;
@@ -454,7 +497,6 @@ void DynamicFontAtSize::_update_char(CharType p_char) {
 
 	int w = slot->bitmap.width;
 	int h = slot->bitmap.rows;
-	//int p = slot->bitmap.pitch;
 	int yofs = slot->bitmap_top;
 	int xofs = slot->bitmap_left;
 	int advance = slot->advance.x >> 6;
@@ -470,6 +512,8 @@ void DynamicFontAtSize::_update_char(CharType p_char) {
 
 	//find a texture to fit this...
 
+	int color_size = slot->bitmap.pixel_mode == FT_PIXEL_MODE_BGRA ? 4 : 2;
+	Image::Format require_format = color_size == 4 ? Image::FORMAT_RGBA8 : Image::FORMAT_LA8;
 	int tex_index = -1;
 	int tex_x = 0;
 	int tex_y = 0;
@@ -477,6 +521,9 @@ void DynamicFontAtSize::_update_char(CharType p_char) {
 	for (int i = 0; i < textures.size(); i++) {
 
 		CharTexture &ct = textures[i];
+
+		if (ct.texture->get_format() != require_format)
+			continue;
 
 		if (mw > ct.texture_size || mh > ct.texture_size) //too big for this texture
 			continue;
@@ -508,8 +555,6 @@ void DynamicFontAtSize::_update_char(CharType p_char) {
 		break;
 	}
 
-	//print_line("CHAR: "+String::chr(p_char)+" TEX INDEX: "+itos(tex_index)+" X: "+itos(tex_x)+" Y: "+itos(tex_y));
-
 	if (tex_index == -1) {
 		//could not find texture to fit, create one
 		tex_x = 0;
@@ -527,13 +572,13 @@ void DynamicFontAtSize::_update_char(CharType p_char) {
 
 		CharTexture tex;
 		tex.texture_size = texsize;
-		tex.imgdata.resize(texsize * texsize * 2); //grayscale alpha
+		tex.imgdata.resize(texsize * texsize * color_size);
 
 		{
 			//zero texture
 			PoolVector<uint8_t>::Write w = tex.imgdata.write();
-			ERR_FAIL_COND(texsize * texsize * 2 > tex.imgdata.size());
-			for (int i = 0; i < texsize * texsize * 2; i++) {
+			ERR_FAIL_COND(texsize * texsize * color_size > tex.imgdata.size());
+			for (int i = 0; i < texsize * texsize * color_size; i++) {
 				w[i] = 0;
 			}
 		}
@@ -555,7 +600,7 @@ void DynamicFontAtSize::_update_char(CharType p_char) {
 		for (int i = 0; i < h; i++) {
 			for (int j = 0; j < w; j++) {
 
-				int ofs = ((i + tex_y + rect_margin) * tex.texture_size + j + tex_x + rect_margin) * 2;
+				int ofs = ((i + tex_y + rect_margin) * tex.texture_size + j + tex_x + rect_margin) * color_size;
 				ERR_FAIL_COND(ofs >= tex.imgdata.size());
 				switch (slot->bitmap.pixel_mode) {
 					case FT_PIXEL_MODE_MONO: {
@@ -568,7 +613,14 @@ void DynamicFontAtSize::_update_char(CharType p_char) {
 						wr[ofs + 0] = 255; //grayscale as 1
 						wr[ofs + 1] = slot->bitmap.buffer[i * slot->bitmap.pitch + j];
 						break;
-					// TODO: FT_PIXEL_MODE_LCD, FT_PIXEL_MODE_BGRA
+					case FT_PIXEL_MODE_BGRA: {
+						int ofs_color = i * slot->bitmap.pitch + (j << 2);
+						wr[ofs + 2] = slot->bitmap.buffer[ofs_color + 0];
+						wr[ofs + 1] = slot->bitmap.buffer[ofs_color + 1];
+						wr[ofs + 0] = slot->bitmap.buffer[ofs_color + 2];
+						wr[ofs + 3] = slot->bitmap.buffer[ofs_color + 3];
+					} break;
+					// TODO: FT_PIXEL_MODE_LCD
 					default:
 						ERR_EXPLAIN("Font uses unsupported pixel format: " + itos(slot->bitmap.pixel_mode));
 						ERR_FAIL();
@@ -581,7 +633,7 @@ void DynamicFontAtSize::_update_char(CharType p_char) {
 	//blit to image and texture
 	{
 
-		Ref<Image> img = memnew(Image(tex.texture_size, tex.texture_size, 0, Image::FORMAT_LA8, tex.imgdata));
+		Ref<Image> img = memnew(Image(tex.texture_size, tex.texture_size, 0, require_format, tex.imgdata));
 
 		if (tex.texture.is_null()) {
 			tex.texture.instance();
@@ -599,9 +651,9 @@ void DynamicFontAtSize::_update_char(CharType p_char) {
 	}
 
 	Character chr;
-	chr.h_align = xofs / oversampling;
-	chr.v_align = ascent - (yofs / oversampling); // + ascent - descent;
-	chr.advance = advance / oversampling;
+	chr.h_align = xofs * scale_color_font / oversampling;
+	chr.v_align = ascent - (yofs * scale_color_font / oversampling); // + ascent - descent;
+	chr.advance = advance * scale_color_font / oversampling;
 	chr.texture_idx = tex_index;
 	chr.found = true;
 
@@ -609,8 +661,6 @@ void DynamicFontAtSize::_update_char(CharType p_char) {
 	chr.rect = chr.rect_uv;
 	chr.rect.position /= oversampling;
 	chr.rect.size /= oversampling;
-
-	//print_line("CHAR: "+String::chr(p_char)+" TEX INDEX: "+itos(tex_index)+" RECT: "+chr.rect+" X OFS: "+itos(xofs)+" Y OFS: "+itos(yofs));
 
 	char_map[p_char] = chr;
 }
@@ -640,6 +690,7 @@ DynamicFontAtSize::DynamicFontAtSize() {
 	linegap = 1;
 	texture_flags = 0;
 	oversampling = font_oversampling;
+	scale_color_font = 1;
 }
 
 DynamicFontAtSize::~DynamicFontAtSize() {
@@ -720,6 +771,18 @@ void DynamicFont::set_use_filter(bool p_enable) {
 		return;
 	cache_id.filter = p_enable;
 	_reload_cache();
+}
+
+DynamicFontData::Hinting DynamicFontData::get_hinting() const {
+
+	return hinting;
+}
+
+void DynamicFontData::set_hinting(Hinting p_hinting) {
+
+	if (hinting == p_hinting)
+		return;
+	hinting = p_hinting;
 }
 
 int DynamicFont::get_spacing(int p_type) const {

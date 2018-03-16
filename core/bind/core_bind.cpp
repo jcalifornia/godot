@@ -205,6 +205,22 @@ String _OS::get_clipboard() const {
 	return OS::get_singleton()->get_clipboard();
 }
 
+int _OS::get_video_driver_count() const {
+	return OS::get_singleton()->get_video_driver_count();
+}
+
+String _OS::get_video_driver_name(int p_driver) const {
+	return OS::get_singleton()->get_video_driver_name(p_driver);
+}
+
+int _OS::get_audio_driver_count() const {
+	return OS::get_singleton()->get_audio_driver_count();
+}
+
+String _OS::get_audio_driver_name(int p_driver) const {
+	return OS::get_singleton()->get_audio_driver_name(p_driver);
+}
+
 void _OS::set_video_mode(const Size2 &p_size, bool p_fullscreen, bool p_resizeable, int p_screen) {
 
 	OS::VideoMode vm;
@@ -264,6 +280,10 @@ Size2 _OS::get_window_size() const {
 	return OS::get_singleton()->get_window_size();
 }
 
+Size2 _OS::get_real_window_size() const {
+	return OS::get_singleton()->get_real_window_size();
+}
+
 void _OS::set_window_size(const Size2 &p_size) {
 	OS::get_singleton()->set_window_size(p_size);
 }
@@ -298,6 +318,14 @@ void _OS::set_window_maximized(bool p_enabled) {
 
 bool _OS::is_window_maximized() const {
 	return OS::get_singleton()->is_window_maximized();
+}
+
+void _OS::set_window_always_on_top(bool p_enabled) {
+	OS::get_singleton()->set_window_always_on_top(p_enabled);
+}
+
+bool _OS::is_window_always_on_top() const {
+	return OS::get_singleton()->is_window_always_on_top();
 }
 
 void _OS::set_borderless_window(bool p_borderless) {
@@ -929,6 +957,11 @@ void _OS::request_attention() {
 	OS::get_singleton()->request_attention();
 }
 
+void _OS::center_window() {
+
+	OS::get_singleton()->center_window();
+}
+
 bool _OS::is_debug_build() const {
 
 #ifdef DEBUG_ENABLED
@@ -998,6 +1031,11 @@ void _OS::_bind_methods() {
 	//ClassDB::bind_method(D_METHOD("is_video_mode_resizable","screen"),&_OS::is_video_mode_resizable,DEFVAL(0));
 	//ClassDB::bind_method(D_METHOD("get_fullscreen_mode_list","screen"),&_OS::get_fullscreen_mode_list,DEFVAL(0));
 
+	ClassDB::bind_method(D_METHOD("get_video_driver_count"), &_OS::get_video_driver_count);
+	ClassDB::bind_method(D_METHOD("get_video_driver_name"), &_OS::get_video_driver_name);
+	ClassDB::bind_method(D_METHOD("get_audio_driver_count"), &_OS::get_audio_driver_count);
+	ClassDB::bind_method(D_METHOD("get_audio_driver_name"), &_OS::get_audio_driver_name);
+
 	ClassDB::bind_method(D_METHOD("get_screen_count"), &_OS::get_screen_count);
 	ClassDB::bind_method(D_METHOD("get_current_screen"), &_OS::get_current_screen);
 	ClassDB::bind_method(D_METHOD("set_current_screen", "screen"), &_OS::set_current_screen);
@@ -1016,7 +1054,11 @@ void _OS::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_window_minimized"), &_OS::is_window_minimized);
 	ClassDB::bind_method(D_METHOD("set_window_maximized", "enabled"), &_OS::set_window_maximized);
 	ClassDB::bind_method(D_METHOD("is_window_maximized"), &_OS::is_window_maximized);
+	ClassDB::bind_method(D_METHOD("set_window_always_on_top", "enabled"), &_OS::set_window_always_on_top);
+	ClassDB::bind_method(D_METHOD("is_window_always_on_top"), &_OS::is_window_always_on_top);
 	ClassDB::bind_method(D_METHOD("request_attention"), &_OS::request_attention);
+	ClassDB::bind_method(D_METHOD("get_real_window_size"), &_OS::get_real_window_size);
+	ClassDB::bind_method(D_METHOD("center_window"), &_OS::center_window);
 
 	ClassDB::bind_method(D_METHOD("set_borderless_window", "borderless"), &_OS::set_borderless_window);
 	ClassDB::bind_method(D_METHOD("get_borderless_window"), &_OS::get_borderless_window);
@@ -1493,6 +1535,17 @@ bool _File::is_open() const {
 
 	return f != NULL;
 }
+String _File::get_path() const {
+
+	ERR_FAIL_COND_V(!f, "");
+	return f->get_path();
+}
+
+String _File::get_path_absolute() const {
+
+	ERR_FAIL_COND_V(!f, "");
+	return f->get_path_absolute();
+}
 
 void _File::seek(int64_t p_position) {
 
@@ -1782,6 +1835,8 @@ void _File::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("open", "path", "flags"), &_File::open);
 	ClassDB::bind_method(D_METHOD("close"), &_File::close);
+	ClassDB::bind_method(D_METHOD("get_path"), &_File::get_path);
+	ClassDB::bind_method(D_METHOD("get_path_absolute"), &_File::get_path_absolute);
 	ClassDB::bind_method(D_METHOD("is_open"), &_File::is_open);
 	ClassDB::bind_method(D_METHOD("seek", "position"), &_File::seek);
 	ClassDB::bind_method(D_METHOD("seek_end", "position"), &_File::seek_end, DEFVAL(0));

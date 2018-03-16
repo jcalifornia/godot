@@ -110,7 +110,9 @@ public:
 	virtual void set_transform(const Transform &p_transform);
 	virtual Transform get_transform() const;
 
+	virtual void add_central_force(const Vector3 &p_force);
 	virtual void add_force(const Vector3 &p_force, const Vector3 &p_pos);
+	virtual void add_torque(const Vector3 &p_torque);
 	virtual void apply_impulse(const Vector3 &p_pos, const Vector3 &p_j);
 	virtual void apply_torque_impulse(const Vector3 &p_j);
 
@@ -196,6 +198,7 @@ private:
 	real_t linearDamp;
 	real_t angularDamp;
 	bool can_sleep;
+	bool omit_forces_integration;
 
 	Vector<CollisionData> collisions;
 	// these parameters are used to avoid vector resize
@@ -251,6 +254,9 @@ public:
 
 	void set_activation_state(bool p_active);
 	bool is_active() const;
+
+	void set_omit_forces_integration(bool p_omit);
+	_FORCE_INLINE_ bool get_omit_forces_integration() const { return omit_forces_integration; }
 
 	void set_param(PhysicsServer::BodyParameter p_param, real_t);
 	real_t get_param(PhysicsServer::BodyParameter p_param) const;
