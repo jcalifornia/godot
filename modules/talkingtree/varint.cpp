@@ -36,6 +36,7 @@ int64_t VarInt::parseVariant(const uint8_t *buffer) {
 	}
 	
 	ERR_PRINT("invalid varint");
+	return OK;
 }
 
 Vector<uint8_t> VarInt::getEncoded() const {
