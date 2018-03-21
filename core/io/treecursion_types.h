@@ -10,6 +10,8 @@
 
 enum AUDIO_CODEC { OPUS = 1, RAW };
 
+enum HTOGG_SERIALNO { HTOGG_ENGINE = 0, HTOGG_VOIP = 1, HTOGG_END };
+
 
 class TreecursionWriteTask : public Reference {
 	GDCLASS(TreecursionWriteTask, Reference);
@@ -20,7 +22,8 @@ public:
 		SET_TASK = 1,
 		CALL_TASK,
 		VOICE_TASK,
-		HEADER_TASK
+		ENGINE_HEADER_TASK,
+		VOIP_HEADER_TASK
 	};
 protected:
 	TreecursionWriteTask( uint64_t t, uint64_t u, Types ty ) : time(t), user_id(u), type(ty){
@@ -169,32 +172,27 @@ class TreecursionVoiceTask : public TreecursionWriteTask {
 };
 
 class TreecursionHeaderTask : public TreecursionWriteTask {
-	AUDIO_CODEC codec;
-	int bit_rate;
-	int frame_size;
-	int version_major;
-	int version_minor;
+public:
+	TreecursionHeaderTask( uint64_t t, uint64_t u, Types ty ) : TreecursionWriteTask(t, u, ty ){
+
+	}
+};
+
+class TreecursionEngineHeaderTask : public TreecursionHeaderTask {
 	Dictionary init_vars;
-
-	TreecursionHeaderTask(  const Dictionary& map )
-		: TreecursionWriteTask( map["time"], map["user_id"], HEADER_TASK), init_vars(map) {
+public:
+	TreecursionEngineHeaderTask(  uint64_t time, const Dictionary& map )
+		: TreecursionHeaderTask( time, 0, ENGINE_HEADER_TASK), init_vars(map) {
 	}
-	virtual String toJson() const {
-		Dictionary dict(init_vars);
-		JSON a;
-		String ret = a.print(dict);
-		return ret;
-	}
-
-	virtual String toString() const{
-		Dictionary dict(init_vars);
-
+	virtual String toString() const {
 		VariantWriter w;
 		String ret;
-		Error err = w.write_to_string(dict, ret);
+		Error err = w.write_to_string(init_vars, ret);
 		return ret;
 	}
 };
+
+
 
 class TreecursionTestData : public Resource{
     GDCLASS(TreecursionTestData, Resource);

@@ -30,6 +30,16 @@ bool is_fishbone_packet(ogg_packet *packet){
 			memcmp(packet->packet, "fisbone", 8) == 0;
 }
 
+unsigned char * write_le64(unsigned char* p, const ogg_int64_t num){
+  ogg_int64_t n = num;
+  ogg_int64_t i;
+  for (i=0; i<8; i++) {
+	 p[i] = (unsigned char)(n & 0xff);
+	 n >>= 8;
+  }
+  return p + 8;
+}
+
 unsigned char * write_le32(unsigned char* p, const ogg_uint32_t num){
   ogg_int32_t n = num;
   ogg_int32_t i;

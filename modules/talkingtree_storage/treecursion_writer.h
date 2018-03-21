@@ -4,6 +4,7 @@
 
 
 #include "ogg/ogg.h"
+#include "io/treecursion_types.h"
 
 
 
@@ -16,18 +17,18 @@ class TreecursionWriter : public Object {
 private:
 	FileAccess *_fout;
     String _outfile_name;
-    ogg_stream_state os;
-    ogg_page og; /* one Ogg bitstream page. */
+    int64_t _sequence_number;
     int serialno;
+    HashMap<String, Variant> last_value;
+    ogg_stream_state ogg_os[HTOGG_END]; 
 
 protected:
     static void _bind_methods();
 
 public:
-    void write_header();
+    void write_task(const TreecursionWriteTask & task);
     void close();
-    String get_time_utc();
-    TreecursionWriter();
+    TreecursionWriter(const String &fileName);
     ~TreecursionWriter();
 	
 };
