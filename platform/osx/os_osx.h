@@ -134,9 +134,6 @@ public:
 	void _update_window();
 
 protected:
-	virtual int get_video_driver_count() const;
-	virtual const char *get_video_driver_name(int p_driver) const;
-
 	virtual void initialize_core();
 	virtual Error initialize(const VideoMode &p_desired, int p_video_driver, int p_audio_driver);
 	virtual void finalize();
@@ -167,6 +164,7 @@ public:
 	virtual void set_window_title(const String &p_title);
 
 	virtual Size2 get_window_size() const;
+	virtual Size2 get_real_window_size() const;
 
 	virtual void set_icon(const Ref<Image> &p_icon);
 
@@ -197,6 +195,7 @@ public:
 	virtual VideoMode get_video_mode(int p_screen = 0) const;
 	virtual void get_fullscreen_mode_list(List<VideoMode> *p_list, int p_screen = 0) const;
 
+	virtual Error execute(const String &p_path, const List<String> &p_arguments, bool p_blocking, ProcessID *r_child_id, String *r_pipe, int *r_exitcode, bool p_read_stderr);
 	virtual String get_executable_path() const;
 
 	virtual LatinKeyboardVariant get_latin_keyboard_variant() const;
@@ -221,6 +220,8 @@ public:
 	virtual bool is_window_minimized() const;
 	virtual void set_window_maximized(bool p_enabled);
 	virtual bool is_window_maximized() const;
+	virtual void set_window_always_on_top(bool p_enabled);
+	virtual bool is_window_always_on_top() const;
 	virtual void request_attention();
 	virtual String get_joy_guid(int p_device) const;
 
@@ -228,6 +229,8 @@ public:
 	virtual bool get_borderless_window();
 	virtual void set_ime_position(const Point2 &p_pos);
 	virtual void set_ime_intermediate_text_callback(ImeCallback p_callback, void *p_inp);
+
+	virtual String get_unique_id() const;
 
 	virtual OS::PowerState get_power_state();
 	virtual int get_power_seconds_left();

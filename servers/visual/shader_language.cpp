@@ -124,6 +124,9 @@ const char *ShaderLanguage::token_names[TK_MAX] = {
 	"TYPE_ISAMPLER2D",
 	"TYPE_USAMPLER2D",
 	"TYPE_SAMPLERCUBE",
+	"INTERPOLATION_FLAT",
+	"INTERPOLATION_NO_PERSPECTIVE",
+	"INTERPOLATION_SMOOTH",
 	"PRECISION_LOW",
 	"PRECISION_MID",
 	"PRECISION_HIGH",
@@ -1374,6 +1377,17 @@ const ShaderLanguage::BuiltinFuncDef ShaderLanguage::builtin_func_defs[] = {
 	{ "bvec4", TYPE_BVEC4, { TYPE_VEC4, TYPE_VOID } },
 
 	//builtins - trigonometry
+
+	{ "radians", TYPE_FLOAT, { TYPE_FLOAT, TYPE_VOID } },
+	{ "radians", TYPE_VEC2, { TYPE_VEC2, TYPE_VOID } },
+	{ "radians", TYPE_VEC3, { TYPE_VEC3, TYPE_VOID } },
+	{ "radians", TYPE_VEC4, { TYPE_VEC4, TYPE_VOID } },
+
+	{ "degrees", TYPE_FLOAT, { TYPE_FLOAT, TYPE_VOID } },
+	{ "degrees", TYPE_VEC2, { TYPE_VEC2, TYPE_VOID } },
+	{ "degrees", TYPE_VEC3, { TYPE_VEC3, TYPE_VOID } },
+	{ "degrees", TYPE_VEC4, { TYPE_VEC4, TYPE_VOID } },
+
 	{ "sin", TYPE_FLOAT, { TYPE_FLOAT, TYPE_VOID } },
 	{ "sin", TYPE_VEC2, { TYPE_VEC2, TYPE_VOID } },
 	{ "sin", TYPE_VEC3, { TYPE_VEC3, TYPE_VOID } },
@@ -1423,6 +1437,21 @@ const ShaderLanguage::BuiltinFuncDef ShaderLanguage::builtin_func_defs[] = {
 	{ "tanh", TYPE_VEC3, { TYPE_VEC3, TYPE_VOID } },
 	{ "tanh", TYPE_VEC4, { TYPE_VEC4, TYPE_VOID } },
 
+	{ "asinh", TYPE_FLOAT, { TYPE_FLOAT, TYPE_VOID } },
+	{ "asinh", TYPE_VEC2, { TYPE_VEC2, TYPE_VOID } },
+	{ "asinh", TYPE_VEC3, { TYPE_VEC3, TYPE_VOID } },
+	{ "asinh", TYPE_VEC4, { TYPE_VEC4, TYPE_VOID } },
+
+	{ "acosh", TYPE_FLOAT, { TYPE_FLOAT, TYPE_VOID } },
+	{ "acosh", TYPE_VEC2, { TYPE_VEC2, TYPE_VOID } },
+	{ "acosh", TYPE_VEC3, { TYPE_VEC3, TYPE_VOID } },
+	{ "acosh", TYPE_VEC4, { TYPE_VEC4, TYPE_VOID } },
+
+	{ "atanh", TYPE_FLOAT, { TYPE_FLOAT, TYPE_VOID } },
+	{ "atanh", TYPE_VEC2, { TYPE_VEC2, TYPE_VOID } },
+	{ "atanh", TYPE_VEC3, { TYPE_VEC3, TYPE_VOID } },
+	{ "atanh", TYPE_VEC4, { TYPE_VEC4, TYPE_VOID } },
+
 	//builtins - exponential
 	{ "pow", TYPE_FLOAT, { TYPE_FLOAT, TYPE_FLOAT, TYPE_VOID } },
 	{ "pow", TYPE_VEC2, { TYPE_VEC2, TYPE_VEC2, TYPE_VOID } },
@@ -1436,6 +1465,14 @@ const ShaderLanguage::BuiltinFuncDef ShaderLanguage::builtin_func_defs[] = {
 	{ "log", TYPE_VEC2, { TYPE_VEC2, TYPE_VOID } },
 	{ "log", TYPE_VEC3, { TYPE_VEC3, TYPE_VOID } },
 	{ "log", TYPE_VEC4, { TYPE_VEC4, TYPE_VOID } },
+	{ "exp2", TYPE_FLOAT, { TYPE_FLOAT, TYPE_VOID } },
+	{ "exp2", TYPE_VEC2, { TYPE_VEC2, TYPE_VOID } },
+	{ "exp2", TYPE_VEC3, { TYPE_VEC3, TYPE_VOID } },
+	{ "exp2", TYPE_VEC4, { TYPE_VEC4, TYPE_VOID } },
+	{ "log2", TYPE_FLOAT, { TYPE_FLOAT, TYPE_VOID } },
+	{ "log2", TYPE_VEC2, { TYPE_VEC2, TYPE_VOID } },
+	{ "log2", TYPE_VEC3, { TYPE_VEC3, TYPE_VOID } },
+	{ "log2", TYPE_VEC4, { TYPE_VEC4, TYPE_VOID } },
 	{ "sqrt", TYPE_FLOAT, { TYPE_FLOAT, TYPE_VOID } },
 	{ "sqrt", TYPE_VEC2, { TYPE_VEC2, TYPE_VOID } },
 	{ "sqrt", TYPE_VEC3, { TYPE_VEC3, TYPE_VOID } },
@@ -1482,6 +1519,10 @@ const ShaderLanguage::BuiltinFuncDef ShaderLanguage::builtin_func_defs[] = {
 	{ "round", TYPE_VEC2, { TYPE_VEC2, TYPE_VOID } },
 	{ "round", TYPE_VEC3, { TYPE_VEC3, TYPE_VOID } },
 	{ "round", TYPE_VEC4, { TYPE_VEC4, TYPE_VOID } },
+	{ "roundEven", TYPE_FLOAT, { TYPE_FLOAT, TYPE_VOID } },
+	{ "roundEven", TYPE_VEC2, { TYPE_VEC2, TYPE_VOID } },
+	{ "roundEven", TYPE_VEC3, { TYPE_VEC3, TYPE_VOID } },
+	{ "roundEven", TYPE_VEC4, { TYPE_VEC4, TYPE_VOID } },
 	{ "ceil", TYPE_FLOAT, { TYPE_FLOAT, TYPE_VOID } },
 	{ "ceil", TYPE_VEC2, { TYPE_VEC2, TYPE_VOID } },
 	{ "ceil", TYPE_VEC3, { TYPE_VEC3, TYPE_VOID } },
@@ -1570,7 +1611,7 @@ const ShaderLanguage::BuiltinFuncDef ShaderLanguage::builtin_func_defs[] = {
 	{ "mix", TYPE_VEC3, { TYPE_VEC3, TYPE_VEC3, TYPE_VEC3, TYPE_VOID } },
 	{ "mix", TYPE_VEC4, { TYPE_VEC4, TYPE_VEC4, TYPE_FLOAT, TYPE_VOID } },
 	{ "mix", TYPE_VEC4, { TYPE_VEC4, TYPE_VEC4, TYPE_BOOL, TYPE_VOID } },
-	{ "mix", TYPE_VEC4, { TYPE_VEC4, TYPE_VEC4, TYPE_BVEC3, TYPE_VOID } },
+	{ "mix", TYPE_VEC4, { TYPE_VEC4, TYPE_VEC4, TYPE_BVEC4, TYPE_VOID } },
 	{ "mix", TYPE_VEC4, { TYPE_VEC4, TYPE_VEC4, TYPE_VEC4, TYPE_VOID } },
 
 	{ "step", TYPE_FLOAT, { TYPE_FLOAT, TYPE_FLOAT, TYPE_VOID } },
@@ -1603,10 +1644,10 @@ const ShaderLanguage::BuiltinFuncDef ShaderLanguage::builtin_func_defs[] = {
 	{ "floatBitsToInt", TYPE_IVEC3, { TYPE_VEC3, TYPE_VOID } },
 	{ "floatBitsToInt", TYPE_IVEC4, { TYPE_VEC4, TYPE_VOID } },
 
-	{ "floatBitsToUInt", TYPE_UINT, { TYPE_FLOAT, TYPE_VOID } },
-	{ "floatBitsToUInt", TYPE_UVEC2, { TYPE_VEC2, TYPE_VOID } },
-	{ "floatBitsToUInt", TYPE_UVEC3, { TYPE_VEC3, TYPE_VOID } },
-	{ "floatBitsToUInt", TYPE_UVEC4, { TYPE_VEC4, TYPE_VOID } },
+	{ "floatBitsToUint", TYPE_UINT, { TYPE_FLOAT, TYPE_VOID } },
+	{ "floatBitsToUint", TYPE_UVEC2, { TYPE_VEC2, TYPE_VOID } },
+	{ "floatBitsToUint", TYPE_UVEC3, { TYPE_VEC3, TYPE_VOID } },
+	{ "floatBitsToUint", TYPE_UVEC4, { TYPE_VEC4, TYPE_VOID } },
 
 	{ "intBitsToFloat", TYPE_FLOAT, { TYPE_INT, TYPE_VOID } },
 	{ "intBitsToFloat", TYPE_VEC2, { TYPE_IVEC2, TYPE_VOID } },
@@ -3661,26 +3702,6 @@ Error ShaderLanguage::_parse_shader(const Map<StringName, FunctionInfo> &p_funct
 					//todo parse default value
 
 					tk = _get_token();
-					if (tk.type == TK_OP_ASSIGN) {
-
-						Node *expr = _parse_and_reduce_expression(NULL, Map<StringName, BuiltInInfo>());
-						if (!expr)
-							return ERR_PARSE_ERROR;
-						if (expr->type != Node::TYPE_CONSTANT) {
-							_set_error("Expected constant expression after '='");
-							return ERR_PARSE_ERROR;
-						}
-
-						ConstantNode *cn = static_cast<ConstantNode *>(expr);
-
-						uniform.default_value.resize(cn->values.size());
-
-						if (!convert_constant(cn, uniform.type, uniform.default_value.ptrw())) {
-							_set_error("Can't convert constant to " + get_datatype_name(uniform.type));
-							return ERR_PARSE_ERROR;
-						}
-						tk = _get_token();
-					}
 
 					if (tk.type == TK_COLON) {
 						//hint
@@ -3793,6 +3814,27 @@ Error ShaderLanguage::_parse_shader(const Map<StringName, FunctionInfo> &p_funct
 							return ERR_PARSE_ERROR;
 						}
 
+						tk = _get_token();
+					}
+
+					if (tk.type == TK_OP_ASSIGN) {
+
+						Node *expr = _parse_and_reduce_expression(NULL, Map<StringName, BuiltInInfo>());
+						if (!expr)
+							return ERR_PARSE_ERROR;
+						if (expr->type != Node::TYPE_CONSTANT) {
+							_set_error("Expected constant expression after '='");
+							return ERR_PARSE_ERROR;
+						}
+
+						ConstantNode *cn = static_cast<ConstantNode *>(expr);
+
+						uniform.default_value.resize(cn->values.size());
+
+						if (!convert_constant(cn, uniform.type, uniform.default_value.ptrw())) {
+							_set_error("Can't convert constant to " + get_datatype_name(uniform.type));
+							return ERR_PARSE_ERROR;
+						}
 						tk = _get_token();
 					}
 

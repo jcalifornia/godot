@@ -316,6 +316,10 @@ void CreateDialog::_update_search() {
 		}
 	}
 
+	if (search_box->get_text() == "") {
+		to_select = root;
+	}
+
 	if (to_select) {
 		to_select->select(0);
 		search_options->scroll_to_item(to_select);
@@ -472,6 +476,8 @@ void CreateDialog::_item_selected() {
 		return;
 
 	help_bit->set_text(EditorHelp::get_doc_data()->class_list[name].brief_description);
+
+	get_ok()->set_disabled(false);
 }
 
 void CreateDialog::_favorite_toggled() {

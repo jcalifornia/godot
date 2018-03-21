@@ -28,11 +28,11 @@ def get_flags():
     return [
         ('tools', False),
         ('module_theora_enabled', False),
-        # Disabling the OpenSSL module noticeably reduces file size.
+        # Disabling the mbedtls module reduces file size.
         # The module has little use due to the limited networking functionality
         # in this platform. For the available networking methods, the browser
         # manages TLS.
-        ('module_openssl_enabled', False),
+        ('module_mbedtls_enabled', False),
     ]
 
 
@@ -65,13 +65,14 @@ def configure(env):
 
     elif (env["target"] == "release_debug"):
         env.Append(CCFLAGS=['-O2', '-DDEBUG_ENABLED'])
-        env.Append(LINKFLAGS=['-O2', '-s', 'ASSERTIONS=1'])
+        env.Append(LINKFLAGS=['-O2'])
         # retain function names at the cost of file size, for backtraces and profiling
         env.Append(LINKFLAGS=['--profiling-funcs'])
 
     elif (env["target"] == "debug"):
         env.Append(CCFLAGS=['-O1', '-D_DEBUG', '-g', '-DDEBUG_ENABLED'])
         env.Append(LINKFLAGS=['-O1', '-g'])
+        env.Append(LINKFLAGS=['-s', 'ASSERTIONS=1'])
 
     ## Compiler configuration
 

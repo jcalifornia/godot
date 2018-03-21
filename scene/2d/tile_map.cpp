@@ -142,16 +142,20 @@ void TileMap::_update_quadrant_transform() {
 
 void TileMap::set_tileset(const Ref<TileSet> &p_tileset) {
 
-	if (tile_set.is_valid())
+	if (tile_set.is_valid()) {
 		tile_set->disconnect("changed", this, "_recreate_quadrants");
+		tile_set->remove_change_receptor(this);
+	}
 
 	_clear_quadrants();
 	tile_set = p_tileset;
 
-	if (tile_set.is_valid())
+	if (tile_set.is_valid()) {
 		tile_set->connect("changed", this, "_recreate_quadrants");
-	else
+		tile_set->add_change_receptor(this);
+	} else {
 		clear();
+	}
 
 	_recreate_quadrants();
 	emit_signal("settings_changed");
@@ -353,7 +357,7 @@ void TileMap::_update_dirty_quadrants() {
 			}
 
 			Rect2 r = tile_set->tile_get_region(c.id);
-			if (tile_set->tile_get_is_autotile(c.id)) {
+			if (tile_set->tile_get_tile_mode(c.id) == TileSet::AUTO_TILE) {
 				int spacing = tile_set->autotile_get_spacing(c.id);
 				r.size = tile_set->autotile_get_size(c.id);
 				r.position += (r.size + Vector2(spacing, spacing)) * Vector2(c.autotile_coord_x, c.autotile_coord_y);
@@ -447,7 +451,7 @@ void TileMap::_update_dirty_quadrants() {
 			for (int i = 0; i < shapes.size(); i++) {
 				Ref<Shape2D> shape = shapes[i].shape;
 				if (shape.is_valid()) {
-					if (!tile_set->tile_get_is_autotile(c.id) || (shapes[i].autotile_coord.x == c.autotile_coord_x && shapes[i].autotile_coord.y == c.autotile_coord_y)) {
+					if (tile_set->tile_get_tile_mode(c.id) == TileSet::SINGLE_TILE || (shapes[i].autotile_coord.x == c.autotile_coord_x && shapes[i].autotile_coord.y == c.autotile_coord_y)) {
 						Transform2D xform;
 						xform.set_origin(offset.floor());
 
@@ -474,7 +478,7 @@ void TileMap::_update_dirty_quadrants() {
 			if (navigation) {
 				Ref<NavigationPolygon> navpoly;
 				Vector2 npoly_ofs;
-				if (tile_set->tile_get_is_autotile(c.id)) {
+				if (tile_set->tile_get_tile_mode(c.id) == TileSet::AUTO_TILE) {
 					navpoly = tile_set->autotile_get_navigation_polygon(c.id, Vector2(c.autotile_coord_x, c.autotile_coord_y));
 					npoly_ofs = Vector2();
 				} else {
@@ -497,7 +501,7 @@ void TileMap::_update_dirty_quadrants() {
 			}
 
 			Ref<OccluderPolygon2D> occluder;
-			if (tile_set->tile_get_is_autotile(c.id)) {
+			if (tile_set->tile_get_tile_mode(c.id) == TileSet::AUTO_TILE) {
 				occluder = tile_set->autotile_get_light_occluder(c.id, Vector2(c.autotile_coord_x, c.autotile_coord_y));
 			} else {
 				occluder = tile_set->tile_get_light_occluder(c.id);
@@ -766,7 +770,7 @@ void TileMap::update_cell_bitmask(int p_x, int p_y) {
 	Map<PosKey, Cell>::Element *E = tile_map.find(p);
 	if (E != NULL) {
 		int id = get_cell(p_x, p_y);
-		if (tile_set->tile_get_is_autotile(id)) {
+		if (tile_set->tile_get_tile_mode(id) == TileSet::AUTO_TILE) {
 			uint16_t mask = 0;
 			if (tile_set->autotile_get_bitmask_mode(id) == TileSet::BITMASK_2X2) {
 				if (tile_set->is_tile_bound(id, get_cell(p_x - 1, p_y - 1)) && tile_set->is_tile_bound(id, get_cell(p_x, p_y - 1)) && tile_set->is_tile_bound(id, get_cell(p_x - 1, p_y))) {
@@ -827,6 +831,16 @@ void TileMap::update_dirty_bitmask() {
 	while (dirty_bitmask.size() > 0) {
 		update_cell_bitmask(dirty_bitmask[0].x, dirty_bitmask[0].y);
 		dirty_bitmask.pop_front();
+	}
+}
+
+void TileMap::fix_invalid_tiles() {
+
+	for (Map<PosKey, Cell>::Element *E = tile_map.front(); E; E = E->next()) {
+
+		if (!tile_set->has_tile(get_cell(E->key().x, E->key().y))) {
+			set_cell(E->key().x, E->key().y, INVALID_CELL);
+		}
 	}
 }
 
@@ -1515,6 +1529,7 @@ void TileMap::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_cell_y_flipped", "x", "y"), &TileMap::is_cell_y_flipped);
 	ClassDB::bind_method(D_METHOD("is_cell_transposed", "x", "y"), &TileMap::is_cell_transposed);
 
+	ClassDB::bind_method(D_METHOD("fix_invalid_tiles"), &TileMap::fix_invalid_tiles);
 	ClassDB::bind_method(D_METHOD("clear"), &TileMap::clear);
 
 	ClassDB::bind_method(D_METHOD("get_used_cells"), &TileMap::get_used_cells);
@@ -1573,6 +1588,12 @@ void TileMap::_bind_methods() {
 	BIND_ENUM_CONSTANT(TILE_ORIGIN_BOTTOM_LEFT);
 }
 
+void TileMap::_changed_callback(Object *p_changed, const char *p_prop) {
+	if (tile_set.is_valid() && tile_set.ptr() == p_changed) {
+		emit_signal("settings_changed");
+	}
+}
+
 TileMap::TileMap() {
 
 	rect_cache_dirty = true;
@@ -1600,6 +1621,9 @@ TileMap::TileMap() {
 }
 
 TileMap::~TileMap() {
+
+	if (tile_set.is_valid())
+		tile_set->remove_change_receptor(this);
 
 	clear();
 }

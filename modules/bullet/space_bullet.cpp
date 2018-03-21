@@ -628,7 +628,7 @@ void SpaceBullet::destroy_world() {
 
 void SpaceBullet::check_ghost_overlaps() {
 
-	/// Algorith support variables
+	/// Algorithm support variables
 	btConvexShape *other_body_shape;
 	btConvexShape *area_shape;
 	btGjkPairDetector::ClosestPointInput gjk_input;
@@ -790,7 +790,7 @@ void SpaceBullet::update_gravity() {
 /// I'm leaving this here just for future tests.
 /// Debug motion and normal vector drawing
 #define debug_test_motion 0
-#define PERFORM_INITIAL_UNSTACK 0
+
 #define RECOVERING_MOVEMENT_SCALE 0.4
 #define RECOVERING_MOVEMENT_CYCLES 4
 
@@ -804,8 +804,7 @@ static Ref<SpatialMaterial> red_mat;
 static Ref<SpatialMaterial> blue_mat;
 #endif
 
-#define IGNORE_AREAS_TRUE true
-bool SpaceBullet::test_body_motion(RigidBodyBullet *p_body, const Transform &p_from, const Vector3 &p_motion, PhysicsServer::MotionResult *r_result) {
+bool SpaceBullet::test_body_motion(RigidBodyBullet *p_body, const Transform &p_from, const Vector3 &p_motion, bool p_infinite_inertia, PhysicsServer::MotionResult *r_result) {
 
 #if debug_test_motion
 	/// Yes I know this is not good, but I've used it as fast debugging hack.
@@ -839,25 +838,14 @@ bool SpaceBullet::test_body_motion(RigidBodyBullet *p_body, const Transform &p_f
 	}
 #endif
 
-	///// Release all generated manifolds
-	//{
-	//    if(p_body->get_kinematic_utilities()){
-	//        for(int i= p_body->get_kinematic_utilities()->m_generatedManifold.size()-1; 0<=i; --i){
-	//            dispatcher->releaseManifold( p_body->get_kinematic_utilities()->m_generatedManifold[i] );
-	//        }
-	//        p_body->get_kinematic_utilities()->m_generatedManifold.clear();
-	//    }
-	//}
-
 	btTransform body_safe_position;
 	G_TO_B(p_from, body_safe_position);
 	UNSCALE_BT_BASIS(body_safe_position);
 
-#if PERFORM_INITIAL_UNSTACK
 	btVector3 recover_initial_position(0, 0, 0);
 	{ /// Phase one - multi shapes depenetration using margin
 		for (int t(RECOVERING_MOVEMENT_CYCLES); 0 < t; --t) {
-			if (!recover_from_penetration(p_body, body_safe_position, RECOVERING_MOVEMENT_SCALE, recover_initial_position)) {
+			if (!recover_from_penetration(p_body, body_safe_position, RECOVERING_MOVEMENT_SCALE, p_infinite_inertia, recover_initial_position)) {
 				break;
 			}
 		}
@@ -865,7 +853,6 @@ bool SpaceBullet::test_body_motion(RigidBodyBullet *p_body, const Transform &p_f
 		// Add recover movement in order to make it safe
 		body_safe_position.getOrigin() += recover_initial_position;
 	}
-#endif
 
 	btVector3 motion;
 	G_TO_B(p_motion, motion);
@@ -900,11 +887,11 @@ bool SpaceBullet::test_body_motion(RigidBodyBullet *p_body, const Transform &p_f
 			btTransform shape_world_to(shape_world_from);
 			shape_world_to.getOrigin() += motion;
 
-			GodotKinClosestConvexResultCallback btResult(shape_world_from.getOrigin(), shape_world_to.getOrigin(), p_body, IGNORE_AREAS_TRUE);
+			GodotKinClosestConvexResultCallback btResult(shape_world_from.getOrigin(), shape_world_to.getOrigin(), p_body, p_infinite_inertia);
 			btResult.m_collisionFilterGroup = p_body->get_collision_layer();
 			btResult.m_collisionFilterMask = p_body->get_collision_mask();
 
-			dynamicsWorld->convexSweepTest(convex_shape_test, shape_world_from, shape_world_to, btResult, 0.002);
+			dynamicsWorld->convexSweepTest(convex_shape_test, shape_world_from, shape_world_to, btResult, dynamicsWorld->getDispatchInfo().m_allowedCcdPenetration);
 
 			if (btResult.hasHit()) {
 				/// Since for each sweep test I fix the motion of new shapes in base the recover result,
@@ -926,14 +913,11 @@ bool SpaceBullet::test_body_motion(RigidBodyBullet *p_body, const Transform &p_f
 		real_t l_penetration_distance = 1e20;
 
 		for (int t(RECOVERING_MOVEMENT_CYCLES); 0 < t; --t) {
-			l_has_penetration = recover_from_penetration(p_body, body_safe_position, RECOVERING_MOVEMENT_SCALE, delta_recover_movement, &r_recover_result);
+			l_has_penetration = recover_from_penetration(p_body, body_safe_position, RECOVERING_MOVEMENT_SCALE, p_infinite_inertia, delta_recover_movement, &r_recover_result);
 
 			if (r_result) {
-#if PERFORM_INITIAL_UNSTACK
 				B_TO_G(motion + delta_recover_movement + recover_initial_position, r_result->motion);
-#else
-				B_TO_G(motion + delta_recover_movement, r_result->motion);
-#endif
+
 				if (l_has_penetration) {
 					has_penetration = true;
 					if (l_penetration_distance <= r_recover_result.penetration_distance) {
@@ -955,15 +939,6 @@ bool SpaceBullet::test_body_motion(RigidBodyBullet *p_body, const Transform &p_f
 					r_result->collider_shape = r_recover_result.other_compound_shape_index;
 					r_result->collision_local_shape = r_recover_result.local_shape_most_recovered;
 
-					//{ /// Add manifold point to manage collisions
-					//    btPersistentManifold* manifold = dynamicsWorld->getDispatcher()->getNewManifold(p_body->getBtBody(), btRigid);
-					//    btManifoldPoint manifoldPoint(result_callabck.m_pointWorld, result_callabck.m_pointWorld, result_callabck.m_pointNormalWorld, result_callabck.m_penetration_distance);
-					//    manifoldPoint.m_index0 = r_result->collision_local_shape;
-					//    manifoldPoint.m_index1 = r_result->collider_shape;
-					//    manifold->addManifoldPoint(manifoldPoint);
-					//    p_body->get_kinematic_utilities()->m_generatedManifold.push_back(manifold);
-					//}
-
 #if debug_test_motion
 					Vector3 sup_line2;
 					B_TO_G(motion, sup_line2);
@@ -979,6 +954,8 @@ bool SpaceBullet::test_body_motion(RigidBodyBullet *p_body, const Transform &p_f
 			} else {
 				if (!l_has_penetration)
 					break;
+				else
+					has_penetration = true;
 			}
 		}
 	}
@@ -1020,7 +997,7 @@ public:
 	}
 };
 
-bool SpaceBullet::recover_from_penetration(RigidBodyBullet *p_body, const btTransform &p_body_position, btScalar p_recover_movement_scale, btVector3 &r_delta_recover_movement, RecoverResult *r_recover_result) {
+bool SpaceBullet::recover_from_penetration(RigidBodyBullet *p_body, const btTransform &p_body_position, btScalar p_recover_movement_scale, bool p_infinite_inertia, btVector3 &r_delta_recover_movement, RecoverResult *r_recover_result) {
 
 	RecoverPenetrationBroadPhaseCallback recover_broad_result(p_body->get_bt_collision_object(), p_body->get_collision_layer(), p_body->get_collision_mask());
 
@@ -1051,7 +1028,7 @@ bool SpaceBullet::recover_from_penetration(RigidBodyBullet *p_body, const btTran
 
 		for (int i = recover_broad_result.result_collision_objects.size() - 1; 0 <= i; --i) {
 			btCollisionObject *otherObject = recover_broad_result.result_collision_objects[i];
-			if (!p_body->get_bt_collision_object()->checkCollideWith(otherObject) || !otherObject->checkCollideWith(p_body->get_bt_collision_object()))
+			if (!p_body->get_bt_collision_object()->checkCollideWith(otherObject) || !otherObject->checkCollideWith(p_body->get_bt_collision_object()) || (p_infinite_inertia && !otherObject->isStaticOrKinematicObject()))
 				continue;
 
 			if (otherObject->getCollisionShape()->isCompound()) {
@@ -1130,7 +1107,7 @@ bool SpaceBullet::RFP_convex_world_test(const btConvexShape *p_shapeA, const btC
 	btCollisionObjectWrapper obA(NULL, p_shapeA, p_objectA, tA, -1, p_shapeId_A);
 	btCollisionObjectWrapper obB(NULL, p_shapeB, p_objectB, p_transformB, -1, p_shapeId_B);
 
-	btCollisionAlgorithm *algorithm = dispatcher->findAlgorithm(&obA, &obB, NULL, BT_CLOSEST_POINT_ALGORITHMS);
+	btCollisionAlgorithm *algorithm = dispatcher->findAlgorithm(&obA, &obB, NULL, BT_CONTACT_POINT_ALGORITHMS);
 	if (algorithm) {
 		GodotDeepPenetrationContactResultCallback contactPointResult(&obA, &obB);
 		//discrete collision detection query
@@ -1140,7 +1117,7 @@ bool SpaceBullet::RFP_convex_world_test(const btConvexShape *p_shapeA, const btC
 		dispatcher->freeCollisionAlgorithm(algorithm);
 
 		if (contactPointResult.hasHit()) {
-			r_delta_recover_movement += contactPointResult.m_pointNormalWorld * (contactPointResult.m_penetration_distance * -1 * p_recover_movement_scale);
+			r_delta_recover_movement += contactPointResult.m_pointNormalWorld * (contactPointResult.m_penetration_distance * p_recover_movement_scale);
 
 			if (r_recover_result) {
 				if (contactPointResult.m_penetration_distance < r_recover_result->penetration_distance) {

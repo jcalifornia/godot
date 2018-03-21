@@ -41,7 +41,8 @@ Error FacialLandmarkModel::set_file(const String &p_file) {
     
     dlib::deserialize(_pose_model, is);
     memdelete(f);
-}
+    return OK;
+};
 
 FacialLandmarkModel::FacialLandmarkModel() {
     

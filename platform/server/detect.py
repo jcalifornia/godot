@@ -1,4 +1,5 @@
 import os
+import platform
 import sys
 
 
@@ -12,9 +13,6 @@ def get_name():
 
 def can_build():
 
-    # Doesn't build against Godot 3.0 for now, disable to avoid confusing users
-    return False
-
     if (os.name != "posix" or sys.platform == "darwin"):
         return False
 
@@ -25,12 +23,14 @@ def get_opts():
     from SCons.Variables import BoolVariable
     return [
         BoolVariable('use_llvm', 'Use the LLVM compiler', False),
+        BoolVariable('use_static_cpp', 'Link libgcc and libstdc++ statically for better portability', False),
     ]
 
 
 def get_flags():
 
     return [
+            ("module_mobile_vr_enabled", False),
     ]
 
 
@@ -66,9 +66,6 @@ def configure(env):
     ## Dependencies
 
     # FIXME: Check for existence of the libs before parsing their flags with pkg-config
-
-    if not env['builtin_openssl']:
-        env.ParseConfig('pkg-config openssl --cflags --libs')
 
     if not env['builtin_libwebp']:
         env.ParseConfig('pkg-config libwebp --cflags --libs')
@@ -127,6 +124,11 @@ def configure(env):
     if not env['builtin_libogg']:
         env.ParseConfig('pkg-config ogg --cflags --libs')
 
+    # On Linux wchar_t should be 32-bits
+    # 16-bit library shouldn't be required due to compiler optimisations
+    if not env['builtin_pcre2']:
+        env.ParseConfig('pkg-config libpcre2-32 --cflags --libs')
+
     ## Flags
 
     # Linkflags below this line should typically stay the last ones
@@ -136,3 +138,13 @@ def configure(env):
     env.Append(CPPPATH=['#platform/server'])
     env.Append(CPPFLAGS=['-DSERVER_ENABLED', '-DUNIX_ENABLED'])
     env.Append(LIBS=['pthread'])
+
+    if (platform.system() == "Linux"):
+        env.Append(LIBS=['dl'])
+
+    if (platform.system().find("BSD") >= 0):
+        env.Append(LIBS=['execinfo'])
+
+    # Link those statically for portability
+    if env['use_static_cpp']:
+        env.Append(LINKFLAGS=['-static-libgcc', '-static-libstdc++'])

@@ -328,7 +328,7 @@ void TalkingTree::_process_audio_packet(int p_from, const uint8_t *p_packet, int
 }
 
 void TalkingTree::_create_audio_frame(PoolVector<uint8_t> pcm){
-	_encode_audio_frame(1, pcm);
+	_encode_audio_frame(0, pcm);
 }
 int TalkingTree::_encode_audio_frame(int target, PoolVector<uint8_t> &pcm){
 	int now = OS::get_singleton()->get_ticks_msec();

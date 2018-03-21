@@ -217,7 +217,7 @@ void TextEdit::Text::_update_line_cache(int p_line) const {
 	}
 }
 
-const Map<int, TextEdit::Text::ColorRegionInfo> &TextEdit::Text::get_color_region_info(int p_line) {
+const Map<int, TextEdit::Text::ColorRegionInfo> &TextEdit::Text::get_color_region_info(int p_line) const {
 
 	static Map<int, ColorRegionInfo> cri;
 	ERR_FAIL_INDEX_V(p_line, text.size(), cri);
@@ -628,7 +628,7 @@ void TextEdit::_notification(int p_what) {
 					VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(Point2i(), get_size()), cache.background_color);
 				}
 				//compute actual region to start (may be inside say, a comment).
-				//slow in very large documments :( but ok for source!
+				//slow in very large documents :( but ok for source!
 
 				for (int i = 0; i < cursor.line_ofs; i++) {
 
@@ -776,7 +776,6 @@ void TextEdit::_notification(int p_what) {
 												j--;
 											}
 											if (escaped) {
-												j--;
 												cc = '\\';
 												continue;
 											}
@@ -2142,9 +2141,12 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 
 						if (completion_index > 0) {
 							completion_index--;
-							completion_current = completion_options[completion_index];
-							update();
+						} else {
+							completion_index = completion_options.size() - 1;
 						}
+						completion_current = completion_options[completion_index];
+						update();
+
 						accept_event();
 						return;
 					}
@@ -2153,9 +2155,12 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 
 						if (completion_index < completion_options.size() - 1) {
 							completion_index++;
-							completion_current = completion_options[completion_index];
-							update();
+						} else {
+							completion_index = 0;
 						}
+						completion_current = completion_options[completion_index];
+						update();
+
 						accept_event();
 						return;
 					}
@@ -4471,7 +4476,7 @@ bool TextEdit::search(const String &p_key, uint32_t p_search_flags, int p_from_l
 	ERR_FAIL_INDEX_V(p_from_line, text.size(), false);
 	ERR_FAIL_INDEX_V(p_from_column, text[p_from_line].length() + 1, false);
 
-	//search through the whole documment, but start by current line
+	//search through the whole document, but start by current line
 
 	int line = p_from_line;
 	int pos = -1;
@@ -4710,13 +4715,36 @@ int TextEdit::get_indent_level(int p_line) const {
 			tab_count++;
 		} else if (text[p_line][i] == ' ') {
 			whitespace_count++;
-		} else if (text[p_line][i] == '#') {
-			break;
 		} else {
 			break;
 		}
 	}
 	return tab_count + whitespace_count / indent_size;
+}
+
+bool TextEdit::is_line_comment(int p_line) const {
+
+	// checks to see if this line is the start of a comment
+	ERR_FAIL_INDEX_V(p_line, text.size(), false);
+
+	const Map<int, Text::ColorRegionInfo> &cri_map = text.get_color_region_info(p_line);
+
+	int line_length = text[p_line].size();
+	for (int i = 0; i < line_length - 1; i++) {
+		if (_is_symbol(text[p_line][i]) && cri_map.has(i)) {
+			const Text::ColorRegionInfo &cri = cri_map[i];
+			if (color_regions[cri.region].begin_key == "#" || color_regions[cri.region].begin_key == "//") {
+				return true;
+			} else {
+				return false;
+			}
+		} else if (_is_whitespace(text[p_line][i])) {
+			continue;
+		} else {
+			break;
+		}
+	}
+	return false;
 }
 
 bool TextEdit::can_fold(int p_line) const {
@@ -4732,6 +4760,8 @@ bool TextEdit::can_fold(int p_line) const {
 		return false;
 	if (is_line_hidden(p_line))
 		return false;
+	if (is_line_comment(p_line))
+		return false;
 
 	int start_indent = get_indent_level(p_line);
 
@@ -4739,10 +4769,13 @@ bool TextEdit::can_fold(int p_line) const {
 		if (text[i].size() == 0)
 			continue;
 		int next_indent = get_indent_level(i);
-		if (next_indent > start_indent)
+		if (is_line_comment(i)) {
+			continue;
+		} else if (next_indent > start_indent) {
 			return true;
-		else
+		} else {
 			return false;
+		}
 	}
 
 	return false;
@@ -4771,7 +4804,9 @@ void TextEdit::fold_line(int p_line) {
 	int last_line = start_indent;
 	for (int i = p_line + 1; i < text.size(); i++) {
 		if (text[i].strip_edges().size() != 0) {
-			if (get_indent_level(i) > start_indent) {
+			if (is_line_comment(i)) {
+				continue;
+			} else if (get_indent_level(i) > start_indent) {
 				last_line = i;
 			} else {
 				break;
@@ -5203,7 +5238,7 @@ void TextEdit::_update_completion_candidates() {
 
 	} else {
 
-		while (cofs > 0 && l[cofs - 1] > 32 && _is_completable(l[cofs - 1])) {
+		while (cofs > 0 && l[cofs - 1] > 32 && (l[cofs - 1] == '/' || _is_completable(l[cofs - 1]))) {
 			s = String::chr(l[cofs - 1]) + s;
 			if (l[cofs - 1] == '\'' || l[cofs - 1] == '"' || l[cofs - 1] == '$')
 				break;

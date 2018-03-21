@@ -34,6 +34,7 @@
 #include "input.h"
 #include "os/file_access.h"
 #include "project_settings.h"
+#include "servers/audio_server.h"
 #include "version_generated.gen.h"
 
 #include <stdarg.h>
@@ -614,6 +615,45 @@ bool OS::has_feature(const String &p_feature) {
 		return true;
 
 	return false;
+}
+
+void OS::center_window() {
+
+	if (is_window_fullscreen()) return;
+
+	Size2 scr = get_screen_size(get_current_screen());
+	Size2 wnd = get_real_window_size();
+	int x = scr.width / 2 - wnd.width / 2;
+	int y = scr.height / 2 - wnd.height / 2;
+	set_window_position(Vector2(x, y));
+}
+
+int OS::get_video_driver_count() const {
+
+	return 2;
+}
+
+const char *OS::get_video_driver_name(int p_driver) const {
+
+	switch (p_driver) {
+		case VIDEO_DRIVER_GLES2:
+			return "GLES2";
+		case VIDEO_DRIVER_GLES3:
+		default:
+			return "GLES3";
+	}
+}
+
+int OS::get_audio_driver_count() const {
+
+	return AudioDriverManager::get_driver_count();
+}
+
+const char *OS::get_audio_driver_name(int p_driver) const {
+
+	AudioDriver *driver = AudioDriverManager::get_driver(p_driver);
+	ERR_FAIL_COND_V(!driver, "");
+	return AudioDriverManager::get_driver(p_driver)->get_name();
 }
 
 OS::OS() {

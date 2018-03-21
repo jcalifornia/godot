@@ -34,17 +34,27 @@
 #include "scene/main/viewport.h"
 #include "scene/scene_string_names.h"
 
-void Sprite::_edit_set_pivot(const Point2 &p_pivot) {
+Dictionary Sprite::_edit_get_state() const {
+	Dictionary state = Node2D::_edit_get_state();
+	state["offset"] = offset;
+	return state;
+}
 
-	set_offset(p_pivot);
+void Sprite::_edit_set_state(const Dictionary &p_state) {
+	Node2D::_edit_set_state(p_state);
+	set_offset(p_state["offset"]);
+}
+
+void Sprite::_edit_set_pivot(const Point2 &p_pivot) {
+	set_offset(get_offset() - p_pivot);
+	set_position(get_transform().xform(p_pivot));
 }
 
 Point2 Sprite::_edit_get_pivot() const {
-
-	return get_offset();
+	return Vector2();
 }
-bool Sprite::_edit_use_pivot() const {
 
+bool Sprite::_edit_use_pivot() const {
 	return true;
 }
 
@@ -63,8 +73,8 @@ void Sprite::_get_rects(Rect2 &r_src_rect, Rect2 &r_dst_rect, bool &r_filter_cli
 		s = s / Size2(hframes, vframes);
 
 		r_src_rect.size = s;
-		r_src_rect.position.x += float(frame % hframes) * s.x;
-		r_src_rect.position.y += float(frame / hframes) * s.y;
+		r_src_rect.position.x = float(frame % hframes) * s.x;
+		r_src_rect.position.y = float(frame / hframes) * s.y;
 	}
 
 	Point2 ofs = offset;
@@ -111,7 +121,15 @@ void Sprite::set_texture(const Ref<Texture> &p_texture) {
 
 	if (p_texture == texture)
 		return;
+
+	if (texture.is_valid())
+		texture->remove_change_receptor(this);
+
 	texture = p_texture;
+
+	if (texture.is_valid())
+		texture->add_change_receptor(this);
+
 	update();
 	emit_signal("texture_changed");
 	item_rect_changed();
@@ -271,13 +289,39 @@ bool Sprite::_edit_is_selected_on_click(const Point2 &p_point, double p_toleranc
 	Rect2 src_rect, dst_rect;
 	bool filter_clip;
 	_get_rects(src_rect, dst_rect, filter_clip);
+	dst_rect.size = dst_rect.size.abs();
 
 	if (!dst_rect.has_point(p_point))
 		return false;
 
-	Vector2 q = ((p_point - dst_rect.position) / dst_rect.size) * src_rect.size + src_rect.position;
+	Vector2 q = (p_point - dst_rect.position) / dst_rect.size;
+	if (hflip)
+		q.x = 1.0f - q.x;
+	if (vflip)
+		q.y = 1.0f - q.y;
+	q = q * src_rect.size + src_rect.position;
 
-	Ref<Image> image = texture->get_data();
+	Ref<Image> image;
+	Ref<AtlasTexture> atlasTexture = texture;
+	if (atlasTexture.is_null()) {
+		image = texture->get_data();
+	} else {
+		ERR_FAIL_COND_V(atlasTexture->get_atlas().is_null(), false);
+
+		image = atlasTexture->get_atlas()->get_data();
+
+		Rect2 region = atlasTexture->get_region();
+		Rect2 margin = atlasTexture->get_margin();
+
+		q -= margin.position;
+
+		if ((q.x > region.size.width) || (q.y > region.size.height)) {
+			return false;
+		}
+
+		q += region.position;
+	}
+
 	ERR_FAIL_COND_V(image.is_null(), false);
 
 	image->lock();
@@ -287,7 +331,7 @@ bool Sprite::_edit_is_selected_on_click(const Point2 &p_point, double p_toleranc
 	return c.a > 0.01;
 }
 
-Rect2 Sprite::_edit_get_rect() const {
+Rect2 Sprite::get_rect() const {
 
 	if (texture.is_null())
 		return Rect2(0, 0, 1, 1);
@@ -323,6 +367,15 @@ void Sprite::_validate_property(PropertyInfo &property) const {
 		property.hint = PROPERTY_HINT_SPRITE_FRAME;
 
 		property.hint_string = "0," + itos(vframes * hframes - 1) + ",1";
+	}
+}
+
+void Sprite::_changed_callback(Object *p_changed, const char *p_prop) {
+
+	// Changes to the texture need to trigger an update to make
+	// the editor redraw the sprite with the updated texture.
+	if (texture.is_valid() && texture.ptr() == p_changed) {
+		update();
 	}
 }
 
@@ -364,6 +417,8 @@ void Sprite::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_hframes", "hframes"), &Sprite::set_hframes);
 	ClassDB::bind_method(D_METHOD("get_hframes"), &Sprite::get_hframes);
 
+	ClassDB::bind_method(D_METHOD("get_rect"), &Sprite::get_rect);
+
 	ADD_SIGNAL(MethodInfo("frame_changed"));
 	ADD_SIGNAL(MethodInfo("texture_changed"));
 
@@ -397,4 +452,9 @@ Sprite::Sprite() {
 
 	vframes = 1;
 	hframes = 1;
+}
+
+Sprite::~Sprite() {
+	if (texture.is_valid())
+		texture->remove_change_receptor(this);
 }

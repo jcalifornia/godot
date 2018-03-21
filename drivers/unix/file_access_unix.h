@@ -51,6 +51,7 @@ class FileAccessUnix : public FileAccess {
 	mutable Error last_error;
 	String save_path;
 	String path;
+	String path_src;
 
 	static FileAccess *create_libc();
 
@@ -60,6 +61,9 @@ public:
 	virtual Error _open(const String &p_path, int p_mode_flags); ///< open a file
 	virtual void close(); ///< close a file
 	virtual bool is_open() const; ///< true when file is open
+
+	virtual String get_path() const; /// returns the path for the current open file
+	virtual String get_path_absolute() const; /// returns the absolute path for the current open file
 
 	virtual void seek(size_t p_position); ///< seek to a given position
 	virtual void seek_end(int64_t p_position = 0); ///< seek from the end of file
@@ -75,6 +79,7 @@ public:
 
 	virtual void flush();
 	virtual void store_8(uint8_t p_dest); ///< store a byte
+	virtual void store_buffer(const uint8_t *p_src, int p_length); ///< store an array of bytes
 
 	virtual bool file_exists(const String &p_path); ///< return true if a file exists
 

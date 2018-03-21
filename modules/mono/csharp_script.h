@@ -85,13 +85,20 @@ class CSharpScript : public Script {
 
 	SelfList<CSharpScript> script_list;
 
+	struct Argument {
+		String name;
+		Variant::Type type;
+	};
+
+	Map<StringName, Vector<Argument> > _signals;
+	bool signals_invalidated;
+
 #ifdef TOOLS_ENABLED
 	List<PropertyInfo> exported_members_cache; // members_cache
 	Map<StringName, Variant> exported_members_defval_cache; // member_default_values_cache
 	Set<PlaceHolderScriptInstance *> placeholders;
 	bool source_changed_cache;
 	bool exports_invalidated;
-
 	void _update_exports_values(Map<StringName, Variant> &values, List<PropertyInfo> &propnames);
 	virtual void _placeholder_erased(PlaceHolderScriptInstance *p_placeholder);
 #endif
@@ -103,6 +110,9 @@ class CSharpScript : public Script {
 	Map<StringName, PropertyInfo> member_info;
 
 	void _clear();
+
+	bool _update_signals();
+	bool _get_signal(GDMonoClass *p_class, GDMonoClass *p_delegate, Vector<Argument> &params);
 
 	bool _update_exports();
 #ifdef TOOLS_ENABLED
@@ -137,8 +147,9 @@ public:
 
 	virtual Error reload(bool p_keep_state = false);
 
-	/* TODO */ virtual bool has_script_signal(const StringName &p_signal) const { return false; }
-	/* TODO */ virtual void get_script_signal_list(List<MethodInfo> *r_signals) const {}
+	virtual bool has_script_signal(const StringName &p_signal) const;
+	virtual void get_script_signal_list(List<MethodInfo> *r_signals) const;
+	virtual void update_signals();
 
 	/* TODO */ virtual bool get_property_default_value(const StringName &p_property, Variant &r_value) const;
 	virtual void get_script_property_list(List<PropertyInfo> *p_list) const;
@@ -283,6 +294,7 @@ public:
 	virtual bool is_using_templates();
 	virtual void make_template(const String &p_class_name, const String &p_base_class_name, Ref<Script> &p_script);
 	/* TODO */ virtual bool validate(const String &p_script, int &r_line_error, int &r_col_error, String &r_test_error, const String &p_path, List<String> *r_functions) const { return true; }
+	virtual String validate_path(const String &p_path) const;
 	virtual Script *create_script() const;
 	virtual bool has_named_classes() const;
 	virtual bool supports_builtin_mode() const;
