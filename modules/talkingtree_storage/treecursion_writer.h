@@ -20,7 +20,7 @@ private:
     int64_t _sequence_number;
     int serialno;
     HashMap<String, Variant> last_value;
-    ogg_stream_state ogg_os[HTOGG_END]; 
+    ogg_stream_state ogg_os[HTOGG_END];
 
 protected:
     static void _bind_methods();

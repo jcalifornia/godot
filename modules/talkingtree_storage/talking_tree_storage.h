@@ -2,8 +2,6 @@
 #ifndef TALKING_TREE_STORAGE_H
 #define TALKING_TREE_STORAGE_H
 
-
-
 #include "object.h"
 #include "variant.h"
 #include "core/os/thread.h"
@@ -28,7 +26,6 @@ class TalkingTreeStorage : public Object {
 	static void thread_func(void *p_udata);
 public:
 	static TalkingTreeStorage *get_singleton();
-	void set_singleton();
 	void lock();
 	void unlock();
 	void finish();

@@ -490,8 +490,7 @@ bool SceneTree::idle(float p_time) {
 
 	_network_poll();
 
-	//added replay
-	_treecursion_poll();
+	//_treecursion_poll();
 
 	emit_signal("idle_frame");
 
@@ -1696,16 +1695,6 @@ void SceneTree::set_network_peer(const Ref<NetworkedMultiplayerPeer> &p_network_
 	}
 }
 
-void SceneTree::set_treecursion_data(const Ref<TreecursionTestData> &treecursion_data){
-	if(treecursion_replay_data.is_valid()){
-
-	}
-	treecursion_replay_data = treecursion_data;
-	if(treecursion_replay_data.is_valid()){
-
-	}
-}
-
 Ref<NetworkedMultiplayerPeer> SceneTree::get_network_peer() const {
 
 	return network_peer;
@@ -2180,60 +2169,6 @@ void SceneTree::_network_poll() {
 		}
 	}
 }
-void SceneTree::_execute_treecursion(TreecursionWriteTask *cmd) {
-	Node *node = NULL;
-	switch(cmd->get_type()){
-		case TreecursionWriteTask::SET_TASK: {
-			TreecursionSetTask *st = (TreecursionSetTask *)cmd;
-			node = get_root()->get_node(st -> get_node_path());
-
-			bool valid;
-			node->set(st->get_name(), st->get_value(), &valid);
-			ERR_FAIL_COND(!valid);
-			break;
-		}
-		case TreecursionWriteTask::CALL_TASK: {
-			TreecursionCallTask *ct = (TreecursionCallTask *)cmd;
-			node = get_root()->get_node(ct -> get_node_path());
-
-			Variant::CallError ce;
-			Vector<Variant> args(ct->get_args());
-			Vector<const Variant *> argp;
-			int argc = args.size();
-			argp.resize(argc);
-			for (int i = 0; i < argc; i++) {
-				argp[i] = &args[i];
-			}
-			node->call(ct->get_name(), (const Variant **) argp.ptr(), argc, ce);
-			if (ce.error != Variant::CallError::CALL_OK) {
-				String error = Variant::get_call_error_text(node, ct->get_name(), (const Variant **)argp.ptr(), argc, ce);
-				error = "Treecursion Scenetree - " + error;
-				ERR_PRINTS(error);
-			}
-			break;
-		}
-		default:
-			ERR_PRINT("Treecursion Scenetree - incorrect treecursionwritetask type");
-			break;
-	}
-	
-}
-void SceneTree::_treecursion_poll() {
-	//no replay data just return
-	if(!treecursion_replay_data.is_valid())
-		return;
-
-	uint64_t current_time = OS::get_singleton()->get_ticks_usec();
-	while(treecursion_replay_data->has_next()){
-		Ref<TreecursionWriteTask> cmd = treecursion_replay_data->peek();
-		uint64_t cmd_time = cmd->get_time();
-		if( cmd_time < current_time){
-			treecursion_replay_data -> next();
-			_execute_treecursion(cmd.ptr());
-		}else
-			break;
-	}
-}
 
 void SceneTree::_bind_methods() {
 
@@ -2304,7 +2239,6 @@ void SceneTree::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("_change_scene"), &SceneTree::_change_scene);
 
 	ClassDB::bind_method(D_METHOD("set_network_peer", "peer"), &SceneTree::set_network_peer);
-	ClassDB::bind_method(D_METHOD("set_treecursion_data", "data"), &SceneTree::set_treecursion_data);
 	ClassDB::bind_method(D_METHOD("get_network_peer"), &SceneTree::get_network_peer);
 	ClassDB::bind_method(D_METHOD("is_network_server"), &SceneTree::is_network_server);
 	ClassDB::bind_method(D_METHOD("has_network_peer"), &SceneTree::has_network_peer);

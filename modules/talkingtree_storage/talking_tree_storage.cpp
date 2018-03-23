@@ -48,9 +48,6 @@ TalkingTreeStorage *TalkingTreeStorage::_singleton = NULL;
 TalkingTreeStorage *TalkingTreeStorage::get_singleton() {
 	return _singleton;
 }
-void TalkingTreeStorage::set_singleton() {
-	_singleton = this;
-}
 
 void TalkingTreeStorage::new_file(){
 //	_treecursion = memnew(TreecursionWriter());
@@ -159,7 +156,7 @@ void TalkingTreeStorage::finish() {
 
 TalkingTreeStorage::TalkingTreeStorage() : _recording_state(ERROR) {
 	//opusEncoder = opus_multistream_encoder_create();
-	
+	_singleton = this;
 }
 
 TalkingTreeStorage::~TalkingTreeStorage() {
@@ -187,9 +184,7 @@ void _TalkingTreeStorage::set_file_name(String name){
 	//TalkingTreeStorage::get_singleton()->set_file_name(name);
 }
 _TalkingTreeStorage::_TalkingTreeStorage() {
-	_singleton = this;
-	TalkingTreeStorage::get_singleton()->init();
-	
+	_singleton = this;	
 }
 _TalkingTreeStorage::~_TalkingTreeStorage() {
 	_singleton = nullptr;

@@ -63,7 +63,6 @@ Ref<TreecursionWriteTask> TreecursionTestData::variant2write_task(const Variant 
 		}
 	}
 	return Ref<TreecursionWriteTask>(nullptr);
-
 }
 Ref<TreecursionWriteTask> TreecursionTestData::peek(){
 	Ref<TreecursionWriteTask> ret = commands[counter];
