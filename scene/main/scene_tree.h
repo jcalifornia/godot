@@ -206,11 +206,6 @@ private:
 
 	int rpc_sender_id;
 
-	// added replay data
-	Ref<TreecursionTestData> treecursion_replay_data;
-	void _treecursion_poll();
-	void _execute_treecursion(TreecursionWriteTask *cmd);
-
 	//path sent caches
 	struct PathSentCache {
 		Map<int, bool> confirmed_peers;
@@ -459,8 +454,7 @@ public:
 
 	void set_network_peer(const Ref<NetworkedMultiplayerPeer> &p_network_peer);
 	Ref<NetworkedMultiplayerPeer> get_network_peer() const;
-	//added
-	void set_treecursion_data(const Ref<TreecursionTestData> &treecursion_data);
+	
 	bool is_network_server() const;
 	bool has_network_peer() const;
 	int get_network_unique_id() const;

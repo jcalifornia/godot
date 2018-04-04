@@ -190,6 +190,9 @@ public:
 		Error err = w.write_to_string(init_vars, ret);
 		return ret;
 	}
+	Dictionary get_vars() const {
+		return init_vars.duplicate();
+	}
 };
 
 
