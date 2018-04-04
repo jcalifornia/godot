@@ -5,12 +5,11 @@
 ResourceFormatTalkingTreeStorage::ResourceFormatTalkingTreeStorage() {
 }
 RES ResourceFormatTalkingTreeStorage::load(const String &p_path, const String &p_original_path, Error *r_error) {
+	Treecursion *treecursion = memnew(Treecursion);
+	treecursion->set_file(p_path);
 	if (r_error)
 		*r_error = OK;
-
-	TreecursionReader *treecursion = memnew(TreecursionReader);
-	treecursion->set_file(p_path);
-	return Ref<TreecursionReader>(treecursion);
+	return Ref<Treecursion>(treecursion);
 }
 
 void ResourceFormatTalkingTreeStorage::get_recognized_extensions(List<String> *p_extensions) const {
