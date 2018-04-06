@@ -8,7 +8,7 @@
 #include "io/json.h"
 #include "dictionary.h"
 
-enum AUDIO_CODEC { OPUS = 1, RAW };
+enum AUDIO_CODEC { RAW = 0, OPUS = 1  };
 
 enum HTOGG_SERIALNO { HTOGG_ENGINE = 0, HTOGG_VOIP = 1, HTOGG_END };
 
@@ -23,7 +23,7 @@ public:
 		CALL_TASK,
 		VOICE_TASK,
 		ENGINE_HEADER_TASK,
-		VOIP_HEADER_TASK
+		VOICE_HEADER_TASK
 	};
 protected:
 	TreecursionWriteTask( uint64_t t, uint64_t u, Types ty ) : time(t), user_id(u), type(ty){
@@ -163,12 +163,49 @@ public:
 		Error err = w.write_to_string(dict, ret);
 		return ret;
 	}
+
 };
 
 
 class TreecursionVoiceTask : public TreecursionWriteTask {
 	PoolByteArray pcm_data;
-	
+public:
+	TreecursionVoiceTask( uint64_t t, uint64_t u, PoolByteArray data )
+		: TreecursionWriteTask(t, u, VOICE_TASK), pcm_data(data) {
+	}
+	TreecursionVoiceTask( uint64_t t, uint64_t u, const uint8_t *data, int size )
+		: TreecursionWriteTask(t, u, VOICE_TASK) {
+			pcm_data.resize(size);
+			memcpy(pcm_data.write().ptr(), data, size); 
+	}
+	PoolByteArray get_data() const {
+		return pcm_data;
+	}
+	virtual String toJson() const{
+		Dictionary dict;
+
+		dict["time"] = time;
+		dict["user_id"] = user_id;
+		dict["pcm_size"] = pcm_data.size();
+		dict["type"] = int32_t(type);
+
+		JSON a;
+		String ret = a.print(dict);
+		return ret;
+	}
+	virtual String toString() const{
+		Dictionary dict;
+
+		dict["time"] = time;
+		dict["user_id"] = user_id;
+		dict["pcm_size"] = pcm_data.size();
+		dict["type"] = int32_t(type);
+
+		VariantWriter w;
+		String ret;
+		Error err = w.write_to_string(dict, ret);
+		return ret;
+	}
 };
 
 class TreecursionHeaderTask : public TreecursionWriteTask {
@@ -195,7 +232,29 @@ public:
 	}
 };
 
-
+class TreecursionVoiceHeaderTask : public TreecursionHeaderTask {
+	int32_t sample_rate;
+	int32_t bit_rate;
+	int32_t frame_size;
+	AUDIO_CODEC codec;
+public:
+	TreecursionVoiceHeaderTask(  int codec, int32_t sample_rate, int32_t bit_rate, int32_t frame_size)
+		: TreecursionHeaderTask( 0, 0, VOICE_HEADER_TASK)
+		,  codec((AUDIO_CODEC)codec), sample_rate(sample_rate), bit_rate(bit_rate), frame_size(frame_size) {
+	}
+	int32_t get_sample_rate() const {
+		return sample_rate;
+	}
+	int32_t get_bit_rate() const {
+		return bit_rate;
+	}
+	int32_t get_frame_size() const {
+		return frame_size;
+	}
+	int32_t get_codec() const {
+		return codec;
+	}
+};
 
 class TreecursionTestData : public Resource{
     GDCLASS(TreecursionTestData, Resource);

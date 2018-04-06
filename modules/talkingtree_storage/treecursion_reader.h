@@ -8,7 +8,9 @@
 #include "list.h"
 #include "hash_map.h"
 #include "variant.h"
+#include "audio_codec.h"
 #include <ogg/ogg.h>
+
 
 class HtoggStream : public Resource {
     GDCLASS(HtoggStream, Resource);
@@ -46,7 +48,7 @@ private:
     FileAccess *_file;
     ogg_sync_state state;
 
-
+    Ref<AudioCodec> audio_codec_handler;
     ogg_int64_t current_unit;
     ogg_int64_t current_granulepos;
     /* Read positioning */
@@ -56,7 +58,7 @@ private:
     int current_packet_pages;
     int current_packet_begin_segment_index;
     TreecursionWriteTask* variant2write_task(int64_t time, const Variant & cmd);
-    void parse_packet(int type, ogg_packet *);
+    void parse_packet(int type, ogg_packet *op);
     void parse_headers(int type, ogg_packet *op);
     int parse_page(ogg_page *);
     int next_page();

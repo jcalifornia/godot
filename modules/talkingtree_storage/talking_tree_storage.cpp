@@ -53,10 +53,13 @@ void TalkingTreeStorage::new_file(){
 //	_treecursion = memnew(TreecursionWriter());
 	_treecursion = memnew( TreecursionWriter(itos(OS::get_singleton()->get_unix_time())) );
 }
-
+//Todo fix header
 void TalkingTreeStorage::write_engine_init(const Dictionary & dict) {
 	TreecursionEngineHeaderTask *task = memnew( TreecursionEngineHeaderTask(OS::get_singleton()->get_unix_time(), dict) );
 	enqueue(task);
+	//temporary hardcode header
+	TreecursionVoiceHeaderTask *vp = memnew(TreecursionVoiceHeaderTask(OPUS, 48000, 1600, 960));
+	enqueue(vp);
 	_recording_state = INIT;
 }
 void TalkingTreeStorage::close_file(){

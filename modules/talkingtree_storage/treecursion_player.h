@@ -6,6 +6,7 @@
 #include "core/os/thread.h"
 #include "core/os/mutex.h"
 #include "treecursion_reader.h"
+#include "modules/talkingtree/audio_stream_talking_tree.h"
 
 class TreecursionPlayer : public Object {
 	GDCLASS(TreecursionPlayer, Object);
@@ -36,6 +37,7 @@ private:
 	};
 	PLAYING_STATE state;
 	Ref<TreecursionReader> reader;
+	HashMap<int, Ref<AudioStreamTalkingTree>> reply_audio_stream_peers;
 	void push_task(const Ref<TreecursionWriteTask> &task);
 	void flush();
 
@@ -43,6 +45,8 @@ public:
 	void close_file();
 	bool is_paused() const;
 	void set_pause(bool paused);
+	void set_pid(int pid);
+	Ref<AudioStreamTalkingTree> get_audio_stream_peer(int pid);
 	Variant get_init_vars() const;
 	void set_treecursion_reader(Ref<Treecursion> &file);
 	void print_all_task_time();
@@ -66,6 +70,8 @@ public:
 	void print_all_task_time();
 	void set_pause(bool paused);
 	void set_treecursion_reader(Ref<Treecursion> in_reader);
+	Ref<AudioStreamTalkingTree> get_audio_stream_peer(int pid);
+	void set_pid(int pid);
 	_TreecursionPlayer();
 	~_TreecursionPlayer();
 };
