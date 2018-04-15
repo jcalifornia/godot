@@ -3,7 +3,8 @@
 #include "variant.h"
 #include "variant_parser.h"
 #include "ogg_routines.h"
-#include <skeleton/skeleton.h>
+#include "io/marshalls.h"
+#include "io/stream_peer.h"
 //https://bluishcoder.co.nz/2009/06/24/reading-ogg-files-using-libogg.html
 
 void TreecursionReader::_bind_methods(){
@@ -45,11 +46,6 @@ TreecursionWriteTask* TreecursionReader::variant2write_task(int64_t time, const 
 		}
 		case TreecursionWriteTask::ENGINE_HEADER_TASK: {
 			return memnew(TreecursionEngineHeaderTask(time, dict));
-			break;
-		}
-		case TreecursionWriteTask::VOICE_TASK:{
-			//return Ref<TreecursionVoiceTask>(memnew(TreecursionVoiceTask(dict)));
-			//return Ref<TreecursionWriteTask>(nullptr);
 			break;
 		}
 		default : {
@@ -127,6 +123,24 @@ void TreecursionReader::parse_headers(int type, ogg_packet *op) {
 			headers.push_back(cmd);
 			break;
 		}
+		case HTOGG_VOIP :{
+			//io/marshalls is usually little endian
+			StreamPeerBuffer buffer;
+			buffer.put_data(op->packet, op->bytes);
+			//Stream peer buffer automatically
+			//increaments the pointer when ever you add data.
+			//seek it to zero so i can get the correct numbers
+			buffer.seek(0);
+			int codec = buffer.get_32();
+			int sampleRate = buffer.get_32();
+			int bitRate = buffer.get_32();
+			int frameSize = buffer.get_32();
+			
+			TreecursionWriteTask *vt = memnew(TreecursionVoiceHeaderTask( codec, sampleRate, bitRate, frameSize));
+			headers.push_back(vt);
+			audio_codec_handler = Ref<AudioCodec>(memnew(OpusCodec(sampleRate, bitRate, frameSize)));
+			break;
+		}
 		default:
 			break;
 	}
@@ -152,7 +166,23 @@ void TreecursionReader::parse_packet(int type, ogg_packet *op) {
 			break;
 		}
 		case HTOGG_VOIP: {
-			
+
+			uint8_t *packet_ptr = op->packet;
+			uint64_t timestamp = decode_uint64(packet_ptr);
+			packet_ptr += sizeof(uint64_t);
+			uint32_t user_id = decode_uint32(packet_ptr);
+			packet_ptr += sizeof(uint32_t);
+			int16_t output[1024];
+			const int samples = audio_codec_handler->decode( 
+				packet_ptr, op->bytes-(packet_ptr - op->packet), 
+				output, 1024);
+
+			TreecursionWriteTask *talk = memnew(
+					TreecursionVoiceTask(timestamp, user_id, (uint8_t*)output, samples*sizeof(int16_t))
+				);
+			treecursion_buffer.push_back(talk);
+			current_granulepos = op->granulepos;
+			break;
 		}
 		default:
 			break;

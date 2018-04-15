@@ -83,6 +83,7 @@ void TreecursionPlayer::finish() {
 void TreecursionPlayer::set_treecursion_reader( Ref<Treecursion> &in_reader){
 	if(reader.is_valid()){
 		reader.unref();
+		reply_audio_stream_peers.clear();
 	}
 	
 	if(in_reader.is_valid()){
@@ -113,6 +114,15 @@ void TreecursionPlayer::print_all_task_time(){
 		print_line("command time: " + itos(t->get_time()) + t->toJson());
 	}
 }
+void TreecursionPlayer::set_pid(int p_id) {
+	reply_audio_stream_peers[p_id].instance();
+	reply_audio_stream_peers[p_id]->set_pid(p_id);
+	reply_audio_stream_peers[p_id]->set_mix_rate(48000);
+	reply_audio_stream_peers[p_id]->set_format(AudioStreamTalkingTree::FORMAT_16_BITS);
+}
+Ref<AudioStreamTalkingTree> TreecursionPlayer::get_audio_stream_peer(int pid) {
+	return reply_audio_stream_peers.get(pid);
+}
 void TreecursionPlayer::push_task(const Ref<TreecursionWriteTask> &task){
 	Node *node = NULL;
 	switch(task->get_type()){
@@ -137,6 +147,11 @@ void TreecursionPlayer::push_task(const Ref<TreecursionWriteTask> &task){
 			MessageQueue::get_singleton()->push_set(node, st->get_name(), st ->get_value());
 			break;
 		}
+		case TreecursionWriteTask::VOICE_TASK: {
+			TreecursionVoiceTask *vt = (TreecursionVoiceTask *)task.ptr();
+			PoolByteArray pcm_data = vt->get_data();
+			reply_audio_stream_peers[vt->get_user_id()]->append_data(pcm_data.read().ptr(), pcm_data.size());
+		}
 		default:
 			break;
 	}
@@ -157,11 +172,19 @@ Variant _TreecursionPlayer::get_init_values() const {
 void _TreecursionPlayer::set_pause(bool paused) {
 	TreecursionPlayer::get_singleton()->set_pause(paused);
 }
+void _TreecursionPlayer::set_pid(int pid){
+	TreecursionPlayer::get_singleton()->set_pid(pid);
+}
+Ref<AudioStreamTalkingTree> _TreecursionPlayer::get_audio_stream_peer(int pid){
+	return TreecursionPlayer::get_singleton()->get_audio_stream_peer(pid);
+}
 void _TreecursionPlayer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_pause", "enable"), &_TreecursionPlayer::set_pause);
 	ClassDB::bind_method(D_METHOD("get_init_values"), &_TreecursionPlayer::get_init_values);
 	ClassDB::bind_method(D_METHOD("set_treecursion", "treecursion"), &_TreecursionPlayer::set_treecursion_reader);
 	ClassDB::bind_method(D_METHOD("print_all_task_time"), &_TreecursionPlayer::print_all_task_time);
+	ClassDB::bind_method(D_METHOD("set_pid", "pid"), &_TreecursionPlayer::set_pid);
+	ClassDB::bind_method(D_METHOD("get_audio_stream_peer", "pid"), &_TreecursionPlayer::get_audio_stream_peer);
 }
 _TreecursionPlayer::_TreecursionPlayer() {
 	_singleton = this;	

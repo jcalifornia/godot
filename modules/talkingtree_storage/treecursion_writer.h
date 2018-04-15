@@ -1,7 +1,8 @@
+#ifndef TREECURSION_WRITER_H
+#define TREECURSION_WRITER_H
 #include "object.h"
 #include "os/file_access.h"
 #include "ustring.h"
-
 
 #include "ogg/ogg.h"
 #include "io/treecursion_types.h"
@@ -21,7 +22,6 @@ private:
     int serialno;
     HashMap<String, Variant> last_value;
     ogg_stream_state ogg_os[HTOGG_END];
-
 protected:
     static void _bind_methods();
 
@@ -32,3 +32,4 @@ public:
     ~TreecursionWriter();
 	
 };
+#endif //TREECURSION_WRITER_H
