@@ -5,6 +5,7 @@
 #include "ustring.h"
 #include "reference.h"
 #include "io/stream_peer.h"
+#include "audio_stream_lockless_buffer.h"
 
 class AudioStreamTalkingTree;
 
@@ -58,8 +59,8 @@ private:
 	bool stereo;
 	bool opened;
 	int id;
-	List<uint8_t> *data;
-	Mutex *mutex;
+	TreecursionAudioStreamBuffer<16384> data_buffer;
+	Mutex *writeLock;
 public:
 	AudioStreamTalkingTree();
 	~AudioStreamTalkingTree();
@@ -67,15 +68,13 @@ public:
 	virtual String get_stream_name() const;
 	virtual float get_length() const { return 0; }
 	int get_available_bytes() const;
-	int get_16();
+	int get_byte_array( uint8_t *buf, int size);
 	Error append_data(const uint8_t * pcm_data, int p_bytes);
 	void set_format(Format p_format);
 	void set_mix_rate(float rate);
 	void clear();
 	Format get_format() const;
 	void set_pid(int id);
-	void lock();
-	void unlock();
 };
 VARIANT_ENUM_CAST(AudioStreamTalkingTree::Format)
 #endif AUDIOSTREAMTALKINGTREE_H

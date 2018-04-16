@@ -24,20 +24,23 @@ private:
 	std::atomic<uint32_t> _head;
 	//std::atomic<uint64_t> _head_last;
 	std::atomic<uint32_t> _tail;
-	std::array<uint8_t, Q_SIZE> _buffer = {};
+	//I shouldnt have to turn each byte into atomic
+	//variable
+	//TODO fix this. atomic are slow primatives
+	std::array<std::atomic<uint8_t>, Q_SIZE> _buffer = {};
 	
 public:
 	bool put_byte_array(const uint8_t * data, int32_t size) {
 		uint32_t head = _head.load();		
 		uint32_t tail = _tail.load();
 
-		uint32_t available_size = head - tail;
+		uint32_t available_size = Q_SIZE - (head - tail);
 		uint32_t smaller = MIN((uint32_t)size, available_size);
 
 		for(uint32_t i = 0; i < smaller; i++){
-			_buffer[ ( head + i ) & Q_MASK] = data[i];
+			_buffer[ ( head + i ) & Q_MASK].store( data[i] );
 		}
-		_head.store( (head + smaller) % Q_SIZE);
+		_head.store( (head + smaller));
 		return size == (int32_t) smaller;
 	}
 	
@@ -48,14 +51,15 @@ public:
 
 		uint32_t smaller = MIN((uint32_t)size, available_size);
 		for(uint32_t i = 0; i < smaller; i++){
-			data[i] = _buffer[ ( tail + i ) & Q_MASK];
+			data[i] = _buffer[ ( tail + i ) & Q_MASK].load();
 		}
-		_tail.store((tail + smaller) % Q_SIZE);
+		_tail.store((tail + smaller));
 		return (int32_t) smaller;
 	}
 	void clear() {
-		_head.store(0);
-		_tail.store(0);
+		
+		_head.store(0xffffffff-4000);
+		_tail.store(0xffffffff-4000);
 	}
 	bool is_empty() const {
 		return _head.load() == _tail.load();
@@ -67,9 +71,10 @@ public:
 		return ret;
 	}
 	TreecursionAudioStreamBuffer() {
-		_head.store(0);
+		//fuzzing output i guess
+		_head.store(0xffffffff-4000);
 		//_head_last.store(0);
-		_tail.store(0);
+		_tail.store(0xffffffff-4000);
 	};
 };
 #endif

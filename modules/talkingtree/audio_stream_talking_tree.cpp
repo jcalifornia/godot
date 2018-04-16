@@ -58,27 +58,33 @@ void AudioStreamPlaybackTalkingTree::_mix_internal(AudioFrame *p_buffer, int p_f
 		}
 		return;
 	}
-	base->lock();
-	int len = base -> get_available_bytes();
+	int len_bytes = base -> get_available_bytes();
+	int len_frames = len_bytes;
+	int max_frame_bytes = p_frames;
 	switch(base->format){
-		case AudioStreamTalkingTree::FORMAT_8_BITS: len /= 1; break;
-		case AudioStreamTalkingTree::FORMAT_16_BITS: len /= 2; break;	
+		case AudioStreamTalkingTree::FORMAT_8_BITS: len_frames /= 1; break;
+		case AudioStreamTalkingTree::FORMAT_16_BITS: len_frames /= 2; max_frame_bytes *= 2; break;	
 	}
 	if (base->stereo) {
-		len /= 2;
+		len_frames /= 2;
+		max_frame_bytes *= 2;
 	}
-	//print_line("checking to see if streamname: " + base->get_stream_name() + " : size " + itos(len));
-	int smaller_buf = MIN(len, p_frames );
+	int16_t buf[1024];
+	
+	int smaller_buf = MIN(len_frames, p_frames);
+	int smaller_bytes = MIN(max_frame_bytes, len_bytes);
+
+	base->get_byte_array((uint8_t *) buf, smaller_bytes);
+
 	for( int i = 0;  i < smaller_buf; i++ ){
 		if(base->stereo){
-			p_buffer[i] = AudioFrame( float(base->get_16())/32768.0f, float(base->get_16())/32768.0f);
+			p_buffer[i] = AudioFrame( float(buf[2*i])/32768.0f, float(buf[2*i+1])/32768.0f);
 		}else{
-			float sample = float(base->get_16())/32768.0f;
+			float sample = float(buf[i])/32768.0f;
 			p_buffer[i] = AudioFrame(sample,sample);
 			//print_line("0: " + rtos(sample) );
 		}
 	}
-	base->unlock();
 	offset += smaller_buf;
 	int todo = p_frames - smaller_buf;
 	for(int i = 0; i < todo; i++){
@@ -102,14 +108,12 @@ void AudioStreamTalkingTree::_bind_methods(){
 	BIND_ENUM_CONSTANT(FORMAT_16_BITS);
 }
 AudioStreamTalkingTree::AudioStreamTalkingTree()
-	: mix_rate(44100.0), format(FORMAT_8_BITS), stereo(false), data(NULL) {
-	mutex = Mutex::create();
-	data = memnew(List<uint8_t>);
+	: mix_rate(44100.0), format(FORMAT_8_BITS), stereo(false) {
+		writeLock = Mutex::create();
 }
 AudioStreamTalkingTree::~AudioStreamTalkingTree(){
-	if(data){
-		memdelete(data);
-	}
+	if (writeLock)
+		memdelete(writeLock);
 }
 
 Ref<AudioStreamPlayback> AudioStreamTalkingTree::instance_playback(){
@@ -120,31 +124,28 @@ Ref<AudioStreamPlayback> AudioStreamTalkingTree::instance_playback(){
 }
 
 Error AudioStreamTalkingTree::append_data(const uint8_t * pcm_data, int p_bytes){
-	//print_line("got audio: " +  itos( data.size()));
-	lock();
-	for(int i = 0; i < p_bytes; i++){
-		data->push_back(pcm_data[i]);
+	bool entire_array = false;
+	if(writeLock->try_lock() == OK){
+		entire_array = data_buffer.put_byte_array(pcm_data, p_bytes);
+		emit_signal("audio_recieved");
+	}else{
+		ERR_EXPLAIN("Only one writer should exist. this should not be possible");
+		return ERR_BUG;
 	}
-	//print_line("set audio size: " + itos( data.size()));
-	unlock();
-	emit_signal("audio_recieved");
-	return OK;
+	if(entire_array){
+		return OK;
+	}else {
+		WARN_PRINTS("Out of Memory: Increase AudioStreamTalkingTree buffer by power of 2.")
+		return ERR_OUT_OF_MEMORY;
+	}
 }
 int AudioStreamTalkingTree::get_available_bytes() const {	
-		return data->size();
+	//return data->size();
+	return (int) data_buffer.size();
 }
-
-int AudioStreamTalkingTree::get_16() {
-	int16_t buf;
-	uint8_t *ptr = (uint8_t *)&buf;
-	
-	ptr[0] = (*data)[0];
-	ptr[1] = (*data)[1];
-	data->pop_front();
-	data->pop_front();
-	return buf;
+int AudioStreamTalkingTree::get_byte_array( uint8_t *buf, int size) {
+	return data_buffer.get_byte_array(buf, size);
 }
-
 
 String AudioStreamTalkingTree::get_stream_name() const {
 	return "TalkingTree: " + itos(id);
@@ -163,11 +164,5 @@ AudioStreamTalkingTree::Format AudioStreamTalkingTree::get_format() const {
 	return format;
 }
 void AudioStreamTalkingTree::clear(){
-	data->clear();
-}
-void AudioStreamTalkingTree::lock(){
-	mutex->lock();
-}
-void AudioStreamTalkingTree::unlock(){
-	mutex->unlock();
+	data_buffer.clear();
 }
