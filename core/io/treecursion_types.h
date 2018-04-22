@@ -1,5 +1,5 @@
-#ifndef TREECURSION_TYPES
-#define TREECURSION_TYPES
+#ifndef TREECURSION_TYPES_H
+#define TREECURSION_TYPES_H
 
 #include "core/variant.h"
 #include "reference.h"
@@ -254,33 +254,5 @@ public:
 	int32_t get_codec() const {
 		return codec;
 	}
-};
-
-class TreecursionTestData : public Resource{
-    GDCLASS(TreecursionTestData, Resource);
-    
-public:
-    bool eof_reached(){
-		return _file->eof_reached();
-	}
-    Error set_file(const String &p_file);
-	
-    Ref<TreecursionWriteTask> next();
-    Ref<TreecursionWriteTask> peek();
-    bool has_next();
-    TreecursionTestData();
-    ~TreecursionTestData();
-	
-
-protected:
-    static void _bind_methods();
-
-private:
-    Vector< Ref<TreecursionWriteTask> > commands;
-    int counter;
-    String file;
-    FileAccess *_file;
-    Ref<TreecursionWriteTask> current;
-    Ref<TreecursionWriteTask> variant2write_task(const Variant & cmd);
 };
 #endif
