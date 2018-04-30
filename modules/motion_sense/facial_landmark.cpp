@@ -99,6 +99,7 @@ void FacialLandmark::startStreaming(){
 	if(!_vc.isOpened()){
 		ERR_PRINT("FacialLandmark: unable to connect to camera\n");
 		_state = STATUS_ERROR;
+		return;
 	}
 	_state = STATUS_RUNNING;
 	dlib::frontal_face_detector detector = dlib::get_frontal_face_detector();
