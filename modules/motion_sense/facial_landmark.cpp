@@ -121,7 +121,7 @@ void FacialLandmark::startStreaming(){
 			cv::Mat cloned = temp_small.clone();
 
 			std::vector<dlib::rectangle> faces = detector(cimg);
-			print_line("delected x faces: " + itos(faces.size()));
+			//print_line("delected x faces: " + itos(faces.size()));
 			std::vector<dlib::full_object_detection> shapes(faces.size());
 			std::vector<dlib::rectangle> rects(faces.size());
 			if(faces.size()>0) { // @TODO: Multiple faces
