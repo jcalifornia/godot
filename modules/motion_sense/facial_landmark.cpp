@@ -35,7 +35,7 @@ void FacialLandmark::_bind_methods() {
 	BIND_ENUM_CONSTANT(STATUS_NONE);
 	BIND_ENUM_CONSTANT(STATUS_STOPPED);
 	BIND_ENUM_CONSTANT(STATUS_RUNNING);
-	
+	return;
 }
 
 FacialLandmark::FacialLandmark() : _vc(0), _state(STATUS_NONE)  {
@@ -44,6 +44,7 @@ FacialLandmark::FacialLandmark() : _vc(0), _state(STATUS_NONE)  {
 
 void FacialLandmark::set_data(Ref<FacialLandmarkModel> m){
 	_model = m;
+	return;
 }
 
 void FacialLandmark::startStreaming(){
@@ -130,10 +131,6 @@ void FacialLandmark::startStreaming(){
 					shapes[i] = (_model->get_data())(cimg, faces[i]);
 					rects[i] = shapes[i].get_rect();
 				}
-				//PoolVector<Vector2> pts = utils::to_3dVec2(shapes[0]); // just use the first one
-				//emit_signal("facial_detect", Variant(utils::to_gRect(rects[0])), Variant(pts));
-			
-			
 			
 				// Filter stuff goes below!
 				///*
@@ -185,30 +182,17 @@ void FacialLandmark::startStreaming(){
 						std::vector<uchar> status;
 						std::vector<float> err;
 						cv::calcOpticalFlowPyrLK(prevgray, gray, prevTrackPts, nextTrackPts, status, err);
-						// std::cout << "variance:" <<variance(prevTrackPts, nextTrackPts) << std::endl;
-						// if the face is moving so fast, use dlib to detect the face
 						double diff = variance(prevTrackPts, nextTrackPts);
 						if (diff > 1.0) {
 							const dlib::full_object_detection& d = shapes[0];
-							// std::cout<< "DLIB" << std::endl;
 							for (int i = 0; i < d.num_parts(); i++) {
 								nextTrackPts[i].x = d.part(i).x();
 								nextTrackPts[i].y = d.part(i).y();
 							}
-						} /*else if (diff <= 1.0 && diff > 0.005){
-							// In this case, use Optical Flow
-							print_line("OF");
-							for (int i = 0; i < nextTrackPts.size(); i++) {
-
-							}
-						}*/ else {
-							// In this case, use Kalman Filter
-							// print_line("KF");
+						} else {
 							for (int i = 0; i < predict_points.size(); i++) {
 								nextTrackPts[i].x = predict_points[i].x;
 								nextTrackPts[i].y = predict_points[i].y;
-								//print_line(""+itos(nextTrackPts[i].x) +"," + 
-								//itos(nextTrackPts[i].y));
 							}
 							PoolVector<Vector2> pts = 
 							utils::to_3dVec2(shapes[0],nextTrackPts); // just use the first one
@@ -227,6 +211,7 @@ void FacialLandmark::startStreaming(){
 			counter++;
 		}
 	}
+	return;
 	
 }
 
@@ -253,6 +238,7 @@ void FacialLandmark::stopStreaming(){
 	if( _state == STATUS_RUNNING ){
 		_state = STATUS_STOPPED;
 	}
+	return;
 }
 
 
