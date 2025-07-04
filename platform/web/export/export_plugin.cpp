@@ -34,10 +34,10 @@
 #include "run_icon_svg.gen.h"
 
 #include "core/config/project_settings.h"
-#include "editor/editor_settings.h"
 #include "editor/editor_string_names.h"
 #include "editor/export/editor_export.h"
 #include "editor/import/resource_importer_texture_settings.h"
+#include "editor/settings/editor_settings.h"
 #include "editor/themes/editor_scale.h"
 #include "scene/resources/image_texture.h"
 
@@ -352,6 +352,11 @@ void EditorExportPlatformWeb::get_preset_features(const Ref<EditorExportPreset> 
 		r_features->push_back("threads");
 	} else {
 		r_features->push_back("nothreads");
+	}
+	if (p_preset->get("variant/extensions_support").operator bool()) {
+		r_features->push_back("web_extensions");
+	} else {
+		r_features->push_back("web_noextensions");
 	}
 	r_features->push_back("wasm32");
 }
